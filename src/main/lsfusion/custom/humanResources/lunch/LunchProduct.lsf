@@ -1,0 +1,56 @@
+MODULE LunchProduct;
+
+REQUIRE HumanResourcesSettings, MasterData, Partner, Color;
+
+PRIORITY HumanResources;
+
+NAMESPACE Lunch;
+
+CLASS Product 'Lunch product';
+TABLE product (Product);
+
+name '{master.data.name}' = DATA ISTRING[100] (Product) CHARWIDTH 15;
+
+vendor 'Vendor' = DATA Partner (Product);
+nameVendor 'Vendor' (Product o) = name(vendor(o));
+
+price 'Price' = DATA NUMERIC[10,2] (Product);
+
+//color 'Color' = DATA Color (Product);
+//nameColor 'Color' (Product p) = name(color(p));
+//idColor 'Color' (Product p) = id(color(p));
+//rgbColor 'Color' (Product p) = rgb(color(p));
+
+symbol 'Symbol' = DATA STRING[20] (Product) CHARWIDTH 2;
+
+archived 'Archived' = DATA BOOLEAN (Product);
+active '{Active}' (Product b) = NOT archived(b);
+
+FORM product 'Lunch product'
+    OBJECTS p = Product PANEL
+    PROPERTIES(p) name, nameVendor, price, symbol, archived
+    
+    EDIT Product OBJECT p
+;
+
+FORM products 'Lunch products'
+    OBJECTS p = Product
+    PROPERTIES(p) READONLY name, nameVendor, price
+
+    FILTERGROUP active
+        FILTER '{Active}' active(p) DEFAULT
+
+    LIST Product OBJECT p
+;
+
+EXTEND FORM options
+    OBJECTS lp = Product
+    PROPERTIES(lp) READONLY name, nameVendor, price, symbol, archived
+    PROPERTIES(lp) NEWSESSION NEW, EDIT, DELETE
+;
+
+DESIGN options {
+    tabbedPane {
+        MOVE BOX(lp) { caption = 'Lunch products'; }
+    }
+}

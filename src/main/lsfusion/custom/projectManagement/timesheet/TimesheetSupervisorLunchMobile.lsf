@@ -1,0 +1,131 @@
+MODULE TimesheetSupervisorLunchMobile;
+
+REQUIRE TimesheetSupervisorMobile, TimesheetLunch;
+
+PRIORITY Lunch, MasterData;
+
+NAMESPACE ProjectManagement;
+
+fillLunch 'Fill' (DATE d, Employee e, Product p) {
+    NEWSESSION {
+        DELETE Order o WHERE date(o) = d AND employee(o) = e;
+        NEW o = Order {
+            date(o) <- d;
+            employee(o) <- e;
+            product(o) <- p;
+        }
+        APPLY;
+    }
+}
+
+EXTEND FORM timesheetSupervisorMobile
+    OBJECTS el = Employee
+    PROPERTIES(el) READONLY name
+    PROPERTIES     READONLY symbolProductOrder(d, el)
+    FILTERS hoursTimesheet(d, el),
+            assigned(timesheetProject(), el) OR (NOT countAssignments(timesheetProject()) AND NOT countAssignments(currentUser()))
+
+    PROPERTIES() nameTimesheetLunchProduct ON CHANGE {
+        DIALOG products OBJECTS p = timesheetLunchProduct() INPUT LIST name(p) DO   
+            fillLunch(d, el, p);
+    }
+;
+
+@defineLunchActions(timesheetSupervisorMobile, Mobile){
+    clearLunchMobile 'Clear for date' (DATE d) {
+        LOCAL in = BOOLEAN (Employee);
+        in(Employee e) <- [FILTER timesheetSupervisorMobile.el](e);
+        NEWSESSION NESTED (in) {
+            DELETE Order o WHERE date(o) = d AND in(employee(o));
+            APPLY;
+        }
+    }
+    clearLunchMobile 'Clear for employee' (Employee e) {
+        LOCAL in = BOOLEAN (DATE);
+        in(DATE d) <- [FILTER timesheetSupervisorMobile.d](d);
+        NEWSESSION NESTED (in) {
+            DELETE Order o WHERE in(date(o)) AND employee(o) = e;
+            APPLY;
+        }
+    }
+
+    copyLunchMobile 'Copy' (DATE d) {
+        LOCAL in = BOOLEAN (Employee);
+        in(Employee e) <- [FILTER timesheetSupervisorMobile.el](e);
+        NEWSESSION NESTED (in) {
+            LOCAL maxDate = DATE();
+            maxDate() <- GROUP MAX date(Order o) IF date(o) < d AND in(employee(o));
+            DELETE Order o WHERE date(o) = d AND in(employee(o));
+            FOR date(Order o) = maxDate(d) AND hoursTimesheet(d, employee(o)) AND in(employee(o)) INLINE DO NEW on = Order {
+                date(on) <- d;
+                employee(on) <- employee(o);
+                product(on) <- product(o);
+                vendor(on) <- vendor(o);
+            }
+            APPLY;
+        }
+    } CONFIRM;
+
+    fillLunchMobile 'Fill for date' (DATE d) {
+        IF timesheetLunchProduct() THEN {
+            LOCAL in = BOOLEAN (Employee);
+            in(Employee e) <- [FILTER timesheetSupervisorMobile.el](e);
+            NEWSESSION NESTED (in) {
+                DELETE Order o WHERE date(o) = d AND in(employee(o));
+                FOR hoursTimesheet(d, Employee e) AND in(e) INLINE DO NEW o = Order {
+                    date(o) <- d;
+                    employee(o) <- e;
+                    product(o) <- timesheetLunchProduct();
+                }
+                APPLY;
+            }
+        } ELSE
+            MESSAGE 'Lunch product is not specified';
+    }
+
+    fillLunchMobile 'Fill for employee' (Employee e) {
+        IF timesheetLunchProduct() THEN {
+            LOCAL in = BOOLEAN (DATE);
+            in(DATE d) <- [FILTER timesheetSupervisorMobile.d](d);
+            NEWSESSION NESTED (in) {
+                DELETE Order o WHERE in(date(o)) AND employee(o) = e;
+                FOR hoursTimesheet(DATE d, e) AND in(d) INLINE DO NEW o = Order {
+                    date(o) <- d;
+                    employee(o) <- e;
+                    product(o) <- timesheetLunchProduct();
+                }
+                APPLY;
+            }
+        } ELSE
+            MESSAGE 'Lunch product is not specified';
+    }
+};
+
+EXTEND FORM timesheetSupervisorMobile
+    PROPERTIES(d) copyLunchMobile, clearLunchMobile
+;
+
+DESIGN timesheetSupervisorMobile {
+    tabbedPane {
+        NEW lunch {
+            caption = 'Lunches';
+            NEW lunchHeader {
+                horizontal = TRUE;
+                alignment = STRETCH;
+                MOVE PROPERTY(copyLunchMobile(d)) { fill = 1; }
+                MOVE PROPERTY(clearLunchMobile(d)) { fill = 1; caption = 'Clear'; }
+            }
+            MOVE GRID(el) {
+                PROPERTY(name(el)) { caption = ''; }
+                PROPERTY(symbolProductOrder(d, el)) { caption = ''; charWidth = 4; };
+            }
+            REMOVE BOX(el);
+            MOVE PROPERTY(nameTimesheetLunchProduct()) {
+                alignment = STRETCH;
+                caption = '';
+                placeholder = 'Lunch product';
+            }
+        }
+    }
+    
+}

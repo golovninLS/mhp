@@ -1,0 +1,83 @@
+MODULE TimesheetLunch;
+
+REQUIRE Timesheet, LunchOrder;
+
+PRIORITY Lunch;
+
+NAMESPACE ProjectManagement;
+
+timesheetLunchProduct = DATA LOCAL NESTED Product ();
+nameTimesheetLunchProduct 'Lunch product' = name(timesheetLunchProduct());
+
+CONSTRAINT timesheetLunchProduct() AND archived(timesheetLunchProduct())
+    CHECKED BY timesheetLunchProduct[] MESSAGE '';
+
+META defineLunchActions(form, postfix)
+    clearLunch##postfix 'Clear for date' (DATE d) {
+        LOCAL in = BOOLEAN (Employee);
+        in(Employee e) <- [FILTER form.el](e);
+        NEWSESSION NESTED (in) {
+            DELETE Order o WHERE date(o) = d AND in(employee(o));
+            APPLY;
+        }
+    } CONFIRM;
+    clearLunch##postfix 'Clear for employee' (Employee e) {
+        LOCAL in = BOOLEAN (DATE);
+        in(DATE d) <- [FILTER form.d](d);
+        NEWSESSION NESTED (in) {
+            DELETE Order o WHERE in(date(o)) AND employee(o) = e;
+            APPLY;
+        }
+    } CONFIRM;
+
+    copyLunch##postfix 'Copy' (DATE d) {
+        LOCAL in = BOOLEAN (Employee);
+        in(Employee e) <- [FILTER form.el](e);
+        NEWSESSION NESTED (in) {
+            LOCAL maxDate = DATE();
+            maxDate() <- GROUP MAX date(Order o) IF date(o) < d AND in(employee(o));
+            DELETE Order o WHERE date(o) = d AND in(employee(o));
+            FOR date(Order o) = maxDate(d) AND hoursTimesheet(d, employee(o)) AND in(employee(o)) INLINE DO NEW on = Order {
+                date(on) <- d;
+                employee(on) <- employee(o);
+                product(on) <- product(o);
+                vendor(on) <- vendor(o);
+            }
+            APPLY;
+        }
+    } CONFIRM;
+
+    fillLunch##postfix 'Fill for date' (DATE d) {
+        IF timesheetLunchProduct() THEN {
+            LOCAL in = BOOLEAN (Employee);
+            in(Employee e) <- [FILTER form.el](e);
+            NEWSESSION NESTED (in) {
+                DELETE Order o WHERE date(o) = d AND in(employee(o));
+                FOR hoursTimesheet(d, Employee e) AND in(e) INLINE DO NEW o = Order {
+                    date(o) <- d;
+                    employee(o) <- e;
+                    product(o) <- timesheetLunchProduct();
+                }
+                APPLY;
+            }
+        } ELSE
+            MESSAGE 'Lunch product is not specified';
+    }
+
+    fillLunch##postfix 'Fill for employee' (Employee e) {
+        IF timesheetLunchProduct() THEN {
+            LOCAL in = BOOLEAN (DATE);
+            in(DATE d) <- [FILTER form.d](d);
+            NEWSESSION NESTED (in) {
+                DELETE Order o WHERE in(date(o)) AND employee(o) = e;
+                FOR hoursTimesheet(DATE d, e) AND in(d) INLINE DO NEW o = Order {
+                    date(o) <- d;
+                    employee(o) <- e;
+                    product(o) <- timesheetLunchProduct();
+                }
+                APPLY;
+            }
+        } ELSE
+            MESSAGE 'Lunch product is not specified';
+    }
+END

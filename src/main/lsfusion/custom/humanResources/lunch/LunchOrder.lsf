@@ -1,0 +1,55 @@
+MODULE LunchOrder;
+
+REQUIRE HumanResourcesSettings,
+        Employee, LunchProduct;
+
+PRIORITY MasterData;
+
+NAMESPACE Lunch;
+
+CLASS Order 'Lunch order';
+
+date 'Date' = DATA DATE (Order) NONULL;
+
+employee 'Employee' = DATA Employee (Order);
+nameEmployee 'Employee' (Order o) = name(employee(o));
+
+product 'Product' = DATA Product (Order);
+nameProduct 'Product' (Order o) = name(product(o));
+
+vendor 'Vendor' = DATA Partner (Order);
+nameVendor 'Vendor' (Order o) = name(vendor(o));
+
+WHEN LOCAL SETCHANGED(product(Order o)) AND vendor(product(o)) DO
+    vendor(o) <- vendor(product(o));
+
+CONSTRAINT product(Order o) AND vendor(product(o)) AND NOT vendor(product(o)) = vendor(o)
+    CHECKED BY product[Order] MESSAGE 'Incorrect product for lunch order';
+
+price 'Price' = DATA NUMERIC[10,2] (Order);
+WHEN LOCAL SETCHANGED(product(Order o)) AND price(product(o)) DO
+    price(o) <- price(product(o));
+
+order (DATE d, Employee e) = GROUP AGGR Order o BY date(o), employee(o);
+
+productOrder (DATE d, Employee e) = product(order(d, e));
+symbolProductOrder 'Lunch order' (DATE d, Employee e) = symbol(productOrder(d, e));
+
+FORM order 'Lunch order'
+    OBJECTS o = Order
+    PROPERTIES(o) date, nameEmployee, nameProduct, nameVendor, price
+    
+    EDIT Order OBJECT o
+;
+
+FORM orders 'Lunch orders'
+    OBJECTS o = Order
+    PROPERTIES(o) READONLY date, nameEmployee, nameProduct, nameVendor, price
+    PROPERTIES(o) NEWSESSION NEW, EDIT, DELETE
+;
+
+NAVIGATOR {
+    operations {
+        NEW orders;
+    }
+}

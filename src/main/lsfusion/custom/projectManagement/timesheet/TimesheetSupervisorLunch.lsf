@@ -1,0 +1,123 @@
+MODULE TimesheetSupervisorLunch;
+
+REQUIRE TimesheetSupervisor, TimesheetLunch, LunchOrder;
+
+PRIORITY Lunch, MasterData;
+
+NAMESPACE ProjectManagement;
+
+EXTEND FORM timesheetSupervisor
+    PROPERTIES nameTimesheetLunchProduct()
+    
+    OBJECTS el = Employee
+    PROPERTIES(el) READONLY firstName, lastName, namePosition, rolesTimesheet
+;
+
+@defineLunchActions(timesheetSupervisor, ){
+    clearLunch 'Clear for date' (DATE d) {
+        LOCAL in = BOOLEAN (Employee);
+        in(Employee e) <- [FILTER timesheetSupervisor.el](e);
+        NEWSESSION NESTED (in) {
+            DELETE Order o WHERE date(o) = d AND in(employee(o));
+            APPLY;
+        }
+    }
+    clearLunch 'Clear for employee' (Employee e) {
+        LOCAL in = BOOLEAN (DATE);
+        in(DATE d) <- [FILTER timesheetSupervisor.d](d);
+        NEWSESSION NESTED (in) {
+            DELETE Order o WHERE in(date(o)) AND employee(o) = e;
+            APPLY;
+        }
+    }
+
+    copyLunch 'Copy' (DATE d) {
+        LOCAL in = BOOLEAN (Employee);
+        in(Employee e) <- [FILTER timesheetSupervisor.el](e);
+        NEWSESSION NESTED (in) {
+            LOCAL maxDate = DATE();
+            maxDate() <- GROUP MAX date(Order o) IF date(o) < d AND in(employee(o));
+            DELETE Order o WHERE date(o) = d AND in(employee(o));
+            FOR date(Order o) = maxDate(d) AND hoursTimesheet(d, employee(o)) AND in(employee(o)) INLINE DO NEW on = Order {
+                date(on) <- d;
+                employee(on) <- employee(o);
+                product(on) <- product(o);
+                vendor(on) <- vendor(o);
+            }
+            APPLY;
+        }
+    } CONFIRM;
+
+    fillLunch 'Fill for date' (DATE d) {
+        IF timesheetLunchProduct() THEN {
+            LOCAL in = BOOLEAN (Employee);
+            in(Employee e) <- [FILTER timesheetSupervisor.el](e);
+            NEWSESSION NESTED (in) {
+                DELETE Order o WHERE date(o) = d AND in(employee(o));
+                FOR hoursTimesheet(d, Employee e) AND in(e) INLINE DO NEW o = Order {
+                    date(o) <- d;
+                    employee(o) <- e;
+                    product(o) <- timesheetLunchProduct();
+                }
+                APPLY;
+            }
+        } ELSE
+            MESSAGE 'Lunch product is not specified';
+    }
+
+    fillLunch 'Fill for employee' (Employee e) {
+        IF timesheetLunchProduct() THEN {
+            LOCAL in = BOOLEAN (DATE);
+            in(DATE d) <- [FILTER timesheetSupervisor.d](d);
+            NEWSESSION NESTED (in) {
+                DELETE Order o WHERE in(date(o)) AND employee(o) = e;
+                FOR hoursTimesheet(DATE d, e) AND in(d) INLINE DO NEW o = Order {
+                    date(o) <- d;
+                    employee(o) <- e;
+                    product(o) <- timesheetLunchProduct();
+                }
+                APPLY;
+            }
+        } ELSE
+            MESSAGE 'Lunch product is not specified';
+    }
+};
+
+EXTEND FORM timesheetSupervisor
+    PROPERTIES symbolProductOrder(d, el) WAIT COLUMNS (d) HEADER extractDay(d) BACKGROUND backgroundHoursTimesheet(d, el)
+               ON CHANGE {
+                   FOR Product lp = timesheetLunchProduct() DO
+                       NEWSESSION APPLY {
+                           FOR Order o = order(d, el) DO {
+                               IF product(o) = lp THEN
+                                   DELETE o;
+                               ELSE
+                                   product(o) <- lp;
+                           } ELSE {
+                               NEW o = Order {
+                                   date(o) <- d;
+                                   employee(o) <- el;
+                                   product(o) <- lp;
+                               }
+                           }
+
+                       }
+                   ELSE
+                       SHOW timesheetSupervisorDateEmployee OBJECTS d = d, e = el FLOAT;
+               } ON CONTEXTMENU clearLunch(d) ON CONTEXTMENU fillLunch(d)
+                 ON CONTEXTMENU clearLunch(el) ON CONTEXTMENU fillLunch(el)
+                 ON CONTEXTMENU copyLunch(d)
+    FILTERS [FILTER timesheetSupervisor.e](el)
+;
+
+DESIGN timesheetSupervisor {
+    tabbedPane {
+        NEW lunch {
+            caption = 'Lunches';
+            MOVE PROPERTY(nameTimesheetLunchProduct()) { alignment = START; }
+            MOVE BOX(el) {
+                caption = '';
+            }
+        }
+    }
+}
