@@ -7,6 +7,8 @@ PRIORITY MasterData;
 
 NAMESPACE ProjectManagement;
 
+toPay 'To pay' (Employee e, INTERVAL[DATE] i) = salary(e, i) (-) lunches(e, i) (-) accomodation(e, i); 
+
 EXTEND FORM timesheetSupervisor
     OBJECTS et = Employee
     PROPERTIES(et) READONLY firstName, lastName, namePosition, rolesTimesheet
@@ -18,7 +20,7 @@ EXTEND FORM timesheetSupervisor
                    SHOW Lunch.ordersDateEmployee OBJECTS i = dates, e = et FLOAT;
                }, accomodation(et, dates) ON CHANGE {
                     SHOW Accomodation.ordersDateEmployee OBJECTS i = dates, e = et FLOAT;
-               }
+               }, toPay(et, dates)
 
     FILTERS [FILTER timesheetSupervisor.e](et)
 ;

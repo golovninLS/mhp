@@ -14,36 +14,42 @@ CONSTRAINT timesheetLunchProduct() AND archived(timesheetLunchProduct())
 
 META defineLunchActions(form, postfix)
     clearLunch##postfix 'Clear for date' (DATE d) {
-        LOCAL in = BOOLEAN (Employee);
-        in(Employee e) <- [FILTER form.el](e);
-        NEWSESSION NESTED (in) {
-            DELETE Order o WHERE date(o) = d AND in(employee(o));
-            APPLY;
+        ASK 'This action cannot be undone. Continue ?' DO {
+            LOCAL in = BOOLEAN (Employee);
+            in(Employee e) <- [FILTER form.el](e);
+            NEWSESSION NESTED (in) {
+                DELETE Order o WHERE date(o) = d AND in(employee(o));
+                APPLY;
+            }
         }
-    } CONFIRM;
+    };
     clearLunch##postfix 'Clear for employee' (Employee e) {
-        LOCAL in = BOOLEAN (DATE);
-        in(DATE d) <- [FILTER form.d](d);
-        NEWSESSION NESTED (in) {
-            DELETE Order o WHERE in(date(o)) AND employee(o) = e;
-            APPLY;
+        ASK 'This action cannot be undone. Continue ?' DO {
+            LOCAL in = BOOLEAN (DATE);
+            in(DATE d) <- [FILTER form.d](d);
+            NEWSESSION NESTED (in) {
+                DELETE Order o WHERE in(date(o)) AND employee(o) = e;
+                APPLY;
+            }
         }
     } CONFIRM;
 
     copyLunch##postfix 'Copy' (DATE d) {
         LOCAL in = BOOLEAN (Employee);
         in(Employee e) <- [FILTER form.el](e);
-        NEWSESSION NESTED (in) {
-            LOCAL maxDate = DATE();
-            maxDate() <- GROUP MAX date(Order o) IF date(o) < d AND in(employee(o));
-            DELETE Order o WHERE date(o) = d AND in(employee(o));
-            FOR date(Order o) = maxDate(d) AND hoursTimesheet(d, employee(o)) AND in(employee(o)) INLINE DO NEW on = Order {
-                date(on) <- d;
-                employee(on) <- employee(o);
-                product(on) <- product(o);
-                vendor(on) <- vendor(o);
+        ASK 'This action cannot be undone. Continue ?' IF (GROUP SUM 1 IF date(Order o) = d AND in(employee(o))) DO {
+            NEWSESSION NESTED (in) {
+                LOCAL maxDate = DATE();
+                maxDate() <- GROUP MAX date(Order o) IF date(o) < d AND in(employee(o));
+                DELETE Order o WHERE date(o) = d AND in(employee(o));
+                FOR date(Order o) = maxDate() AND hoursTimesheet(d, employee(o)) AND in(employee(o)) INLINE DO NEW on = Order {
+                    date(on) <- d;
+                    employee(on) <- employee(o);
+                    product(on) <- product(o);
+                    vendor(on) <- vendor(o);
+                }
+                APPLY;
             }
-            APPLY;
         }
     } CONFIRM;
 
@@ -51,14 +57,16 @@ META defineLunchActions(form, postfix)
         IF timesheetLunchProduct() THEN {
             LOCAL in = BOOLEAN (Employee);
             in(Employee e) <- [FILTER form.el](e);
-            NEWSESSION NESTED (in) {
-                DELETE Order o WHERE date(o) = d AND in(employee(o));
-                FOR hoursTimesheet(d, Employee e) AND in(e) INLINE DO NEW o = Order {
-                    date(o) <- d;
-                    employee(o) <- e;
-                    product(o) <- timesheetLunchProduct();
+            ASK 'This action cannot be undone. Continue ?' IF (GROUP SUM 1 IF date(Order o) = d AND in(employee(o))) DO {
+                NEWSESSION NESTED (in) {
+                    DELETE Order o WHERE date(o) = d AND in(employee(o));
+                    FOR hoursTimesheet(d, Employee e) AND in(e) INLINE DO NEW o = Order {
+                        date(o) <- d;
+                        employee(o) <- e;
+                        product(o) <- timesheetLunchProduct();
+                    }
+                    APPLY;
                 }
-                APPLY;
             }
         } ELSE
             MESSAGE 'Lunch product is not specified';
@@ -68,14 +76,16 @@ META defineLunchActions(form, postfix)
         IF timesheetLunchProduct() THEN {
             LOCAL in = BOOLEAN (DATE);
             in(DATE d) <- [FILTER form.d](d);
-            NEWSESSION NESTED (in) {
-                DELETE Order o WHERE in(date(o)) AND employee(o) = e;
-                FOR hoursTimesheet(DATE d, e) AND in(d) INLINE DO NEW o = Order {
-                    date(o) <- d;
-                    employee(o) <- e;
-                    product(o) <- timesheetLunchProduct();
+            ASK 'This action cannot be undone. Continue ?' IF (GROUP SUM 1 IF in(date(Order o)) AND employee(o) = e) DO {
+                NEWSESSION NESTED (in) {
+                    DELETE Order o WHERE in(date(o)) AND employee(o) = e;
+                    FOR hoursTimesheet(DATE d, e) AND in(d) INLINE DO NEW o = Order {
+                        date(o) <- d;
+                        employee(o) <- e;
+                        product(o) <- timesheetLunchProduct();
+                    }
+                    APPLY;
                 }
-                APPLY;
             }
         } ELSE
             MESSAGE 'Lunch product is not specified';

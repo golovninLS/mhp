@@ -12,10 +12,10 @@ CLASS Order 'Accomodation order';
 startDate 'Start date' = DATA DATE (Order) NONULL;
 endDate 'End date' = DATA DATE (Order);
 
-employee 'Employee' = DATA Employee (Order);
+employee 'Employee' = DATA Employee (Order) NONULL;
 nameEmployee 'Employee' (Order o) = name(employee(o));
 
-accomodation 'Accomodation' = DATA Accomodation (Order);
+accomodation 'Accomodation' = DATA Accomodation (Order) NONULL;
 nameAccomodation 'Accomodation' (Order o) = name(accomodation(o));
 
 order (DATE d, Employee e) = GROUP MIN Order o IF startDate(o) <= d AND NOT d > endDate(o) AND employee(o) = e;
@@ -43,6 +43,18 @@ FORM order 'Accomodation order'
     
     EDIT Order OBJECT o
 ;
+
+DESIGN order {
+    OBJECTS {
+        NEW dates {
+            horizontal = TRUE;
+            MOVE PROPERTY(startDate(o));
+            MOVE PROPERTY(endDate(o));
+        }
+        MOVE PROPERTY(nameEmployee(o)) { alignment = STRETCH; }
+        MOVE PROPERTY(nameAccomodation(o)) { alignment = STRETCH; }
+    }
+}
 
 FORM orders 'Accomodation orders'
     OBJECTS o = Order
