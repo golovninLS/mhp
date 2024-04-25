@@ -1,0 +1,11 @@
+MODULE ProjectAssignmentCustom;
+
+REQUIRE ProjectAssignment;
+
+NAMESPACE ProjectManagement;
+
+salary 'Salary per hour' = DATA NUMERIC[10,2] (ProjectAssignment);
+
+EXTEND FORM project
+    PROPERTIES(pa) salary AFTER nameRole(pa)
+;
