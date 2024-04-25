@@ -1,0 +1,47 @@
+MODULE AccomodationOrder;
+
+REQUIRE HumanResourcesSettings,
+        Employee, Accomodation;
+
+PRIORITY MasterData;
+
+NAMESPACE Accomodation;
+
+CLASS Order 'Accomodation order';
+
+startDate 'Start date' = DATA DATE (Order) NONULL;
+endDate 'End date' = DATA DATE (Order);
+
+employee 'Employee' = DATA Employee (Order);
+nameEmployee 'Employee' (Order o) = name(employee(o));
+
+accomodation 'Accomodation' = DATA Accomodation (Order);
+nameAccomodation 'Accomodation' (Order o) = name(accomodation(o));
+
+order (DATE d, Employee e) = GROUP MIN Order o IF startDate(o) <= d AND NOT d > endDate(o) AND employee(o) = e;
+
+prevOrder (DATE d, Employee e) = GROUP LAST Order o ORDER startDate(o), o WHERE startDate(o) < d AND employee(o) = e;
+nextOrder (DATE d, Employee e) = GROUP LAST Order o ORDER DESC startDate(o), o WHERE startDate(o) > d AND employee(o) = e;
+
+accomodationOrder (DATE d, Employee e) = accomodation(order(d, e));
+symbolAccomodationOrder 'Accomodation order' (DATE d, Employee e) = symbol(accomodationOrder(d, e));
+rgbColorAccomodationOrder (DATE d, Employee e) = rgbColor(accomodationOrder(d, e));
+
+FORM order 'Accomodation order'
+    OBJECTS o = Order PANEL
+    PROPERTIES(o) startDate, endDate, nameEmployee, nameAccomodation
+    
+    EDIT Order OBJECT o
+;
+
+FORM orders 'Accomodation orders'
+    OBJECTS o = Order
+    PROPERTIES(o) READONLY startDate, endDate, nameEmployee, nameAccomodation
+    PROPERTIES(o) NEWSESSION NEW, EDIT, DELETE
+;
+
+NAVIGATOR {
+    operations {
+        NEW orders;
+    }
+}

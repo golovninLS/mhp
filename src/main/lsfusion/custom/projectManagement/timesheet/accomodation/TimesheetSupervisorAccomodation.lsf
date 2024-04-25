@@ -1,0 +1,51 @@
+MODULE TimesheetSupervisorAccomodation;
+
+REQUIRE TimesheetSupervisor, TimesheetAccomodation, AccomodationOrder;
+
+PRIORITY MasterData;
+
+NAMESPACE ProjectManagement;
+
+EXTEND FORM timesheetSupervisor
+    PROPERTIES nameTimesheetAccomodation()
+
+    OBJECTS ea = Employee
+    PROPERTIES(ea) READONLY firstName, lastName, namePosition, rolesTimesheet
+
+    PROPERTIES hoursTimesheet(d, ea) WAIT COLUMNS (d) HEADER extractDay(d) BACKGROUND rgbColorAccomodationOrder(d, ea)
+                ON CHANGE {
+                    IF timesheetAccomodation() THEN {
+                        NEWSESSION {
+                            IF order(d, ea) THEN
+                                endDate(order(d, ea)) <- d;
+                            ELSE NEW o = Order {
+                                startDate(o) <- d;
+                                employee(o) <- ea;
+                                accomodation(o) <- timesheetAccomodation();
+                            }
+                            APPLY;
+                        }
+                    } ELSE
+                        IF order(d, ea) THEN
+                            SHOW order OBJECTS o = order(d, ea) FLOAT;
+                        ELSE
+                            SHOW timesheetSupervisorDateEmployee OBJECTS d = d, e = ea FLOAT;
+                } ON CONTEXTMENU checkIn(d, ea) ON CONTEXTMENU checkOut(d, ea) ON CONTEXTMENU delete(d, ea)
+    FILTERS [FILTER timesheetSupervisor.e](ea)
+;
+
+DESIGN timesheetSupervisor {
+    tabbedPane {
+        NEW accomodation {
+            caption = 'Accomodation order';
+            MOVE PROPERTY(nameTimesheetAccomodation()) { alignment = START; }
+            MOVE BOX(ea) {
+                caption = '';
+                PROPERTY(hoursTimesheet(d, ea)) {
+                    charWidth = 2;
+                    //                valueTooltip = timeEntries(d, e);
+                }
+            }
+        }
+    }
+}

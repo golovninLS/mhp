@@ -1,0 +1,69 @@
+MODULE Accomodation;
+
+REQUIRE HumanResourcesSettings, Color;
+
+PRIORITY HumanResources;
+
+NAMESPACE Accomodation;
+
+CLASS Accomodation 'Accomodation';
+TABLE accomodation (Accomodation);
+
+name '{master.data.name}' = DATA ISTRING[100] (Accomodation) CHARWIDTH 25;
+
+CLASS AccomodationPrice 'Accomodation price';
+accomodation 'Accomodation price' = DATA Accomodation (AccomodationPrice) NONULL DELETE;
+
+date 'Date' = DATA DATE (AccomodationPrice) NONULL;
+date(AccomodationPrice p) <- currentDate() WHEN SET(p IS AccomodationPrice);
+
+price 'Price' = DATA NUMERIC[10,2] (AccomodationPrice) NONULL;
+
+INDEX accomodation(AccomodationPrice p), date(p), p;
+
+price (Accomodation p, DATE d) = GROUP LAST price(AccomodationPrice pp) ORDER date(pp), pp WHERE accomodation(pp) = p AND date(pp) <= d;
+
+price 'Price' (Accomodation p) = price(p, currentDate());
+
+color 'Color' = DATA Color (Accomodation);
+nameColor 'Color' (Accomodation p) = name(color(p));
+idColor 'Color' (Accomodation p) = id(color(p));
+rgbColor 'Color' (Accomodation p) = rgb(color(p));
+
+symbol 'Symbol' = DATA STRING[20] (Accomodation) CHARWIDTH 2;
+
+archived 'Archived' = DATA BOOLEAN (Accomodation);
+active '{Active}' (Accomodation b) = NOT archived(b);
+
+FORM accomodation 'Accomodation'
+    OBJECTS p = Accomodation PANEL
+    PROPERTIES(p) name, nameColor, rgbColor, symbol, archived
+
+    OBJECTS pp = AccomodationPrice
+    PROPERTIES(pp) date, price, NEW, DELETE
+    FILTERS accomodation(pp) = p
+
+    EDIT Accomodation OBJECT p
+;
+
+FORM accomodations 'Accomodations'
+    OBJECTS p = Accomodation
+    PROPERTIES(p) READONLY name, price
+
+    FILTERGROUP active
+        FILTER '{Active}' active(p) DEFAULT
+
+    LIST Accomodation OBJECT p
+;
+
+EXTEND FORM options
+    OBJECTS ac = Accomodation
+    PROPERTIES(ac) READONLY name, nameColor, rgbColor, price, symbol, archived
+    PROPERTIES(ac) NEWSESSION NEW, EDIT, DELETE
+;
+
+DESIGN options {
+    tabbedPane {
+        MOVE BOX(ac) { caption = 'Accomodations'; }
+    }
+}

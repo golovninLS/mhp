@@ -1,0 +1,55 @@
+MODULE TimesheetSupervisorLunch;
+
+REQUIRE TimesheetSupervisor, TimesheetLunch, LunchOrder;
+
+PRIORITY Lunch, MasterData;
+
+NAMESPACE ProjectManagement;
+
+EXTEND FORM timesheetSupervisor
+    PROPERTIES nameTimesheetLunchProduct()
+    
+    OBJECTS el = Employee
+    PROPERTIES(el) READONLY firstName, lastName, namePosition, rolesTimesheet
+;
+
+@defineLunchActions(timesheetSupervisor, );
+
+EXTEND FORM timesheetSupervisor
+    PROPERTIES symbolProductOrder(d, el) WAIT COLUMNS (d) HEADER extractDay(d) BACKGROUND backgroundHoursTimesheet(d, el)
+               ON CHANGE {
+                   FOR Product lp = timesheetLunchProduct() DO
+                       NEWSESSION APPLY {
+                           FOR Order o = order(d, el) DO {
+                               IF product(o) = lp THEN
+                                   DELETE o;
+                               ELSE
+                                   product(o) <- lp;
+                           } ELSE {
+                               NEW o = Order {
+                                   date(o) <- d;
+                                   employee(o) <- el;
+                                   product(o) <- lp;
+                               }
+                           }
+
+                       }
+                   ELSE
+                       SHOW timesheetSupervisorDateEmployee OBJECTS d = d, e = el FLOAT;
+               } ON CONTEXTMENU clearLunch(d) ON CONTEXTMENU fillLunch(d)
+                 ON CONTEXTMENU clearLunch(el) ON CONTEXTMENU fillLunch(el)
+                 ON CONTEXTMENU copyLunch(d)
+    FILTERS [FILTER timesheetSupervisor.e](el)
+;
+
+DESIGN timesheetSupervisor {
+    tabbedPane {
+        NEW lunch {
+            caption = 'Lunches';
+            MOVE PROPERTY(nameTimesheetLunchProduct()) { alignment = START; }
+            MOVE BOX(el) {
+                caption = '';
+            }
+        }
+    }
+}

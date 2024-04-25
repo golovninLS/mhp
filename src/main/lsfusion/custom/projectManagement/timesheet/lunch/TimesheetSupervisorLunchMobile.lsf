@@ -1,0 +1,63 @@
+MODULE TimesheetSupervisorLunchMobile;
+
+REQUIRE TimesheetSupervisorMobile, TimesheetLunch;
+
+PRIORITY Lunch, MasterData;
+
+NAMESPACE ProjectManagement;
+
+fillLunch 'Fill' (DATE d, Employee e, Product p) {
+    NEWSESSION {
+        DELETE Order o WHERE date(o) = d AND employee(o) = e;
+        NEW o = Order {
+            date(o) <- d;
+            employee(o) <- e;
+            product(o) <- p;
+        }
+        APPLY;
+    }
+}
+
+EXTEND FORM timesheetSupervisorMobile
+    OBJECTS el = Employee
+    PROPERTIES(el) READONLY name
+    PROPERTIES     READONLY symbolProductOrder(d, el)
+    FILTERS hoursTimesheet(d, el),
+            assigned(timesheetProject(), el) OR (NOT countAssignments(timesheetProject()) AND NOT countAssignments(currentUser()))
+
+    PROPERTIES() nameTimesheetLunchProduct ON CHANGE {
+        DIALOG products OBJECTS p = timesheetLunchProduct() INPUT LIST name(p) DO   
+            fillLunch(d, el, p);
+    }
+;
+
+@defineLunchActions(timesheetSupervisorMobile, Mobile);
+
+EXTEND FORM timesheetSupervisorMobile
+    PROPERTIES(d) copyLunchMobile, clearLunchMobile
+;
+
+DESIGN timesheetSupervisorMobile {
+    tabbedPane {
+        NEW lunch {
+            caption = 'Lunches';
+            NEW lunchHeader {
+                horizontal = TRUE;
+                alignment = STRETCH;
+                MOVE PROPERTY(copyLunchMobile(d)) { fill = 1; }
+                MOVE PROPERTY(clearLunchMobile(d)) { fill = 1; caption = 'Clear'; }
+            }
+            MOVE GRID(el) {
+                PROPERTY(name(el)) { caption = ''; }
+                PROPERTY(symbolProductOrder(d, el)) { caption = ''; charWidth = 4; };
+            }
+            REMOVE BOX(el);
+            MOVE PROPERTY(nameTimesheetLunchProduct()) {
+                alignment = STRETCH;
+                caption = '';
+                placeholder = 'Lunch product';
+            }
+        }
+    }
+    
+}
