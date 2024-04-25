@@ -26,9 +26,7 @@ WHEN LOCAL SETCHANGED(product(Order o)) AND vendor(product(o)) DO
 CONSTRAINT product(Order o) AND vendor(product(o)) AND NOT vendor(product(o)) = vendor(o)
     CHECKED BY product[Order] MESSAGE 'Incorrect product for lunch order';
 
-price 'Price' = DATA NUMERIC[10,2] (Order);
-WHEN LOCAL SETCHANGED(product(Order o)) AND price(product(o)) DO
-    price(o) <- price(product(o));
+price 'Price' (Order o) = price(product(o), date(o));
 
 order (DATE d, Employee e) = GROUP AGGR Order o BY date(o), employee(o);
 

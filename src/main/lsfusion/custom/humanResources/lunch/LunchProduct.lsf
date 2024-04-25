@@ -14,7 +14,19 @@ name '{master.data.name}' = DATA ISTRING[100] (Product) CHARWIDTH 15;
 vendor 'Vendor' = DATA Partner (Product);
 nameVendor 'Vendor' (Product o) = name(vendor(o));
 
-price 'Price' = DATA NUMERIC[10,2] (Product);
+CLASS ProductPrice 'Lunch product price';
+product 'Product' = DATA Product (ProductPrice) NONULL DELETE;
+
+date 'Date' = DATA DATE (ProductPrice) NONULL;
+date(ProductPrice p) <- currentDate() WHEN SET(p IS ProductPrice);
+
+price 'Price' = DATA NUMERIC[10,2] (ProductPrice) NONULL;
+
+INDEX product(ProductPrice p), date(p), p;
+
+price (Product p, DATE d) = GROUP LAST price(ProductPrice pp) ORDER date(pp), pp WHERE product(pp) = p AND date(pp) <= d;
+
+price 'Price' (Product p) = price(p, currentDate());
 
 //color 'Color' = DATA Color (Product);
 //nameColor 'Color' (Product p) = name(color(p));
@@ -28,7 +40,11 @@ active '{Active}' (Product b) = NOT archived(b);
 
 FORM product 'Lunch product'
     OBJECTS p = Product PANEL
-    PROPERTIES(p) name, nameVendor, price, symbol, archived
+    PROPERTIES(p) name, nameVendor, symbol, archived
+    
+    OBJECTS pp = ProductPrice
+    PROPERTIES(pp) date, price, NEW, DELETE
+    FILTERS product(pp) = p
     
     EDIT Product OBJECT p
 ;
