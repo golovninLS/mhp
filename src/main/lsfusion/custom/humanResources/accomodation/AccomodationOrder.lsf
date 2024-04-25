@@ -23,14 +23,18 @@ order (DATE d, Employee e) = GROUP MIN Order o IF startDate(o) <= d AND NOT d > 
 prevOrder (DATE d, Employee e) = GROUP LAST Order o ORDER startDate(o), o WHERE startDate(o) < d AND employee(o) = e;
 nextOrder (DATE d, Employee e) = GROUP LAST Order o ORDER DESC startDate(o), o WHERE startDate(o) > d AND employee(o) = e;
 
+countEmployees (Accomodation a, DATE d) = GROUP SUM 1 IF accomodation(order(d, Employee e)) = a;
+employeePrice (Accomodation a, DATE d) = round2(price(a, d) / (IF fixedPrice(a, d) THEN countEmployees(a, d) ELSE 1));
+
 accomodationOrder (DATE d, Employee e) = accomodation(order(d, e));
 nameAccomodationOrder 'Accomodation' (DATE d, Employee e) = name(accomodationOrder(d, e));
 symbolAccomodationOrder 'Accomodation' (DATE d, Employee e) = symbol(accomodationOrder(d, e));
 rgbColorAccomodationOrder (DATE d, Employee e) = rgbColor(accomodationOrder(d, e));
-priceAccomodationOrder 'Price' (DATE d, Employee e) = price(accomodationOrder(d, e), d); 
+employeePriceAccomodationOrder 'Price' (DATE d, Employee e) = employeePrice(accomodationOrder(d, e), d);
+countEmployeesAccomodationOrder 'Employees' (DATE d, Employee e) = countEmployees(accomodationOrder(d, e), d);
 
 accomodation 'Accomodation order' (Employee e, DATE from, DATE to) =
-    GROUP SUM priceAccomodationOrder(DATE d, e) IF iterate(d, from, to);
+    GROUP SUM employeePriceAccomodationOrder(DATE d, e) IF iterate(d, from, to);
 accomodation 'Accomodation order' (Employee e, INTERVAL[DATE] i) = accomodation(e, from(i), to(i));
 
 accomodationDays 'Accomodation order (days)' (Employee e, DATE from, DATE to) =
@@ -67,7 +71,7 @@ FORM ordersDateEmployee 'Accomodation orders'
     OBJECTS e = Employee PANEL
 
     OBJECTS d = DATE
-    PROPERTIES READONLY BACKGROUND rgbColorAccomodationOrder(d, e) 'Date' = VALUE(d), nameAccomodationOrder(d, e), priceAccomodationOrder(d, e)
+    PROPERTIES READONLY BACKGROUND rgbColorAccomodationOrder(d, e) 'Date' = VALUE(d), nameAccomodationOrder(d, e), employeePriceAccomodationOrder(d, e), countEmployeesAccomodationOrder(d, e)
     FILTERS iterate(d, from(i), to(i))
 ;
 

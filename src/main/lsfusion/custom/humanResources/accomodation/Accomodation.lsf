@@ -18,10 +18,13 @@ date 'Date' = DATA DATE (AccomodationPrice) NONULL;
 date(AccomodationPrice p) <- currentDate() WHEN SET(p IS AccomodationPrice);
 
 price 'Price' = DATA NUMERIC[10,2] (AccomodationPrice) NONULL;
+fixed 'Fixed' = DATA BOOLEAN (AccomodationPrice);
 
 INDEX accomodation(AccomodationPrice p), date(p), p;
 
-price (Accomodation p, DATE d) = GROUP LAST price(AccomodationPrice pp) ORDER date(pp), pp WHERE accomodation(pp) = p AND date(pp) <= d;
+accomodationPrice (Accomodation p, DATE d) = GROUP LAST AccomodationPrice pp ORDER date(pp), pp WHERE accomodation(pp) = p AND date(pp) <= d;
+price (Accomodation p, DATE d) = price(accomodationPrice(p, d));
+fixedPrice (Accomodation p, DATE d) = fixed(accomodationPrice(p, d));
 
 price 'Price' (Accomodation p) = price(p, currentDate());
 
@@ -40,7 +43,7 @@ FORM accomodation 'Accomodation'
     PROPERTIES(p) name, nameColor, rgbColor, symbol, archived
 
     OBJECTS pp = AccomodationPrice
-    PROPERTIES(pp) date, price, NEW, DELETE
+    PROPERTIES(pp) date, price, fixed, NEW, DELETE
     FILTERS accomodation(pp) = p
 
     EDIT Accomodation OBJECT p
