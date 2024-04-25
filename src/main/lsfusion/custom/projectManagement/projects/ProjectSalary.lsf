@@ -12,6 +12,7 @@ project 'Project' = DATA Project (ProjectSalary) NONULL;
 countSalaries = GROUP SUM 1 BY project(ProjectSalary s) MATERIALIZED;
 
 date 'Date' = DATA DATE (ProjectSalary) NONULL;
+date (ProjectSalary t) <- currentDate() WHEN SET(t IS ProjectSalary);
 
 employee 'Employee' = DATA Employee (ProjectSalary) NONULL;
 nameEmployee 'Employee' (ProjectSalary s) = name(employee(s));
@@ -25,7 +26,8 @@ salary (Project p, Employee e, DATE d) =
 
 rateSalary 'Salary per hour' (Project p, Employee e, DATE d) = rate(salary(p, e, d));
 
-salary (TimeEntry e) = hours(e) * rateSalary(project(e), employee(e), date(e)); 
+rateSalary 'Salary per hour' (TimeEntry e) = rateSalary(project(e), employee(e), date(e));
+salary 'Salary' (TimeEntry e) = hours(e) * rateSalary(project(e), employee(e), date(e)); 
 
 salary 'Salary' (Project p, Employee e, DATE from, DATE to) = 
     GROUP SUM salary(TimeEntry te) IF project(te) = p AND employee(te) = e AND date(te) >= from AND date(te) <= to;

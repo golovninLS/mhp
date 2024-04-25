@@ -24,11 +24,13 @@ prevOrder (DATE d, Employee e) = GROUP LAST Order o ORDER startDate(o), o WHERE 
 nextOrder (DATE d, Employee e) = GROUP LAST Order o ORDER DESC startDate(o), o WHERE startDate(o) > d AND employee(o) = e;
 
 accomodationOrder (DATE d, Employee e) = accomodation(order(d, e));
-symbolAccomodationOrder 'Accomodation order' (DATE d, Employee e) = symbol(accomodationOrder(d, e));
+nameAccomodationOrder 'Accomodation' (DATE d, Employee e) = name(accomodationOrder(d, e));
+symbolAccomodationOrder 'Accomodation' (DATE d, Employee e) = symbol(accomodationOrder(d, e));
 rgbColorAccomodationOrder (DATE d, Employee e) = rgbColor(accomodationOrder(d, e));
+priceAccomodationOrder 'Price' (DATE d, Employee e) = price(accomodationOrder(d, e), d); 
 
 accomodation 'Accomodation order' (Employee e, DATE from, DATE to) =
-    GROUP SUM price(accomodationOrder(DATE d, e), d) IF iterate(d, from, to);
+    GROUP SUM priceAccomodationOrder(DATE d, e) IF iterate(d, from, to);
 accomodation 'Accomodation order' (Employee e, INTERVAL[DATE] i) = accomodation(e, from(i), to(i));
 
 accomodationDays 'Accomodation order (days)' (Employee e, DATE from, DATE to) =
@@ -46,6 +48,15 @@ FORM orders 'Accomodation orders'
     OBJECTS o = Order
     PROPERTIES(o) READONLY startDate, endDate, nameEmployee, nameAccomodation
     PROPERTIES(o) NEWSESSION NEW, EDIT, DELETE
+;
+
+FORM ordersDateEmployee 'Accomodation orders'
+    OBJECTS i = INTERVAL[DATE] PANEL
+    OBJECTS e = Employee PANEL
+
+    OBJECTS d = DATE
+    PROPERTIES READONLY BACKGROUND rgbColorAccomodationOrder(d, e) 'Date' = VALUE(d), nameAccomodationOrder(d, e), priceAccomodationOrder(d, e)
+    FILTERS iterate(d, from(i), to(i))
 ;
 
 NAVIGATOR {

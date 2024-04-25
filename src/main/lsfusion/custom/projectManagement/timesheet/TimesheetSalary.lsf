@@ -1,0 +1,9 @@
+MODULE TimesheetSalary;
+
+REQUIRE Timesheet, ProjectSalary;
+
+NAMESPACE ProjectManagement;
+
+EXTEND FORM timesheetSupervisorDateEmployee
+    PROPERTIES(t) READONLY AFTER hours(t) rateSalary, salary 
+;

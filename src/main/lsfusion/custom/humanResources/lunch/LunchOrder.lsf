@@ -54,6 +54,17 @@ FORM orders 'Lunch orders'
     PROPERTIES(o) NEWSESSION NEW, EDIT, DELETE
 ;
 
+FORM ordersDateEmployee 'Lunch orders'
+    OBJECTS i = INTERVAL[DATE] PANEL
+    OBJECTS e = Employee PANEL
+
+    OBJECTS o = Order
+    PROPERTIES(o) READONLY date, nameProduct, nameVendor, price
+    ORDERS date(o)
+    FILTERS date(o) >= from(i) AND date(o) <= to(i),
+            employee(o) = e
+;
+
 NAVIGATOR {
     operations {
         NEW orders;
