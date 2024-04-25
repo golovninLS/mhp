@@ -27,6 +27,14 @@ accomodationOrder (DATE d, Employee e) = accomodation(order(d, e));
 symbolAccomodationOrder 'Accomodation order' (DATE d, Employee e) = symbol(accomodationOrder(d, e));
 rgbColorAccomodationOrder (DATE d, Employee e) = rgbColor(accomodationOrder(d, e));
 
+accomodation 'Accomodation order' (Employee e, DATE from, DATE to) =
+    GROUP SUM price(accomodationOrder(DATE d, e), d) IF iterate(d, from, to);
+accomodation 'Accomodation order' (Employee e, INTERVAL[DATE] i) = accomodation(e, from(i), to(i));
+
+accomodationDays 'Accomodation order (days)' (Employee e, DATE from, DATE to) =
+    GROUP SUM 1 IF accomodationOrder(DATE d, e) AND iterate(d, from, to);
+accomodationDays 'Accomodation order (days)' (Employee e, INTERVAL[DATE] i) = accomodationDays(e, from(i), to(i));
+
 FORM order 'Accomodation order'
     OBJECTS o = Order PANEL
     PROPERTIES(o) startDate, endDate, nameEmployee, nameAccomodation

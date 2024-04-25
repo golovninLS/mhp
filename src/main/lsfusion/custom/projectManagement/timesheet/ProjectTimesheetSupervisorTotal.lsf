@@ -1,0 +1,29 @@
+MODULE ProjectTimesheetSupervisorTotal;
+
+REQUIRE TimesheetSupervisor, ProjectSalary, LunchOrder, AccomodationOrder;
+
+PRIORITY MasterData;
+
+NAMESPACE ProjectManagement;
+
+EXTEND FORM timesheetSupervisor
+    OBJECTS et = Employee
+    PROPERTIES(et) READONLY firstName, lastName, namePosition, rolesTimesheet
+
+    PROPERTIES hours(et, dates), lunchesDays(et, dates), accomodationDays(et, dates), salary(et, dates), lunches(et, dates), accomodation(et, dates)
+
+    FILTERS [FILTER timesheetSupervisor.e](et)
+;
+
+DESIGN timesheetSupervisor {
+    tabbedPane {
+        NEW total {
+            caption = 'Total';
+            MOVE BOX(et) {
+                caption = '';
+            }
+        }
+    }
+}
+
+

@@ -53,4 +53,4 @@ REQUIRE Eval, ProcessMonitor, Backup,
 
         ProjectAssignmentCustom,
         TimesheetSupervisorLunch, TimesheetSupervisorLunchMobile,
-        TimesheetSupervisorAccomodation;
+        TimesheetSupervisorAccomodation, ProjectTimesheetSupervisorTotal;

@@ -1,0 +1,47 @@
+MODULE ProjectSalary;
+
+REQUIRE ProjectTimeEntry;
+
+PRIORITY MasterData;
+
+NAMESPACE ProjectManagement;
+
+CLASS ProjectSalary 'Project salary';
+
+project 'Project' = DATA Project (ProjectSalary) NONULL;
+countSalaries = GROUP SUM 1 BY project(ProjectSalary s) MATERIALIZED;
+
+date 'Date' = DATA DATE (ProjectSalary) NONULL;
+
+employee 'Employee' = DATA Employee (ProjectSalary) NONULL;
+nameEmployee 'Employee' (ProjectSalary s) = name(employee(s));
+
+rate 'Salary per hour' = DATA NUMERIC[10,2] (ProjectSalary) NONULL;
+
+INDEX project(ProjectSalary s), employee(s), date(s), s;
+
+salary (Project p, Employee e, DATE d) =
+    GROUP LAST ProjectSalary s ORDER date(s), s WHERE date(s) <= d BY project(s), employee(s);
+
+rateSalary 'Salary per hour' (Project p, Employee e, DATE d) = rate(salary(p, e, d));
+
+salary (TimeEntry e) = hours(e) * rateSalary(project(e), employee(e), date(e)); 
+
+salary 'Salary' (Project p, Employee e, DATE from, DATE to) = 
+    GROUP SUM salary(TimeEntry te) IF project(te) = p AND employee(te) = e AND date(te) >= from AND date(te) <= to;
+
+salary 'Salary' (Employee e, DATE from, DATE to) =
+    GROUP SUM salary(TimeEntry te) IF employee(te) = e AND date(te) >= from AND date(te) <= to;
+salary 'Salary' (Employee e, INTERVAL[DATE] i) = salary(e, from(i), to(i));
+
+EXTEND FORM project
+    OBJECTS ps = ProjectSalary
+    PROPERTIES(ps) nameEmployee, date, rate, NEW, DELETE
+    FILTERS project(ps) = p
+;
+
+DESIGN project {
+    details {
+        MOVE BOX(ps) { caption = badged('Salary', countSalaries(p)); }
+    }
+}

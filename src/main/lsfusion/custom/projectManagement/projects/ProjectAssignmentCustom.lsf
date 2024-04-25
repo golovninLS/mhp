@@ -4,8 +4,8 @@ REQUIRE ProjectAssignment;
 
 NAMESPACE ProjectManagement;
 
-salary 'Salary per hour' = DATA NUMERIC[10,2] (ProjectAssignment);
+salary 'Salary per hour' = DATA NUMERIC[10,2] (ProjectAssignment); // remove
 
-EXTEND FORM project
-    PROPERTIES(pa) salary AFTER nameRole(pa)
-;
+//EXTEND FORM project
+//    PROPERTIES(pa) salary AFTER nameRole(pa)
+//;
