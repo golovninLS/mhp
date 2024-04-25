@@ -51,4 +51,5 @@ REQUIRE Eval, ProcessMonitor, Backup,
         ProjectSalesLedgerInvoice,
         TimesheetSupervisor, TimesheetSupervisorMobile,
 
+        ProjectAssignmentCustom,
         TimesheetSupervisorLunch, TimesheetSupervisorLunchMobile;
