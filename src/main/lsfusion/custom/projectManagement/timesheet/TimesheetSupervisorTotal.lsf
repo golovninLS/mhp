@@ -9,12 +9,17 @@ NAMESPACE ProjectManagement;
 
 toPay 'To pay' (Employee e, INTERVAL[DATE] i) = salary(e, i) (-) lunches(e, i) (-) accomodation(e, i); 
 
+timesheetHoursProject 'Hours (project)' (Employee e, INTERVAL[DATE] i) = hours(e, timesheetProject(), i);
+timesheetSalaryProject 'Salary (project)' (Employee e, INTERVAL[DATE] i) = salary(e, timesheetProject(), i);
+
 EXTEND FORM timesheetSupervisor
     OBJECTS et = Employee
     PROPERTIES(et) READONLY firstName, lastName, namePosition, rolesTimesheet
-
-    PROPERTIES hours(et, dates), countLunches(et, dates), countAccomodation(et, dates), 
-               salary(et, dates) ON CHANGE {
+    
+    PROPERTIES timesheetHoursProject(et, dates) SHOWIF timesheetProject(), hours(et, dates), countLunches(et, dates), countAccomodation(et, dates),
+               timesheetSalaryProject(et, dates) SHOWIF timesheetProject() ON CHANGE {
+                   SHOW timesheetSupervisorDateEmployee OBJECTS i = dates, e = et FLOAT;
+               }, salary(et, dates) ON CHANGE {
                    SHOW timesheetSupervisorDateEmployee OBJECTS i = dates, e = et FLOAT;
                }, lunches(et, dates) ON CHANGE {
                    SHOW Lunch.ordersDateEmployee OBJECTS i = dates, e = et FLOAT;

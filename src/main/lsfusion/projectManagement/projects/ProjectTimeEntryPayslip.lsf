@@ -52,9 +52,9 @@ generate (Payslip p) + {
         total(pe) <- salary(employee(p), pt, period(p));
     }
     
-    DELETE PayslipTimeEntry pe WHERE payslip(pe) = p AND NOT hours(employee(p), project(pe), period(p));
+    DELETE PayslipTimeEntry pe WHERE payslip(pe) = p AND NOT hours(employee(p), project(pe), period(p)) AND project(pe);
 
-    payslipTimeEntry(TimeEntry e) <- payslipTimeEntry(p, project(e)) WHERE employee(e) = employee(p) AND date(e) >= startDate(p) AND date(e) <= endDate(p);
+    payslipTimeEntry(TimeEntry e) <- payslipTimeEntry(p, project(e)) WHERE employee(e) = employee(p) AND date(e) >= startDate(p) AND date(e) <= endDate(p) AND project(e);
 }
 
 EXTEND FORM payslip
