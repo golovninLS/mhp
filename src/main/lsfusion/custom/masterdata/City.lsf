@@ -1,0 +1,46 @@
+MODULE City;
+
+REQUIRE Utils, MetaNumerator, Input;
+
+NAMESPACE City;
+
+CLASS City 'City';
+TABLE city (City);
+
+@defineID(city, 'Cities', 'CT', 6);
+name '{master.data.name}' = DATA ISTRING[100] (City) CHARWIDTH 25;
+
+latitude 'Latitude'= DATA NUMERIC[11,6] (City);
+longitude 'Longitude' = DATA NUMERIC[11,6] (City);
+
+FORM city 'City'
+    OBJECTS c = City PANEL 
+    PROPERTIES(c) id, name, latitude, longitude
+
+    OBJECTS ct = City MAP
+    PROPERTIES(ct) name READONLY, latitude, longitude
+    FILTERS ct = c
+    
+    EDIT City OBJECT c
+;
+
+DESIGN city {
+    BOX(ct) {
+        height = 500;
+        caption = '';
+    }
+}
+
+FORM cities 'Cities'
+    OBJECTS c = City
+    PROPERTIES(c) READONLYIF isReadonly() id, name, latitude, longitude
+    PROPERTIES(c) NEWSESSION NEW, EDIT, DELETE
+
+    LIST City OBJECT c
+;
+
+NAVIGATOR {
+    masterData {
+        NEW cities;
+    }
+}

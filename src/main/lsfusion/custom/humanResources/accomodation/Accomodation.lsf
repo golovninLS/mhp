@@ -1,6 +1,6 @@
 MODULE Accomodation;
 
-REQUIRE HumanResourcesSettings, Color;
+REQUIRE HumanResourcesSettings, Color, City;
 
 PRIORITY HumanResources;
 
@@ -38,16 +38,37 @@ symbol 'Symbol' = DATA STRING[20] (Accomodation) CHARWIDTH 2;
 archived 'Archived' = DATA BOOLEAN (Accomodation);
 active '{Active}' (Accomodation b) = NOT archived(b);
 
+city = DATA City (Accomodation);
+nameCity 'City' (Accomodation a) = name(city(a));
+
+latitude 'Latitude' (Accomodation a) = latitude(city(a));
+longitude 'Longitude' (Accomodation a) = latitude(city(a));
+
 FORM accomodation 'Accomodation'
     OBJECTS p = Accomodation PANEL
-    PROPERTIES(p) name, nameColor, rgbColor, symbol, archived
+    PROPERTIES(p) name, nameColor, rgbColor, nameCity, symbol, archived
 
     OBJECTS pp = AccomodationPrice
     PROPERTIES(pp) date, price, fixed, NEW, DELETE
     FILTERS accomodation(pp) = p
 
+    OBJECTS mp = Accomodation MAP
+    PROPERTIES(mp) name READONLY, latitude, longitude
+    FILTERS mp = p
+
     EDIT Accomodation OBJECT p
 ;
+
+DESIGN accomodation {
+    OBJECTS {
+        NEW tabbed {
+            fill = 1;
+            tabbed = TRUE;
+            MOVE BOX(pp);
+            MOVE BOX(mp) { caption = 'Map'; }
+        }
+    }
+}
 
 FORM accomodations 'Accomodations'
     OBJECTS p = Accomodation
@@ -61,7 +82,7 @@ FORM accomodations 'Accomodations'
 
 EXTEND FORM options
     OBJECTS ac = Accomodation
-    PROPERTIES(ac) READONLY name, nameColor, rgbColor, price, symbol, archived
+    PROPERTIES(ac) READONLY name, nameColor, rgbColor, price, nameCity, symbol, archived
     PROPERTIES(ac) NEWSESSION NEW, EDIT, DELETE
 ;
 

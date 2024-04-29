@@ -1,6 +1,6 @@
 MODULE ProjectAssignmentCustom;
 
-REQUIRE ProjectAssignment;
+REQUIRE ProjectAssignment, City;
 
 NAMESPACE ProjectManagement;
 

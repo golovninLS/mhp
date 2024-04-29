@@ -1,0 +1,48 @@
+MODULE ProjectAccomodation;
+
+REQUIRE Project, Accomodation;
+
+NAMESPACE ProjectManagement;
+
+in 'In' = DATA BOOLEAN (Project, Accomodation);
+accomodations 'Accomodations' (Project p) = GROUP CONCAT name(Accomodation a) IF in(p, a), ', ' ORDER a;
+
+city = DATA City (Project);
+nameCity 'City' (Project a) = name(city(a));
+
+latitude 'Latitude' (Project a) = latitude(city(a));
+longitude 'Longitude' (Project a) = latitude(city(a));
+
+WHEN LOCAL SET(city(Project p)) DO {
+    in(p, Accomodation a) <- TRUE WHERE city(p) == city(a);
+}
+
+FORM dialogProjectAccomodations 'Accomodations'
+    OBJECTS p = Project PANEL
+    
+    OBJECTS a = Accomodation
+    PROPERTIES in(p,a)
+    PROPERTIES(a) READONLY name, price, nameCity SELECTOR 
+;
+
+EXTEND FORM project 
+    PROPERTIES(p) nameCity, accomodations ON CHANGE { DIALOG dialogProjectAccomodations OBJECTS p = p; }
+
+    OBJECTS pp = Project MAP
+    PROPERTIES(pp) name READONLY, latitude, longitude
+    FILTERS pp = p
+;
+
+DESIGN project {
+    OBJECTS {
+        headerLeft {
+            MOVE PROPERTY(nameCity(p));
+        }
+        MOVE PROPERTY(accomodations(p)) AFTER header;
+        details {
+            MOVE BOX(pp) { caption = 'Map'; }
+        }
+    }
+}
+
+EXTEND FORM projects PROPERTIES(p) READONLY nameCity AFTER nameManager(p);
