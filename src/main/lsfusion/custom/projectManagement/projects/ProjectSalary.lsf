@@ -1,6 +1,6 @@
 MODULE ProjectSalary;
 
-REQUIRE ProjectTimeEntry;
+REQUIRE ProjectTimeEntryPayslip;
 
 PRIORITY MasterData;
 
@@ -26,15 +26,7 @@ salary (Project p, Employee e, DATE d) =
 
 rateSalary 'Salary per hour' (Project p, Employee e, DATE d) = rate(salary(p, e, d));
 
-rateSalary 'Salary per hour' (TimeEntry e) = rateSalary(project(e), employee(e), date(e));
-salary 'Salary' (TimeEntry e) = hours(e) * rateSalary(project(e), employee(e), date(e)); 
-
-salary 'Salary' (Project p, Employee e, DATE from, DATE to) = 
-    GROUP SUM salary(TimeEntry te) IF project(te) = p AND employee(te) = e AND date(te) >= from AND date(te) <= to;
-
-salary 'Salary' (Employee e, DATE from, DATE to) =
-    GROUP SUM salary(TimeEntry te) IF employee(te) = e AND date(te) >= from AND date(te) <= to;
-salary 'Salary' (Employee e, INTERVAL[DATE] i) = salary(e, from(i), to(i));
+rateSalary (TimeEntry e) += rateSalary(project(e), employee(e), date(e));
 
 EXTEND FORM project
     OBJECTS ps = ProjectSalary

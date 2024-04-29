@@ -1,0 +1,60 @@
+MODULE AccomodationPayslip;
+
+REQUIRE AccomodationOrder, PayslipBatch;
+
+PRIORITY MasterData;
+
+NAMESPACE Accomodation;
+
+accomodationPayslipCategory = DATA PayslipCategory ();
+isAccomodation 'Accomodation order' (PayslipCategory c) = accomodationPayslipCategory() = c;
+
+EXTEND FORM payslipCategory
+    PROPERTIES(c) isAccomodation
+;
+
+@definePayslipDetail(accomodation, 'line');
+
+accomodation = DATA Accomodation (PayslipAccomodation);
+description (PayslipAccomodation pe) += name(accomodation(pe));
+
+INDEX accomodation(PayslipAccomodation p), payslip(p);
+
+payslipAccomodation = DATA PayslipAccomodation (Order, DATE) INDEXED;
+payslip 'Payslip' (Order o, DATE d) = payslip(payslipAccomodation(o, d)) MATERIALIZED INDEXED;
+countAccomodation 'Accomodation order' (Payslip p) = GROUP SUM 1 IF payslip(Order o, DATE d) = p;
+
+payslipAccomodation = GROUP AGGR PayslipAccomodation pt BY payslip(pt), accomodation(pt);
+
+generate (Payslip p) + {
+    FOR countAccomodation(employee(p), Accomodation ac, period(p)) AND NOT payslipAccomodation(p, ac) DO NEW pe = PayslipAccomodation {
+        payslip(pe) <- p;
+        accomodation(pe) <- ac;
+        category(pe) <- accomodationPayslipCategory();
+    }
+    FOR PayslipAccomodation pe = payslipAccomodation(p, Accomodation ac) DO {
+        quantity(pe) <- countAccomodation(employee(p), ac, period(p));
+        total(pe) <- accomodation(employee(p), ac, period(p));
+    }
+    DELETE PayslipAccomodation pe WHERE payslip(pe) = p AND NOT countAccomodation(employee(p), accomodation(pe), period(p));
+    payslipAccomodation(Order o, DATE d) <- payslipAccomodation(p, accomodation(o)) WHERE 
+                                                employee(o) = employee(p) AND 
+                                                accomodationOrder(d, employee(p)) = accomodation(o) AND 
+                                                iterate(d, startDate(p), endDate(p));
+}
+
+EXTEND FORM payslip
+    OBJECTS acd = (ac = Order, ad = DATE)
+    PROPERTIES BACKGROUND rgbColorAccomodation(ac) READONLY date 'Date' = VALUE(ad), nameAccomodation(ac), employeePrice(ac, ad), countEmployees(ac, ad) 
+    PROPERTIES(ac) NEWSESSION EDIT
+    ORDERS date
+    FILTERS payslip(ac, ad) = p
+;
+
+DESIGN payslip {
+    details {
+        MOVE BOX(acd) {
+            caption = badged('Accomodation order', countAccomodation(p));
+        }
+    }
+}

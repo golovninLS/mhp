@@ -13,7 +13,7 @@ EXTEND FORM timesheetSupervisor
     OBJECTS et = Employee
     PROPERTIES(et) READONLY firstName, lastName, namePosition, rolesTimesheet
 
-    PROPERTIES hours(et, dates), lunchesDays(et, dates), accomodationDays(et, dates), 
+    PROPERTIES hours(et, dates), countLunches(et, dates), countAccomodation(et, dates), 
                salary(et, dates) ON CHANGE {
                    SHOW timesheetSupervisorDateEmployee OBJECTS i = dates, e = et FLOAT;
                }, lunches(et, dates) ON CHANGE {

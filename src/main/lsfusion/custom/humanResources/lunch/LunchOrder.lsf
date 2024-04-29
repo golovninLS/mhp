@@ -37,9 +37,9 @@ lunches 'Lunches' (Employee e, DATE from, DATE to) =
     GROUP SUM price(Order o) IF employee(o) = e AND date(o) >= from AND date(o) <= to;
 lunches 'Lunches' (Employee e, INTERVAL[DATE] i) = lunches(e, from(i), to(i));
 
-lunchesDays 'Lunches (days)' (Employee e, DATE from, DATE to) =
+countLunches 'Lunches (days)' (Employee e, DATE from, DATE to) =
     GROUP SUM 1 IF employee(Order o) = e AND date(o) >= from AND date(o) <= to;
-lunchesDays 'Lunches (days)' (Employee e, INTERVAL[DATE] i) = lunchesDays(e, from(i), to(i));
+countLunches 'Lunches (days)' (Employee e, INTERVAL[DATE] i) = countLunches(e, from(i), to(i));
 
 FORM order 'Lunch order'
     OBJECTS o = Order

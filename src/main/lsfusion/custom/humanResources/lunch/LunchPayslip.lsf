@@ -1,0 +1,49 @@
+MODULE LunchPayslip;
+
+REQUIRE LunchOrder, PayslipBatch;
+
+NAMESPACE Lunch;
+
+lunchPayslipCategory = DATA PayslipCategory ();
+isLunch 'Lunches' (PayslipCategory c) = lunchPayslipCategory() = c;
+
+EXTEND FORM payslipCategory
+    PROPERTIES(c) isLunch
+;
+
+@definePayslipDetail(lunch, 'line');
+
+payslipLunch = DATA PayslipLunch (Order) INDEXED;
+payslip 'Payslip' (Order o) = payslip(payslipLunch(o)) MATERIALIZED INDEXED;
+countLunch 'Lunches' (Payslip p) = GROUP SUM 1 IF payslip(Order o) = p;
+
+payslipLunch = GROUP AGGR PayslipLunch pt BY payslip(pt);
+
+generate (Payslip p) + {
+    IF countLunches(employee(p), period(p)) AND NOT payslipLunch(p) THEN NEW pe = PayslipLunch {
+        payslip(pe) <- p;
+        category(pe) <- lunchPayslipCategory();
+    }
+    FOR PayslipLunch pe = payslipLunch(p) DO {
+        quantity(pe) <- countLunches(employee(p), period(p));
+        total(pe) <- lunches(employee(p), period(p));
+    }
+    DELETE PayslipLunch pe WHERE payslip(pe) = p AND NOT countLunches(employee(p), period(p));
+    payslipLunch(Order o) <- payslipLunch(p) WHERE employee(o) = employee(p) AND date(o) >= startDate(p) AND date(o) <= endDate(p);
+}
+
+EXTEND FORM payslip
+    OBJECTS lc = Order
+    PROPERTIES(lc) READONLY date, nameEmployee, nameProduct, nameVendor, price
+    ORDERS date(lc)
+    PROPERTIES(lc) NEWSESSION EDIT
+    FILTERS payslip(lc) = p
+;
+
+DESIGN payslip {
+    details {
+        MOVE BOX(lc) {
+            caption = badged('Lunches', countLunch(p));
+        }
+    }
+}

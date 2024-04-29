@@ -1,0 +1,22 @@
+MODULE PayslipLine;
+
+REQUIRE PayslipLedger;
+
+NAMESPACE Payroll;
+
+@definePayslipDetail(line, 'line');
+
+line (Payslip p, PayslipCategory c) = GROUP MIN PayslipLine l IF payslip(l) = p AND category(l) = c;
+
+description 'Description' = DATA ISTRING (PayslipLine) CHARWIDTH 15;
+description (PayslipLine l) += description(l);
+
+newLine 'Add' (Payslip p) {
+    NEW l = PayslipLine {
+        payslip(l) <- p;
+    }
+} IMAGE 'add.png' CHANGEKEY 'INSERT' HIDE;
+
+EXTEND FORM payslip
+    PROPERTIES(p) newLine DRAW pl TOOLBAR
+;
