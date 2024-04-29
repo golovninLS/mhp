@@ -1,0 +1,64 @@
+MODULE TimesheetSupervisorPayslip;
+
+REQUIRE TimesheetSupervisor, PayslipLineBatch;
+
+NAMESPACE ProjectManagement;
+
+timesheetCompany = DATA LOCAL NESTED Company ();
+nameTimesheetCompany 'Company' = name(timesheetCompany());
+
+CONSTRAINT timesheetCompany() AND archived(timesheetCompany())
+    CHECKED BY timesheetCompany[] MESSAGE '';
+
+generatePayslips 'Generate' (INTERVAL[DATE] period) {
+    NEWSESSION {
+        IF NOT payslipBatch(timesheetCompany(), period) THEN NEW b = PayslipBatch {
+            company(b) <- timesheetCompany();
+            period(b) <- period;
+        }
+        generate(payslipBatch(timesheetCompany(), period));
+        APPLY;
+    }    
+} CONFIRM;
+
+EXTEND FORM timesheetSupervisor
+    OBJECTS pc = PayslipCategory
+    PROPERTIES(pc) index
+    ORDERS index(pc)
+    
+    PROPERTIES nameTimesheetCompany(), generatePayslips(dates) SHOWIF timesheetCompany()
+    
+    OBJECTS ps = Payslip
+    PROPERTIES(ps) READONLY number, startDate, endDate, firstNameEmployee, lastNameEmployee, namePositionEmployee, nameCompany, 
+                           netWage
+    PROPERTIES(ps) NEWSESSION EDIT
+
+    PROPERTIES(ps, pc) total COLUMNS (pc) HEADER name(pc) READONLYIF readonly(pc) ON CHANGE {
+                        NEWSESSION {
+                            changeTotal(ps, pc);
+                            APPLY;
+                        }
+                    }
+                    
+    
+    FILTERS [FILTER timesheetSupervisor.e](employee(ps)),
+            startDate(ps) >= from(dates) AND startDate(ps) <= to(dates),
+            company(ps) = timesheetCompany() OR NOT timesheetCompany()
+;
+
+DESIGN timesheetSupervisor {
+    tabbedPane {
+        NEW payslip {
+            caption = 'Payslip';
+            REMOVE BOX(pc);
+            NEW payslipHeader {
+                horizontal = TRUE;
+                MOVE PROPERTY(nameTimesheetCompany());
+                MOVE PROPERTY(generatePayslips(dates));
+            }
+            MOVE BOX(ps) {
+                caption = '';
+            }
+        }
+    }
+}

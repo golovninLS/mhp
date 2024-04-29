@@ -36,6 +36,9 @@ payslipTimeEntry = DATA PayslipTimeEntry (TimeEntry) INDEXED;
 payslip 'Payslip' (TimeEntry e) = payslip(payslipTimeEntry(e)) MATERIALIZED INDEXED;
 countTimeEntry 'Time entries' (Payslip p) = GROUP SUM 1 IF payslip(TimeEntry e) = p;
 
+numberPayslip 'Payslip' (TimeEntry e) = number(payslip(e));
+EXTEND FORM timeEntries PROPERTIES(t) READONLY numberPayslip;
+
 payslipTimeEntry = GROUP AGGR PayslipTimeEntry pt BY payslip(pt), project(pt);
 
 generate (Payslip p) + {

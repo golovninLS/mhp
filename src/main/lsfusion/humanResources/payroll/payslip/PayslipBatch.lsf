@@ -20,6 +20,8 @@ company 'Company' = DATA Company (PayslipBatch) NONULL;
 nameCompany 'Company' (PayslipBatch o) = name(company(o));
 WHEN LOCAL SET(PayslipBatch p IS PayslipBatch) AND NOT CHANGED(company(p)) DO company(p) <- defaultCompany();
 
+payslipBatch (Company c, INTERVAL[DATE] i) = GROUP MIN PayslipBatch b BY company(b), period(b); 
+
 batch 'Payslip batch' = DATA PayslipBatch (Payslip) INDEXED;
 
 generate ABSTRACT LIST (Payslip);

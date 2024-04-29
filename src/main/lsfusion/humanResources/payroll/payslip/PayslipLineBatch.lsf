@@ -18,7 +18,12 @@ changeTotal (Payslip p, PayslipCategory c) {
 
 EXTEND FORM payslipBatch
     OBJECTS c = PayslipCategory BEFORE p
+    PROPERTIES(c) index
+    ORDERS index(c)
     
     PROPERTIES(p, c) total COLUMNS (c) HEADER name(c) READONLYIF readonly(c) ON CHANGE changeTotal(p, c)
 ;
 
+DESIGN payslipBatch {
+    REMOVE BOX(c);
+}

@@ -17,6 +17,9 @@ payslipLunch = DATA PayslipLunch (Order) INDEXED;
 payslip 'Payslip' (Order o) = payslip(payslipLunch(o)) MATERIALIZED INDEXED;
 countLunch 'Lunches' (Payslip p) = GROUP SUM 1 IF payslip(Order o) = p;
 
+numberPayslip 'Payslip' (Order o) = number(payslip(o));
+EXTEND FORM orders PROPERTIES(o) READONLY numberPayslip;
+
 payslipLunch = GROUP AGGR PayslipLunch pt BY payslip(pt);
 
 generate (Payslip p) + {
