@@ -1,10 +1,13 @@
 MODULE TimesheetSupervisorAccomodation;
 
-REQUIRE TimesheetSupervisor, TimesheetAccomodation, AccomodationOrder;
+REQUIRE TimesheetSupervisor, TimesheetAccomodation, AccomodationOrder, ProjectAccomodation;
 
 PRIORITY MasterData;
 
 NAMESPACE ProjectManagement;
+
+CONSTRAINT timesheetAccomodation() AND timesheetProject() AND NOT in(timesheetProject(), timesheetAccomodation())
+    CHECKED BY timesheetAccomodation[] MESSAGE '';
 
 EXTEND FORM timesheetSupervisor
     PROPERTIES nameTimesheetAccomodation()
