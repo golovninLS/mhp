@@ -76,7 +76,30 @@ FORM orders 'Accomodation orders'
     OBJECTS o = Order
     PROPERTIES(o) READONLY startDate, endDate, nameEmployee, nameAccomodation
     PROPERTIES(o) NEWSESSION NEW, EDIT, DELETE
+
+    OBJECTS a = Accomodation PANEL, d = DATE PANEL
+    PROPERTIES name(a) SELECTOR, date 'Дата' = VALUE(d)
+    
+    OBJECTS oo = Order
+    PROPERTIES READONLY nameEmployee(oo), employeePrice(oo, d), startDate(oo), endDate(oo)
+    FILTERS startDate(oo) <= d AND NOT d > endDate(oo) AND accomodation(oo) == a;
 ;
+
+DESIGN orders {
+    OBJECTS {
+        tabbed = TRUE;
+        MOVE BOX(o);
+        NEW details {
+            caption = 'Детализация';
+            NEW header {
+                MOVE PROPERTY(name(a)) { caption = 'Объект размещения'; }
+                MOVE PROPERTY(date);
+                horizontal = TRUE;
+            }
+            MOVE BOX(oo) { caption = ''; }
+        }
+    }
+}
 
 FORM ordersDateEmployee 'Accomodation orders'
     OBJECTS i = INTERVAL[DATE] PANEL
