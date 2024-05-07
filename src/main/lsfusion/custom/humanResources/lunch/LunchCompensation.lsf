@@ -1,0 +1,57 @@
+MODULE LunchCompensation;
+
+REQUIRE LunchPayslip, ProjectTimeEntry;
+
+NAMESPACE Lunch;
+
+lunchCompensationPayslipCategory = DATA PayslipCategory ();
+isLunchCompensation 'Копенсация питания' (PayslipCategory c) = lunchCompensationPayslipCategory() = c;
+
+EXTEND FORM payslipCategory PROPERTIES(c) isLunchCompensation;
+
+@definePayslipDetail(lunchCompensation, 'line');
+
+lunchCompensationCost 'Стоимость копенсации питания' = DATA NUMERIC[12,2] ();
+
+EXTEND FORM HumanResources.options PROPERTIES lunchCompensationCost();
+DESIGN HumanResources.options {
+    commons {
+        MOVE PROPERTY(lunchCompensationCost());
+    }
+}
+
+lunchCompensationCost 'Стоимость копенсации питания' = DATA NUMERIC[12,2] (Project);
+
+EXTEND FORM project PROPERTIES lunchCompensationCost(p);
+DESIGN project {
+    headerLeft {
+        MOVE PROPERTY(lunchCompensationCost(p));
+    }
+}
+
+isWorkDay (Employee e, DATE d, Project p) = TRUE IF hours(d, e, p);
+isWorkDay (Employee e, DATE d) = TRUE IF (GROUP SUM 1 IF isWorkDay(e, d, Project p));
+countProjectsWorkDay (Employee e, DATE d) = GROUP SUM 1 IF isWorkDay(e, d, Project p);
+
+lunchCompensationCost (Employee e, DATE d) = OVERRIDE 
+    lunchCompensationCost(GROUP MAX Project p IF isWorkDay(e, d, p)) IF countProjectsWorkDay(e, d) == 1,
+    lunchCompensationCost() IF countProjectsWorkDay(e, d);
+lunchCompensationTotal 'Копенсация питания' (Employee e, INTERVAL[DATE] i) = GROUP SUM lunchCompensationCost(e, DATE d) IF 
+    iterate(d, from(i), to(i)) AND NOT order(d, e);
+
+countWorkDays (Employee e, INTERVAL[DATE] i) = GROUP SUM 1 IF isWorkDay(e, DATE d) AND iterate(d, from(i), to(i));
+countLunchCompensations (Employee e, INTERVAL[DATE] i) = countWorkDays(e, i) (-) countLunches(e, i);
+
+payslipLunchCompensation = GROUP AGGR PayslipLunchCompensation pt BY payslip(pt);
+
+generate (Payslip p) + {
+    IF countLunchCompensations(employee(p), period(p)) AND NOT payslipLunchCompensation(p) THEN NEW pe = PayslipLunchCompensation {
+        payslip(pe) <- p;
+        category(pe) <- lunchCompensationPayslipCategory();
+    }
+    FOR PayslipLunchCompensation pe = payslipLunchCompensation(p) DO {
+        quantity(pe) <- countLunchCompensations(employee(p), period(p));
+        total(pe) <- lunchCompensationTotal(employee(p), period(p));
+    }
+    DELETE PayslipLunchCompensation pe WHERE payslip(pe) = p AND NOT countLunchCompensations(employee(p), period(p));
+}

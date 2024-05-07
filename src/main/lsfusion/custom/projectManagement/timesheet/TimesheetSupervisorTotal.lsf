@@ -1,13 +1,13 @@
 MODULE TimesheetSupervisorTotal;
 
 REQUIRE TimesheetSupervisor, TimesheetSalary, 
-        ProjectSalary, LunchOrder, AccomodationOrder;
+        ProjectSalary, LunchOrder, AccomodationOrder, LunchCompensation;
 
 PRIORITY MasterData;
 
 NAMESPACE ProjectManagement;
 
-toPay 'To pay' (Employee e, INTERVAL[DATE] i) = salary(e, i) (-) lunches(e, i) (-) accomodation(e, i); 
+toPay 'To pay' (Employee e, INTERVAL[DATE] i) = salary(e, i) (-) lunches(e, i) (-) accomodation(e, i) (+) lunchCompensationTotal(e, i); 
 
 timesheetHoursProject 'Hours (project)' (Employee e, INTERVAL[DATE] i) = hours(e, timesheetProject(), i);
 timesheetSalaryProject 'Salary (project)' (Employee e, INTERVAL[DATE] i) = salary(e, timesheetProject(), i);
@@ -25,7 +25,7 @@ EXTEND FORM timesheetSupervisor
                    SHOW Lunch.ordersDateEmployee OBJECTS i = dates, e = et FLOAT;
                }, accomodation(et, dates) ON CHANGE {
                     SHOW Accomodation.ordersDateEmployee OBJECTS i = dates, e = et FLOAT;
-               }, toPay(et, dates)
+               }, lunchCompensationTotal(et, dates), toPay(et, dates)
 
     FILTERS [FILTER timesheetSupervisor.e](et)
 ;
