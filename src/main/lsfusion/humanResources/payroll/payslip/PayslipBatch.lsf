@@ -33,7 +33,7 @@ generate 'Generate' (PayslipBatch b) {
         employee(p) <- e;
         company(p) <- company(b);
     }
-    FOR batch(Payslip p) = b DO // INLINE
+    FOR batch(Payslip p) = b INLINE DO
         generate(p);
 } CONFIRM;
 

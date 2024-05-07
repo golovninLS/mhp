@@ -25,7 +25,7 @@ signedTotal 'Total' (PayslipLedger l) = total(l) * (IF deduction(l) THEN -1 ELSE
 
 total 'Total' (Payslip p, PayslipCategory c) = GROUP SUM total(PayslipLedger l) IF payslip(l) = p AND category(l) = c; 
 
-netWage 'Net wage' (Payslip p) = GROUP SUM signedTotal(PayslipLedger l) IF payslip(l) = p AND NOT skip(p) MATERIALIZED;
+netWage 'Net wage' (Payslip p) = GROUP SUM signedTotal(PayslipLedger l) IF payslip(l) = p AND NOT skip(l) MATERIALIZED;
 
 EXTEND FORM payslip
     OBJECTS pl = PayslipLedger
