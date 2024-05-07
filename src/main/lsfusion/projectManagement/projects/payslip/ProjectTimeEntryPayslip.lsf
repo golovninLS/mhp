@@ -1,6 +1,6 @@
 MODULE ProjectTimeEntryPayslip;
 
-REQUIRE ProjectTimeEntry, PayslipBatch;
+REQUIRE ProjectTimeEntry, ProjectPayslipLedger, PayslipBatch;
 
 NAMESPACE ProjectManagement;
 
@@ -28,7 +28,7 @@ EXTEND FORM payslipCategory
 @definePayslipDetail(timeEntry, 'line');
 
 project = DATA Project (PayslipTimeEntry);
-description (PayslipTimeEntry pe) += name(project(pe));
+project (PayslipTimeEntry pe) += project(pe);
 
 INDEX project(PayslipTimeEntry p), payslip(p);
 

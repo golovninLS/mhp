@@ -1,6 +1,6 @@
 MODULE TimesheetSupervisorPayslip;
 
-REQUIRE TimesheetSupervisor, PayslipLineBatch;
+REQUIRE TimesheetSupervisor, PayslipLineBatch, ProjectPayslipLine;
 
 NAMESPACE ProjectManagement;
 
@@ -21,6 +21,12 @@ generatePayslips 'Generate' (INTERVAL[DATE] period) {
     }    
 } CONFIRM;
 
+splitByProject 'Split by project' = DATA BOOLEAN (PayslipCategory);
+EXTEND FORM payslipCategory
+    PROPERTIES(c) splitByProject
+;
+totalTimesheet (Payslip p, PayslipCategory c) = total(p, c, timesheetProject());
+
 EXTEND FORM timesheetSupervisor
     OBJECTS pc = PayslipCategory
     PROPERTIES(pc) index
@@ -33,14 +39,23 @@ EXTEND FORM timesheetSupervisor
                            netWage
     PROPERTIES(ps) NEWSESSION EDIT
 
-    PROPERTIES(ps, pc) total COLUMNS (pc) HEADER name(pc) READONLYIF readonly(pc) ON CHANGE {
+    PROPERTIES(ps, pc) total COLUMNS 'total' (pc) HEADER name(pc) READONLYIF readonly(pc) ON CHANGE {
                         NEWSESSION {
                             changeTotal(ps, pc);
                             APPLY;
                         }
                     }
-                    
-    
+
+    PROPERTIES(ps, pc) 'Total (project)' = totalTimesheet COLUMNS 'total' (pc) 
+        HEADER name(pc) + '(' + 'Project' + ')' READONLYIF readonly(pc)
+        SHOWIF timesheetProject() AND splitByProject(pc)
+        ON CHANGE {
+            NEWSESSION {
+                changeTotal(ps, pc, timesheetProject());
+                APPLY;
+            }
+        }
+
     FILTERS [FILTER timesheetSupervisor.e](employee(ps)),
             startDate(ps) >= from(dates) AND startDate(ps) <= to(dates),
             company(ps) = timesheetCompany() OR NOT timesheetCompany()
