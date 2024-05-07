@@ -12,6 +12,7 @@ payslip = ABSTRACT Payslip (PayslipLedger) MATERIALIZED INDEXED;
 category 'Category' = ABSTRACT PayslipCategory (PayslipLedger) MATERIALIZED;
 nameCategory 'Category' (PayslipLedger l) = name(category(l));
 deduction 'Deduction' (PayslipLedger l) = deduction(category(l));
+skip 'Skip' (PayslipLedger l) = skip(category(l));
 
 description 'Description' = ABSTRACT ISTRING (PayslipLedger) MATERIALIZED CHARWIDTH 15;
 
@@ -24,7 +25,7 @@ signedTotal 'Total' (PayslipLedger l) = total(l) * (IF deduction(l) THEN -1 ELSE
 
 total 'Total' (Payslip p, PayslipCategory c) = GROUP SUM total(PayslipLedger l) IF payslip(l) = p AND category(l) = c; 
 
-netWage 'Net wage' (Payslip p) = GROUP SUM signedTotal(PayslipLedger l) IF payslip(l) = p MATERIALIZED;
+netWage 'Net wage' (Payslip p) = GROUP SUM signedTotal(PayslipLedger l) IF payslip(l) = p AND NOT skip(p) MATERIALIZED;
 
 EXTEND FORM payslip
     OBJECTS pl = PayslipLedger
