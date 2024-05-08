@@ -1,6 +1,6 @@
 MODULE ProjectSalary;
 
-REQUIRE ProjectTimeEntryPayslip;
+REQUIRE ProjectTimeEntryPayslip, ProjectCustom;
 
 PRIORITY MasterData;
 
@@ -35,7 +35,7 @@ EXTEND FORM project
 ;
 
 DESIGN project {
-    details {
+    staff {
         MOVE BOX(ps) { caption = badged('Salary', countSalaries(p)); }
     }
 }

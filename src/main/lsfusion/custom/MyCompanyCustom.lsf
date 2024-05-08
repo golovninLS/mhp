@@ -59,4 +59,4 @@ REQUIRE Eval, ProcessMonitor, Backup,
         ProjectTimeEntryPayslip, LunchPayslip, AccomodationPayslip,
         TimesheetSupervisorPayslip,
 
-        ProjectAccomodation;
+        ProjectAccomodation, ProjectTimeEntryCustom;

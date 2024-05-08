@@ -1,6 +1,6 @@
 MODULE ProjectAssignmentCustom;
 
-REQUIRE ProjectAssignment, City;
+REQUIRE ProjectAssignment, City, ProjectCustom;
 
 NAMESPACE ProjectManagement;
 
@@ -9,3 +9,10 @@ salary 'Salary per hour' = DATA NUMERIC[10,2] (ProjectAssignment); // remove
 //EXTEND FORM project
 //    PROPERTIES(pa) salary AFTER nameRole(pa)
 //;
+
+DESIGN project {
+    staff {
+        MOVE BOX(pa);
+        MOVE employees;
+    }
+}

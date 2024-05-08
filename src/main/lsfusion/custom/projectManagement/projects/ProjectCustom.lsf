@@ -1,0 +1,16 @@
+MODULE ProjectCustom;
+
+REQUIRE Project;
+
+NAMESPACE ProjectManagement;
+
+DESIGN project {
+    details {
+        NEW staff {
+            tabbed = TRUE;
+            fill = 1;
+            caption = 'Staff';
+            
+        }
+    }
+}

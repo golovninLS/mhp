@@ -16,8 +16,10 @@ rateSalary 'Salary per hour (project)' (Employee e, INTERVAL[DATE] i) = rateSala
 
 changeRateSalary (Employee e, INTERVAL[DATE] i) {
     INPUT q = NUMERIC[10,2] DO
-        IF salary(timesheetProject(), e, from(i)) THEN {
-            rate(salary(timesheetProject(), e, from(i))) <- q;
+        IF salary(timesheetProject(), e, from(i)) AND NOT q THEN {
+            delete(salary(timesheetProject(), e, from(i)));
+        } ELSE IF salary(timesheetProject(), e, from(i)) THEN {
+        rate(salary(timesheetProject(), e, from(i))) <- q;
         } ELSE NEW p = ProjectSalary {
             project(p) <- timesheetProject();
             date(p) <- from(i);
@@ -56,4 +58,17 @@ DESIGN timesheetSupervisor {
     }
 }
 
+openTimeSheetSupervisor 'Открыть табель' (Project p) {
+    NESTEDSESSION {
+        timesheetProject() <- p;
+        SHOW timesheetSupervisor DOCKED;
+    }
+}
 
+EXTEND FORM project PROPERTIES openTimeSheetSupervisor(p);
+
+DESIGN project {
+    headerRight {
+        MOVE PROPERTY(openTimeSheetSupervisor(p));
+    }
+}

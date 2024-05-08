@@ -1,0 +1,29 @@
+MODULE ProjectTimeEntryCustom;
+
+REQUIRE ProjectTimeEntry, ProjectCustom;
+
+NAMESPACE ProjectManagement;
+
+countTimeEntryCustom 'Time entries' (Project p) = GROUP SUM 1 IF project(TimeEntry t) = p AND hours(t) > 0;
+hoursTimeEntryCustom 'Hours' (Project p) = GROUP SUM hours(TimeEntry t) IF project(t) = p AND hours(t) > 0;
+
+EXTEND FORM project
+    FILTERS hours(te) > 0
+;
+
+DESIGN project {
+    details {
+        staff {
+            MOVE timeEntries FIRST {
+                caption = badged('Time entries', '(' + countTimeEntryCustom(p) + ')' + '(' + hoursTimeEntryCustom(p) + ')');
+                MOVE BOX(te) { caption = ''; }
+            }
+        }
+    }
+}
+
+EXTEND FORM projects PROPERTIES countTimeEntryCustom(p) BEFORE countTimeEntry(p);
+
+DESIGN projects {
+    PROPERTY(countTimeEntry(p)) { hide = TRUE; }
+}

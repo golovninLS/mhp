@@ -36,7 +36,7 @@ FORM timesheetSupervisor 'Supervisor timesheet'
     FILTERS assigned(timesheetProject(), e, dates) OR (NOT countAssignments(timesheetProject()) AND NOT countAssignments(currentUser()))
 
     EVENTS ON INIT {
-        timesheetProject() <- defaultProject(currentUser());
+        IF NOT timesheetProject() THEN timesheetProject() <- defaultProject(currentUser());
         timesheetTimeEntryType() <- defaultTimeEntryType();
         SEEK timesheetSupervisor.dates = interval(firstDayOfMonth(currentDate()), lastDayOfMonth(currentDate()));
     }
