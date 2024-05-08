@@ -1,6 +1,6 @@
 MODULE LunchCompensation;
 
-REQUIRE LunchPayslip, ProjectTimeEntry;
+REQUIRE LunchProjectPayslip, ProjectTimeEntry;
 
 NAMESPACE Lunch;
 
@@ -29,29 +29,38 @@ DESIGN project {
     }
 }
 
-isWorkDay (Employee e, DATE d, Project p) = TRUE IF hours(d, e, p);
-isWorkDay (Employee e, DATE d) = TRUE IF (GROUP SUM 1 IF isWorkDay(e, d, Project p));
-countProjectsWorkDay (Employee e, DATE d) = GROUP SUM 1 IF isWorkDay(e, d, Project p);
-
 lunchCompensationCost (Employee e, DATE d) = OVERRIDE 
-    lunchCompensationCost(GROUP MAX Project p IF isWorkDay(e, d, p)) IF countProjectsWorkDay(e, d) == 1,
-    lunchCompensationCost() IF countProjectsWorkDay(e, d);
-lunchCompensationTotal 'Копенсация питания' (Employee e, INTERVAL[DATE] i) = GROUP SUM lunchCompensationCost(e, DATE d) IF 
-    iterate(d, from(i), to(i)) AND NOT order(d, e);
+    lunchCompensationCost(project(d, e)),
+    lunchCompensationCost();
 
-countWorkDays (Employee e, INTERVAL[DATE] i) = GROUP SUM 1 IF isWorkDay(e, DATE d) AND iterate(d, from(i), to(i));
-countLunchCompensations (Employee e, INTERVAL[DATE] i) = countWorkDays(e, i) (-) countLunches(e, i);
+lunchCompensation (DATE d, Employee e) = hours(d, e) AND NOT order(d, e); 
+countLunchCompensation (Employee e, Project p, DATE from, DATE to) = GROUP SUM 1 IF lunchCompensation(DATE d, e) AND d >= from AND d <= to AND project(d, e) = p;
+countLunchCompensation (Employee e, Project p, INTERVAL[DATE] i) = countLunchCompensation(e, p, from(i), to(i));
 
-payslipLunchCompensation = GROUP AGGR PayslipLunchCompensation pt BY payslip(pt);
+lunchCompensation (Employee e, Project p, DATE from, DATE to) = 
+    GROUP SUM lunchCompensationCost(e, DATE d) IF lunchCompensation(d, e) AND d >= from AND d <= to AND project(d, e) = p;
+lunchCompensation (Employee e, Project p, INTERVAL[DATE] i) = lunchCompensation(e, p, from(i), to(i));
+
+lunchCompensation (Employee e, DATE from, DATE to) =
+    GROUP SUM lunchCompensationCost(e, DATE d) IF lunchCompensation(d, e) AND d >= from AND d <= to;
+lunchCompensation 'Lunch compensation' (Employee e, INTERVAL[DATE] i) = lunchCompensation(e, from(i), to(i));
+
+project = DATA Project (PayslipLunchCompensation);
+project (PayslipLunchCompensation pe) += project(pe);
+
+INDEX project(PayslipLunchCompensation p), payslip(p);
+
+payslipLunchCompensation = GROUP AGGR PayslipLunchCompensation pt BY payslip(pt), project(pt);
 
 generate (Payslip p) + {
-    IF countLunchCompensations(employee(p), period(p)) AND NOT payslipLunchCompensation(p) THEN NEW pe = PayslipLunchCompensation {
+    FOR countLunchCompensation(employee(p), Project pr, period(p)) AND NOT payslipLunchCompensation(p, pr) DO NEW pe = PayslipLunchCompensation {
         payslip(pe) <- p;
         category(pe) <- lunchCompensationPayslipCategory();
+        project(pe) <- pr;
     }
-    FOR PayslipLunchCompensation pe = payslipLunchCompensation(p) DO {
-        quantity(pe) <- countLunchCompensations(employee(p), period(p));
-        total(pe) <- lunchCompensationTotal(employee(p), period(p));
+    FOR PayslipLunchCompensation pe = payslipLunchCompensation(p, Project pr) DO {
+        quantity(pe) <- countLunchCompensation(employee(p), pr, period(p));
+        total(pe) <- lunchCompensation(employee(p), pr, period(p));
     }
-    DELETE PayslipLunchCompensation pe WHERE payslip(pe) = p AND NOT countLunchCompensations(employee(p), period(p));
+    DELETE PayslipLunchCompensation pe WHERE payslip(pe) = p AND NOT countLunchCompensation(employee(p), project(pe), period(p));
 }

@@ -1,0 +1,79 @@
+MODULE LunchProjectPayslip;
+
+REQUIRE LunchOrder, PayslipBatch, ProjectPayslipLedger, ProjectTimeEntry;
+
+NAMESPACE Lunch;
+
+lunchPayslipCategory = DATA PayslipCategory ();
+isLunch 'Lunches' (PayslipCategory c) = lunchPayslipCategory() = c;
+
+EXTEND FORM payslipCategory
+    PROPERTIES(c) isLunch
+;
+
+@definePayslipDetail(lunch, 'line');
+
+payslip = DATA Payslip (Order) INDEXED;
+countLunch 'Lunches' (Payslip p) = GROUP SUM 1 IF payslip(Order o) = p;
+
+numberPayslip 'Payslip' (Order o) = number(payslip(o));
+EXTEND FORM orders PROPERTIES(o) READONLY numberPayslip;
+
+project = DATA Project (PayslipLunch);
+project (PayslipLunch pe) += project(pe);
+
+INDEX project(PayslipLunch p), payslip(p);
+
+payslipLunch = GROUP AGGR PayslipLunch pt BY payslip(pt), project(pt);
+
+project (DATE d, Employee e) = project(timeEntry(d, e));
+
+lunches 'Lunches' (Employee e, Project p, DATE from, DATE to) =
+    GROUP SUM price(Order o) IF employee(o) = e AND date(o) >= from AND date(o) <= to AND project(date(o), employee(o)) = p;
+lunches 'Lunches (days)' (Employee e, Project p, INTERVAL[DATE] i) = lunches(e, p, from(i), to(i));
+
+countLunches 'Lunches (days)' (Employee e, Project p, DATE from, DATE to) =
+    GROUP SUM 1 IF employee(Order o) = e AND date(o) >= from AND date(o) <= to AND project(date(o), employee(o)) = p;
+countLunches 'Lunches (days)' (Employee e, Project p, INTERVAL[DATE] i) = countLunches(e, p, from(i), to(i));
+
+//countLunches 'Lunches (days)' (Employee e, Project p, INTERVAL[DATE] i) =
+//    PARTITION UNGROUP countLunches
+//        PROPORTION STRICT ROUND(0) hours(e, p, i)
+//        ORDER p
+//        BY e, i;
+//
+//lunches 'Lunches' (Employee e, Project p, INTERVAL[DATE] i) =
+//    PARTITION UNGROUP lunches
+//        PROPORTION STRICT ROUND(0) hours(e, p, i)
+//        ORDER p
+//        BY e, i;
+
+generate (Payslip p) + {
+    FOR countLunches(employee(p), Project pr, period(p)) AND NOT payslipLunch(p, pr) DO NEW pe = PayslipLunch {
+        payslip(pe) <- p;
+        project(pe) <- pr;
+        category(pe) <- lunchPayslipCategory();
+    }
+    FOR PayslipLunch pe = payslipLunch(p, Project pr) DO {
+        quantity(pe) <- countLunches(employee(p), pr, period(p));
+        total(pe) <- lunches(employee(p), pr, period(p));
+    }
+    DELETE PayslipLunch pe WHERE payslip(pe) = p AND NOT countLunches(employee(p), project(pe), period(p));
+    payslip(Order o) <- p WHERE employee(o) = employee(p) AND date(o) >= startDate(p) AND date(o) <= endDate(p);
+}
+
+EXTEND FORM payslip
+    OBJECTS lc = Order
+    PROPERTIES(lc) READONLY date, nameEmployee, nameProduct, nameVendor, price
+    ORDERS date(lc)
+    PROPERTIES(lc) NEWSESSION EDIT
+    FILTERS payslip(lc) = p
+;
+
+DESIGN payslip {
+    details {
+        MOVE BOX(lc) {
+            caption = badged('Lunches', countLunch(p));
+        }
+    }
+}

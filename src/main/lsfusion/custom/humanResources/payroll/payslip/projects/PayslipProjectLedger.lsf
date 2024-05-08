@@ -1,0 +1,22 @@
+MODULE PayslipProjectLedger;
+
+REQUIRE ProjectPayslipLedger, ProjectLedger;
+
+NAMESPACE Payroll;
+
+EXTEND CLASS PayslipLedger : ProjectLedger;
+
+active (PayslipLedger l) += l IS PayslipLedger;
+
+project (PayslipLedger l) += project(l);
+
+number (PayslipLedger l) += number(l);
+date (PayslipLedger l) += endDate(l);
+
+partner(PayslipLedger l) += employee(l);
+
+category[ProjectLedger] (PayslipLedger l) += nameCategory(l);
+
+description[ProjectLedger] (PayslipLedger l) += description(l);
+
+expense(PayslipLedger l) += signedTotal(l);

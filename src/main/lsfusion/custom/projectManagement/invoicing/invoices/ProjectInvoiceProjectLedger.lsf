@@ -1,0 +1,23 @@
+MODULE ProjectInvoiceProjectLedger;
+
+REQUIRE ProjectInvoice, ProjectLedger, Refund;
+
+NAMESPACE ProjectManagement;
+
+EXTEND CLASS InvoiceLine : ProjectLedger;
+
+active (InvoiceLine l) += active(invoice(l));
+
+project (InvoiceLine l) += project(l);
+
+number (InvoiceLine l) += Invoicing.number(l);
+date (InvoiceLine l) += Invoicing.date(l);
+
+partner (InvoiceLine l) += customer(l);
+
+category (InvoiceLine l) += nameType(l);
+
+description (InvoiceLine l) += nameItem(l);
+
+income(InvoiceLine l) += amount(l) IF NOT isRefund(invoice(l));
+expense(InvoiceLine l) += -amount(l) IF isRefund(invoice(l));

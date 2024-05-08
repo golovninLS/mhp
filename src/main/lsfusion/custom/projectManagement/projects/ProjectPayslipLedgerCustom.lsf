@@ -1,0 +1,14 @@
+MODULE ProjectPayslipLedgerCustom;
+
+REQUIRE ProjectPayslipLedger, ProjectCustom;
+
+NAMESPACE ProjectManagement;
+
+DESIGN project {
+    details {
+        staff {
+            MOVE BOX(psl);
+        }
+    }
+}
+

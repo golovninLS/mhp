@@ -1,0 +1,41 @@
+MODULE ProjectLedgerReport;
+
+REQUIRE ProjectLedger, ProjectManagementSettings;
+
+NAMESPACE ProjectManagement;
+
+FORM projectLedgerReport 'Project report'
+    OBJECTS l = ProjectLedger PIVOT
+    PROPERTIES(l) READONLY class, date, number, nameProject, namePartner, category, description 
+    PROPERTIES(l) READONLY MEASURE
+                    income, expense, profit
+    FILTERS active(l)
+;
+
+DESIGN projectLedgerReport {
+    OBJECTS {
+        NEW filters FIRST {
+            caption = 'Filters';
+            horizontal = TRUE;
+        }
+        NEW pane {
+            tabbed = TRUE;
+            fill = 1;
+            MOVE BOX(l) {
+                caption = 'Project';
+            }
+        }
+    }
+}
+
+@defineDateAggregationForm(projectLedgerReport, l, );
+
+@defineDateFilterForm(projectLedgerReport, l);
+
+NAVIGATOR {
+    projectManagement {
+        reporting {
+            NEW projectLedgerReport;
+        }
+    }
+}

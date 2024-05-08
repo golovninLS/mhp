@@ -6,6 +6,8 @@ PRIORITY MasterData;
 
 NAMESPACE Accomodation;
 
+// модуль пока не используется, так как тут нет ссылки на проект. Оставлен на будущее.
+
 accomodationPayslipCategory = DATA PayslipCategory ();
 isAccomodation 'Accomodation order' (PayslipCategory c) = accomodationPayslipCategory() = c;
 

@@ -1,0 +1,23 @@
+MODULE ProjectBillProjectLedger;
+
+REQUIRE ProjectBill, ProjectLedger, CreditNote;
+
+NAMESPACE ProjectManagement;
+
+EXTEND CLASS BillLine : ProjectLedger;
+
+active (BillLine l) += active(bill(l));
+
+project (BillLine l) += project(l);
+
+number (BillLine l) += Invoicing.number(l);
+date (BillLine l) += Invoicing.date(l);
+
+partner (BillLine l) += vendor(l);
+
+category (BillLine l) += nameType(l);
+
+description (BillLine l) += nameItem(l);
+
+income(BillLine l) += -amount(l) IF isCreditNote(bill(l));
+expense(BillLine l) += amount(l) IF NOT isCreditNote(bill(l));

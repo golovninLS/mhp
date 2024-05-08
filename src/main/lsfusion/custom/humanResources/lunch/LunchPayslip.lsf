@@ -4,6 +4,8 @@ REQUIRE LunchOrder, PayslipBatch;
 
 NAMESPACE Lunch;
 
+// модуль пока не используется, так как тут нет ссылки на проект. Оставлен на будущее.
+
 lunchPayslipCategory = DATA PayslipCategory ();
 isLunch 'Lunches' (PayslipCategory c) = lunchPayslipCategory() = c;
 

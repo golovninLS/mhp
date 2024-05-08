@@ -1,0 +1,67 @@
+MODULE ProjectLedger;
+
+REQUIRE Project, DateUtils;
+
+NAMESPACE ProjectManagement;
+
+CLASS ABSTRACT ProjectLedger 'Project ledger';
+TABLE projectLedger (ProjectLedger);
+
+active '{Active}' = ABSTRACT BOOLEAN (ProjectLedger);
+
+class 'Type' (ProjectLedger l) = objectClassName(l) IF l IS ProjectLedger CHARWIDTH 15;
+
+project 'Project' = ABSTRACT Project (ProjectLedger) MATERIALIZED;
+nameProject 'Project' (ProjectLedger l) = name(project(l));
+
+number 'Number' = ABSTRACT STRING[31] (ProjectLedger) MATERIALIZED;
+
+date 'Date' = ABSTRACT DATE (ProjectLedger) MATERIALIZED;
+@defineDateAggregation(ProjectLedger, , );
+
+INDEX project (ProjectLedger l), date(l);
+
+//// type
+//CLASS ProjectLedgerType 'Project ledger type' {
+//    none 'None'
+//}
+//TABLE projectLedgerType (ProjectLedgerType);
+//
+//name '{master.data.name}' (ProjectLedgerType o) = staticCaption(o) IF o IS ProjectLedgerType CHARWIDTH 15;
+//
+//FORM dialogProjectLedgerTypes 'Project ledger type'
+//    OBJECTS o = ProjectLedgerType
+//    PROPERTIES(o) READONLY name
+//    
+//    LIST ProjectLedgerType OBJECT o
+//;
+//
+//type = ABSTRACT ProjectLedgerType (ProjectLedger) MATERIALIZED;
+//nameType 'Type' (ProjectLedger l) = name(type(l));
+
+partner 'Partner' = ABSTRACT Partner (ProjectLedger) MATERIALIZED;
+namePartner 'Partner' (ProjectLedger l) = name(partner(l));
+
+category 'Category' = ABSTRACT ISTRING (ProjectLedger) MATERIALIZED;
+
+description 'Description' = ABSTRACT ISTRING (ProjectLedger) MATERIALIZED;
+
+income 'Income' = ABSTRACT NUMERIC[16,2] (ProjectLedger) MATERIALIZED;
+expense 'Expense' = ABSTRACT NUMERIC[16,2] (ProjectLedger) MATERIALIZED;
+profit 'Profit' (ProjectLedger l) = income(l) (-) expense(l);
+
+EXTEND FORM project
+    OBJECTS prl = ProjectLedger
+    PROPERTIES(prl) READONLY class, date, number, nameProject, namePartner, category, description, income, expense, profit
+    PROPERTIES(prl) EDIT
+    FILTERS project(prl) = p,
+            active(prl)
+;
+
+DESIGN project {
+    details {
+        MOVE BOX(prl) {
+            caption = 'Project ledger';
+        }
+    }
+}
