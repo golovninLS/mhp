@@ -1,48 +1,30 @@
 MODULE LunchCompensation;
 
-REQUIRE LunchProjectPayslip, ProjectTimeEntry;
+REQUIRE LunchCompensationCost, LunchProjectPayslip, ProjectTimeEntry;
 
 NAMESPACE Lunch;
 
 lunchCompensationPayslipCategory = DATA PayslipCategory ();
-isLunchCompensation 'Копенсация питания' (PayslipCategory c) = lunchCompensationPayslipCategory() = c;
+isLunchCompensation 'Lunch compensation' (PayslipCategory c) = lunchCompensationPayslipCategory() = c;
 
 EXTEND FORM payslipCategory PROPERTIES(c) isLunchCompensation;
 
 @definePayslipDetail(lunchCompensation, 'line');
 
-lunchCompensationCost 'Стоимость копенсации питания' = DATA NUMERIC[12,2] ();
-
-EXTEND FORM HumanResources.options PROPERTIES lunchCompensationCost();
-DESIGN HumanResources.options {
-    commons {
-        MOVE PROPERTY(lunchCompensationCost());
-    }
-}
-
-lunchCompensationCost 'Стоимость копенсации питания' = DATA NUMERIC[12,2] (Project);
-
-EXTEND FORM project PROPERTIES lunchCompensationCost(p);
-DESIGN project {
-    headerLeft {
-        MOVE PROPERTY(lunchCompensationCost(p));
-    }
-}
-
-lunchCompensationCost (Employee e, DATE d) = OVERRIDE 
-    lunchCompensationCost(project(d, e)),
-    lunchCompensationCost();
+costLunchCompensation (Employee e, DATE d) = OVERRIDE
+    costLunchCompensation(project(d, e), d),
+    costLunchCompensation(d);
 
 lunchCompensation (DATE d, Employee e) = hours(d, e) AND NOT order(d, e); 
 countLunchCompensation (Employee e, Project p, DATE from, DATE to) = GROUP SUM 1 IF lunchCompensation(DATE d, e) AND d >= from AND d <= to AND project(d, e) = p;
 countLunchCompensation (Employee e, Project p, INTERVAL[DATE] i) = countLunchCompensation(e, p, from(i), to(i));
 
 lunchCompensation (Employee e, Project p, DATE from, DATE to) = 
-    GROUP SUM lunchCompensationCost(e, DATE d) IF lunchCompensation(d, e) AND d >= from AND d <= to AND project(d, e) = p;
+    GROUP SUM costLunchCompensation(e, DATE d) IF lunchCompensation(d, e) AND d >= from AND d <= to AND project(d, e) = p;
 lunchCompensation (Employee e, Project p, INTERVAL[DATE] i) = lunchCompensation(e, p, from(i), to(i));
 
 lunchCompensation (Employee e, DATE from, DATE to) =
-    GROUP SUM lunchCompensationCost(e, DATE d) IF lunchCompensation(d, e) AND d >= from AND d <= to;
+    GROUP SUM costLunchCompensation(e, DATE d) IF lunchCompensation(d, e) AND d >= from AND d <= to;
 lunchCompensation 'Lunch compensation' (Employee e, INTERVAL[DATE] i) = lunchCompensation(e, from(i), to(i));
 
 project = DATA Project (PayslipLunchCompensation);

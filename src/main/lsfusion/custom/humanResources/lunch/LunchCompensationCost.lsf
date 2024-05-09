@@ -1,0 +1,55 @@
+MODULE LunchCompensationCost;
+
+REQUIRE ProjectCustom, HumanResourcesSettings;
+
+PRIORITY HumanResources;
+
+NAMESPACE Lunch;
+
+lunchCompensationCost 'Стоимость копенсации питания' = DATA NUMERIC[12,2] (); // to delete
+lunchCompensationCost 'Стоимость копенсации питания' = DATA NUMERIC[12,2] (Project); // to delete
+
+CLASS LunchCompensation 'Lunch compensation';
+
+date 'Date' = DATA DATE (LunchCompensation);
+
+project 'Project' = DATA Project (LunchCompensation);
+nameProject 'Project' (LunchCompensation c) = name(project(c));
+countLunchCompensation = GROUP SUM 1 BY project(LunchCompensation s) MATERIALIZED;
+
+cost 'Cost' = DATA NUMERIC[12,2] (LunchCompensation);
+
+INDEX project(LunchCompensation s), date(s), s;
+
+lunchCompensation (Project p, DATE d) =
+    GROUP LAST LunchCompensation s ORDER date(s), s WHERE date(s) <= d BY project(s);
+
+costLunchCompensation  (Project p, DATE d) = cost(lunchCompensation(p, d));
+
+lunchCompensation (DATE d) =
+    GROUP LAST LunchCompensation s ORDER date(s), s WHERE date(s) <= d AND NOT project(s);
+
+costLunchCompensation  (DATE d) = cost(lunchCompensation(d));
+
+EXTEND FORM project
+    OBJECTS ls = LunchCompensation
+    PROPERTIES(ls) date, cost, NEW, DELETE
+    FILTERS project(ls) = p
+;
+
+DESIGN project {
+    staff {
+        MOVE BOX(ls) { caption = badged('Lunch compensation', countLunchCompensation(p)); }
+    }
+}
+
+EXTEND FORM options
+    OBJECTS ls = LunchCompensation
+    PROPERTIES(ls) nameProject, date, cost, NEW, DELETE
+;
+
+DESIGN options {
+    tabbedPane {
+        MOVE BOX(ls) { caption = 'Lunch compensation'; }
+    }
+}
