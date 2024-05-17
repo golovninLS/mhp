@@ -74,4 +74,6 @@ REQUIRE Eval, ProcessMonitor, Backup,
         ProjectAccomodation, ProjectTimeEntryCustom,
         
         ProjectLedgerReport, ProjectPayslipLedgerCustom, 
-        ProjectBillProjectLedger, ProjectInvoiceProjectLedger, PayslipProjectLedger;
+        ProjectBillProjectLedger, ProjectInvoiceProjectLedger, PayslipProjectLedger,
+
+        BillAccomodation;

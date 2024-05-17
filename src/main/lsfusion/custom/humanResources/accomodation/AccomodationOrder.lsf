@@ -24,8 +24,9 @@ order (DATE d, Employee e) = GROUP MIN Order o IF startDate(o) <= d AND NOT d > 
 prevOrder (DATE d, Employee e) = GROUP LAST Order o ORDER startDate(o), o WHERE startDate(o) < d AND employee(o) = e;
 nextOrder (DATE d, Employee e) = GROUP LAST Order o ORDER DESC startDate(o), o WHERE startDate(o) > d AND employee(o) = e;
 
-countEmployees (Accomodation a, DATE d) = GROUP SUM 1 IF accomodation(order(d, Employee e)) = a;
+countEmployees 'Employees' (Accomodation a, DATE d) = GROUP SUM 1 IF accomodation(order(d, Employee e)) = a;
 employeePrice (Accomodation a, DATE d) = round2(price(a, d) / (IF fixedPrice(a, d) THEN countEmployees(a, d) ELSE 1));
+amount 'Total amount' (Accomodation a, DATE d) = price(a, d) * (IF NOT fixedPrice(a, d) THEN countEmployees(a, d) ELSE 1);  
 
 employeePrice 'Price' (Order o, DATE d) = employeePrice(accomodation(o), d);
 countEmployees 'Employees' (Order o, DATE d) = countEmployees(accomodation(o), d);

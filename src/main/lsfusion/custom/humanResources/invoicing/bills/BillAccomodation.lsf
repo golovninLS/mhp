@@ -1,0 +1,63 @@
+MODULE BillAccomodation;
+
+REQUIRE Bill, AccomodationOrder;
+
+NAMESPACE Invoicing;
+
+accomodation 'Accomodation order' = DATA BOOLEAN (BillType);
+EXTEND FORM billType
+    PROPERTIES(o) accomodation
+;
+
+period 'Period' = DATA INTERVAL[DATE] (Bill);
+
+in = DATA BOOLEAN (Bill, Accomodation);
+accomodations 'Accomodations' (Bill b) = GROUP CONCAT name(Accomodation a) IF in (b, a), ',' ORDER a CHARWIDTH 40;
+
+amountAccomodation 'Total' (Bill b) = GROUP SUM amount(Accomodation a, DATE d) IF iterate(d, from(period(b)), to(period(b))) AND in(b, a);   
+
+EXTEND FORM bill
+    PROPERTIES(b) period, accomodations
+    
+    PROPERTIES(b) amountAccomodation, adua = untaxedAmount
+    
+    OBJECTS da = (d = DATE, a = Accomodation)
+    PROPERTIES READONLY BACKGROUND rgbColor(a) 'Date' = VALUE(d), name(a), countEmployees(a, d), amount(a, d)
+    FILTERS iterate(d, from(period(b)), to(period(b))),
+            in(b, a),
+            countEmployees(a, d)
+
+    OBJECTS o = Order
+    PROPERTIES(o) READONLY BACKGROUND rgbColorAccomodation(o)
+                startDate, endDate, nameEmployee, nameAccomodation
+    FILTERS NOT startDate(o) > to(period(b)),
+            NOT endDate(o) < from(period(b)),
+            in(b, accomodation(o))
+;
+
+DESIGN bill {
+    details {
+        NEW accommodation {
+            showIf = accomodation(type(b));
+            caption = 'Accomodation order';
+            NEW accomodationHeader {
+                horizontal = TRUE;
+                alignment = STRETCH;
+                MOVE PROPERTY(period(b));
+                MOVE PROPERTY(accomodations(b));
+            }
+            NEW accomodationSum {
+                horizontal = TRUE;
+                MOVE PROPERTY(amountAccomodation(b));
+                MOVE PROPERTY(adua);
+            }
+            NEW accomodationDetails {
+                fill = 1;
+                horizontal = TRUE;
+                MOVE BOX(da);
+                MOVE BOX(o);
+            }
+        }
+    }
+}
+
