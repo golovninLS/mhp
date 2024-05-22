@@ -33,7 +33,7 @@ EXTEND FORM timesheetSupervisor
     PROPERTIES(et) READONLY firstName, lastName, namePosition, rolesTimesheet
     
     PROPERTIES timesheetHoursProject(et, dates) SHOWIF timesheetProject(), rateSalary(et, dates) SHOWIF timesheetProject() ON CHANGE changeRateSalary(et, dates),
-               hours(et, dates), countLunches(et, dates), countAccomodation(et, dates),
+               hours(et, dates) SHOWIF NOT timesheetProject(), countLunches(et, dates) SHOWIF NOT timesheetProject(), countAccomodation(et, dates) SHOWIF NOT timesheetProject(), 
                timesheetSalaryProject(et, dates) SHOWIF timesheetProject() ON CHANGE {
                    SHOW timesheetSupervisorDateEmployee OBJECTS i = dates, e = et FLOAT;
                }, salary(et, dates) ON CHANGE {

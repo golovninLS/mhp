@@ -1,0 +1,72 @@
+MODULE EmployeeLocation;
+
+REQUIRE Employee, InventoryReportLot;
+
+NAMESPACE MasterData;
+
+location = DATA Location (Employee);
+nameLocation 'Location' (Employee e) = name(location(e));
+
+onStarted()+{
+    IF NOT location('employees') THEN NEW l = Location{
+        id(l) <- 'employees';
+        name(l) <- 'Employees';
+        APPLY;
+    }
+}
+
+fillLocations 'Заполнить склады для сотрудников'(){
+    FOR name(Employee e) AND NOT location(e) NEW l = Location DO{
+        name(l) <- name(e);
+        parent(l) <- location('employees');
+        company(l) <- legalEntity(e);
+        location(e) <- l;
+    } 
+}
+
+WHEN SET (Employee e IS Employee) AND NOT (location(e)) DO NEW l = Location{
+    name(l) <- name(e);
+    parent(l) <- location('employees');
+    company(l) <- legalEntity(e); 
+    location(e) <- l;
+}
+
+locationEmployee = GROUP AGGR Employee e BY location(e);
+onHand 'On hand'  (Employee e, Product p)  = onHand(location(e), p);
+onHand 'On hand'  (Employee e, Lot l)  = onHand(location(e), l);
+onHand 'On hand' (Employee e) = GROUP SUM 1 IF onHand(e, Product p);
+
+CONSTRAINT SET(archived(Employee e)) AND onHand(e) 
+    MESSAGE 'It is forbidden to disable an employee with balances in inventory!';
+
+EXTEND FORM employee
+    OBJECTS p = Product
+    PROPERTIES (p) READONLY name, nameCategory, nameUom
+    PROPERTIES onHand(e, p)
+    FILTERS onHand(e, p)
+
+    OBJECTS lotH = Lot
+    PROPERTIES(lotH) READONLY id
+    PROPERTIES(e, lotH) onHand
+    FILTERS product(lotH) = p AND onHand(e, lotH)
+;
+
+DESIGN employee{
+    details{
+        NEW inventory{
+            showIf = location(e);
+            caption = 'Inventory employee';
+            alignment = STRETCH;
+            fill = 2;
+            NEW products{
+                alignment = STRETCH;
+                MOVE BOX (p);
+            }
+            NEW lots{
+                alignment = STRETCH;
+                fill = 1;
+                MOVE BOX (lotH);
+            }
+        }
+    }
+}

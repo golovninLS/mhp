@@ -39,7 +39,7 @@ EXTEND FORM timesheetSupervisor
                            netWage
     PROPERTIES(ps) NEWSESSION EDIT
 
-    PROPERTIES(ps, pc) total COLUMNS 'total' (pc) HEADER name(pc) READONLYIF readonly(pc) ON CHANGE {
+    PROPERTIES(ps, pc) total COLUMNS 'total' (pc) HEADER name(pc) SHOWIF NOT timesheetProject() READONLYIF readonly(pc) ON CHANGE {
                         NEWSESSION {
                             changeTotal(ps, pc);
                             APPLY;
