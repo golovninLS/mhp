@@ -1,0 +1,53 @@
+MODULE BillPaymentDashboard;
+
+REQUIRE ProjectBill, OutgoingPaymentBillProject;
+
+NAMESPACE Invoicing;
+
+FORM billPaymentDashboard 'Bill list'
+    OBJECTS t = Tax
+
+    OBJECTS b = Bill
+    PROPERTIES(b) READONLY STICKY nameCompany, nameVendor, number, date
+    PROPERTIES(b) READONLY numberMonth, year, untaxedAmount
+    PROPERTIES READONLY taxAmount(t, b) COLUMNS (t) HEADER name(t)
+
+    PROPERTIES(b) READONLY amount, nameCurrency
+    PROPERTIES(b) READONLY nameProject, note, items, dueDateTime
+
+    PROPERTIES READONLY left(b), left(b, t) COLUMNS (t) HEADER 'To pay' + ' (' + name(t) + ')', untaxedLeft(b)
+
+    PROPERTIES READONLY paid(b), paid(b, t) COLUMNS (t) HEADER 'Paid' + ' (' + name(t) + ')', untaxedPaid(b)
+    PROPERTIES(b) NEWSESSION NEW, EDIT, DELETE
+
+    PROPERTIES GRID openFile1(b) DISABLEIF NOT file1(b), openFile2(b) DISABLEIF NOT file2(b), openFile3(b) DISABLEIF NOT file3(b)
+    
+    OBJECTS o = OutgoingPayment
+    PROPERTIES(o) READONLY imagedNameStatus BACKGROUND colorStatus(o),
+                           number, date, nameCompanyAccount, namePartnerAccount 
+    PROPERTIES READONLY paid(o, b), paid(o, b, t) COLUMNS (t) HEADER 'Paid' + ' (' + name(t) + ')', untaxedPaid(o, b)
+    PROPERTIES(o) EDIT
+    FILTERS paid(o, b)
+;
+
+@defineDocObjectsForm(billPaymentDashboard, b, 'Bills');
+
+DESIGN billPaymentDashboard {
+    tabbedPane {
+        NEW bills {
+            caption = 'Bills';
+            MOVE BOX(b) { caption = ''; }
+            MOVE BOX(o) { fill = 0.2; }
+        }
+    }
+
+}
+
+@defineDocFilter(billPaymentDashboard, billPaymentDashboard, Partner, vendor, b, 'Vendor', vendor);
+@defineDocFilter(billPaymentDashboard, billPaymentDashboard, Partner, company, b, 'Company', company);
+
+NAVIGATOR {
+    dashboards {
+        NEW billPaymentDashboard;
+    }
+}

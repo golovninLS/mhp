@@ -1,0 +1,29 @@
+MODULE PaymentProjectDashboardReport;
+
+REQUIRE PaymentProjectDashboard;
+
+NAMESPACE Invoicing;
+
+EXTEND FORM paymentProjectDashboard
+    OBJECTS ob = (op = OutgoingPayment, bp = BillProject) PIVOT
+
+    PROPERTIES(bp) READONLY nameCompany, nameVendor, number, date
+    PROPERTIES(bp) READONLY numberMonth, year, untaxedAmount
+    PROPERTIES READONLY taxAmount(t, bp) COLUMNS (t) HEADER name(t)
+    
+    PROPERTIES(bp) READONLY amount, nameCurrency
+    PROPERTIES(bp) READONLY nameProject, note, items, dueDateTime
+
+    PROPERTIES(op) READONLY imagedNameStatus BACKGROUND colorStatus(op),
+                            number, date, week, numberMonth, year, nameCompanyAccount, namePartnerAccount
+    PROPERTIES MEASURE READONLY paid(op, bp), paid(op, bp, t) COLUMNS (t) HEADER 'Paid' + ' (' + name(t) + ')', untaxedPaid(op, bp)
+    FILTERS paid(op, bp),
+            [FILTER paymentProjectDashboard.b](bp)
+            
+;
+
+DESIGN paymentProjectDashboard {
+    tabbedPane {
+        MOVE BOX(ob) { caption = '{Pivot}'; }
+    }
+}

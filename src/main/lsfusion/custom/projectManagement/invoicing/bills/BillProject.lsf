@@ -1,0 +1,94 @@
+MODULE BillProject;
+
+REQUIRE BillCurrency, Project;
+
+NAMESPACE ProjectManagement;
+
+CLASS BillProject 'Project bill';
+
+bill 'Bill' = DATA Bill (BillProject) NONULL DELETE;
+
+project 'Project' = DATA Project (BillProject);
+nameProject 'Project' (BillProject b) = name(project(b));
+
+base 'Distribution base' = DATA NUMERIC[10,2] (BillProject);
+
+untaxedAmount '{Amount}'  = DATA NUMERIC[14,2] (BillProject);
+
+taxAmount 'Taxes' (Tax t, BillProject p) = DATA NUMERIC[14,2] (Tax, BillProject);
+taxAmount 'Taxes' (BillProject p) = GROUP SUM taxAmount(Tax t, p);
+
+amount 'Total amount' (BillProject p) = untaxedAmount(p) (+) taxAmount(p);
+
+file1(BillProject o) = file1(bill(o));
+file2(BillProject o) = file2(bill(o));
+file3(BillProject o) = file3(bill(o));
+openFile1(BillProject o) { openFile(bill(o), 1); }
+openFile2(BillProject o) { openFile(bill(o), 2); }
+openFile3(BillProject o) { openFile(bill(o), 3); }
+
+EXTEND FORM bill
+    OBJECTS bpt = Tax
+    
+    OBJECTS bp = BillProject
+    PROPERTIES(bp) nameProject, base, untaxedAmount
+    PROPERTIES taxAmount(bpt, bp) COLUMNS (bpt) HEADER name(bpt)
+    PROPERTIES(bp) amount READONLY
+    PROPERTIES(bp) NEW, DELETE
+    FILTERS bill(bp) = b
+;
+
+DESIGN bill {
+    details {
+        NEW billProject FIRST {
+            caption = 'Projects';
+            MOVE BOX(bp) { caption = ''; }
+        }
+    }
+}
+
+// bill properties
+type (BillProject l) = type(bill(l));
+nameType 'Type' (BillProject l) = nameType(bill(l)) IN id;
+imagedNameStatus 'Status' (BillProject l) = imagedNameStatus(bill(l));
+dateTime 'Date' (BillProject l) = dateTime(bill(l)) IN id;
+date 'Date' (BillProject l) = date(bill(l));
+dueDateTime 'Pay before' (BillProject l) = dueDateTime(bill(l)) IN id;
+dueDate 'Date' (BillProject l) = dueDate(bill(l));
+number 'Number' (BillProject l) = number(bill(l)) IN id;
+numberDate 'Description' (BillProject l) = numberDate(bill(l));
+vendor (BillProject l) = vendor(bill(l));
+nameVendor 'Vendor' (BillProject l) = nameVendor(bill(l));
+company 'Company' (BillProject l) = company(bill(l));
+nameCompany 'Company' (BillProject l) = nameCompany(bill(l));
+nameCurrency 'Currency' (BillProject l) = nameCurrency(bill(l));
+items 'Items' (BillProject l) = items(bill(l));
+note 'Note' (BillProject l) = note(bill(l));
+
+@defineDateAggregation(BillProject, , );
+
+customGenerate = ABSTRACT VALUE BOOLEAN (Bill);
+generateProject 'Generate' ABSTRACT LIST (Bill);
+
+// proportion
+
+calcUntaxedAmount (BillProject p) =
+    PARTITION UNGROUP untaxedAmount
+        PROPORTION STRICT ROUND(0) base(p)
+        ORDER p BY bill(p);
+
+calcTaxAmount (Tax t, BillProject p) =
+    PARTITION UNGROUP taxAmount
+        PROPORTION STRICT ROUND(0) base(p)
+        ORDER p BY t, bill(p);
+
+generateProject(Bill b) + {
+    IF NOT customGenerate(b) THEN {
+        untaxedAmount(BillProject p) <- calcUntaxedAmount(p) WHERE bill(p) = b;
+        taxAmount(Tax t, BillProject p) <- calcTaxAmount(t, p) WHERE bill(p) = b;
+    }
+}
+
+EXTEND FORM bill
+    PROPERTIES(b) generateProject DRAW bp TOOLBAR
+;

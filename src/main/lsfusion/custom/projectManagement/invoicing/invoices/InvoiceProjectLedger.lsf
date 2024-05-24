@@ -1,4 +1,4 @@
-MODULE ProjectInvoiceProjectLedger;
+MODULE InvoiceProjectLedger;
 
 REQUIRE ProjectInvoice, ProjectLedger, Refund;
 

@@ -1,0 +1,70 @@
+MODULE BillCustom;
+
+REQUIRE Bill;
+
+NAMESPACE Invoicing;
+
+changeItems (Bill b) {
+    DIALOG items OBJECTS i INPUT LIST name(i) DO {
+        IF NOT countBillLine(b) THEN
+            NEW l = BillLine {
+                bill(l) <- b;
+                item(l) <- i;
+            }
+        ELSE
+            item(BillLine l) <- i WHERE bill(l) = b AND NOT item(l) IS Product;
+    }
+}
+
+changeUntaxedAmount (Bill b) {
+    INPUT a = untaxedAmount(b) DO {
+        IF NOT countBillLine(b) THEN
+            NEW l = BillLine {
+                bill(l) <- b;
+                untaxedAmount(l) <- a;
+            }
+        ELSE
+            untaxedAmount(BillLine l) <- a WHERE bill(l) = b;
+    }
+}
+
+changeTaxAmount (Tax t, Bill b) {
+    INPUT a = taxAmount(t, b) DO {
+        IF NOT countBillLine(b) THEN
+            NEW l = BillLine {
+                bill(l) <- b;
+                in(l, t) <- TRUE;
+                taxAmount(t, l) <- a;
+            }
+        ELSE {
+            in (BillLine l, t) <- TRUE IF a WHERE bill(l) = b;
+            taxAmount(t, BillLine l) <- a WHERE bill(l) = b;
+        }
+    }
+}
+
+EXTEND FORM bill
+    OBJECTS bt = Tax
+    
+    PROPERTIES uta = untaxedAmount(b) ON CHANGE changeUntaxedAmount(b),
+               utt = taxAmount(bt, b) ON CHANGE changeTaxAmount(bt, b) COLUMNS (bt) HEADER name(bt),
+               items(b) ON CHANGE changeItems(b),
+               amn = amount(b)
+;
+
+DESIGN bill {
+    header {
+        headerLeft {
+            MOVE PROPERTY(dueDateTime(b)) AFTER PROPERTY(dateTime(b));
+        }
+        NEW headerLine AFTER headerRight {
+            MOVE PROPERTY(uta);
+            MOVE PROPERTY(utt);
+            MOVE PROPERTY(amn);
+        }
+    }
+    OBJECTS {
+        MOVE PROPERTY(note(b)) AFTER header { alignment = STRETCH; }
+        MOVE PROPERTY(items(b)) AFTER header { alignment = STRETCH; }
+    }
+}

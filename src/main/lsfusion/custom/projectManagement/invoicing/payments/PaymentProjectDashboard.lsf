@@ -1,0 +1,122 @@
+MODULE PaymentProjectDashboard;
+
+REQUIRE InvoicingSettings, BillPayment, BillProject, OutgoingPaymentBillProject;
+
+NAMESPACE Invoicing;
+
+FORM paymentProjectDashboard 'Harmonogram'
+    OBJECTS t = Tax
+    
+    OBJECTS b = BillProject
+    PROPERTIES(b) STICKY READONLY nameCompany, nameVendor, number, date 
+    PROPERTIES(b) READONLY numberMonth, year, untaxedAmount
+    PROPERTIES READONLY taxAmount(t, b) COLUMNS (t) HEADER name(t)
+    
+    PROPERTIES(b) READONLY amount, nameCurrency
+    PROPERTIES(b) READONLY nameProject, note, items, dueDateTime
+    
+    PROPERTIES READONLY left(b), left(b, t) COLUMNS (t) HEADER 'To pay' + ' (' + name(t) + ')', untaxedLeft(b)
+
+    PROPERTIES READONLY paid(b), paid(b, t) COLUMNS (t) HEADER 'Paid' + ' (' + name(t) + ')', untaxedPaid(b)
+    
+    PROPERTIES GRID openFile1(b) DISABLEIF NOT file1(b), openFile2(b) DISABLEIF NOT file2(b), openFile3(b) DISABLEIF NOT file3(b)
+;
+
+@defineDocObjectsForm(paymentProjectDashboard, b, 'Harmonogram');
+
+changeDateDraftPayment (BillProject b) {
+    INPUT d = dateDraftPayment(b) DO {
+        NEWSESSION {
+            IF d THEN {
+                IF NOT draftPayment(b) THEN NEW p = OutgoingPayment {
+                    dateTime(p) <- DATETIME(d);
+                    ready(p) <- TRUE;
+                    fill(p, bill(b));
+                    paid(p, b) <- left(b);
+                    paid(p, b, Tax t) <- left(b, t);
+                } ELSE
+                    dateTime(draftPayment(b)) <- DATETIME(d);
+            } ELSE
+                DELETE draftPayment(b);
+            APPLY;
+        }
+    }
+}
+
+changePaidDraftPayment (BillProject b) {
+    INPUT n = paidDraftPayment(b) DO {
+        NEWSESSION {
+            IF countBillProject(draftPayment(b)) = 1 AND NOT n THEN
+                DELETE draftPayment(b);
+            ELSE {
+                paid(draftPayment(b), b) <- n;
+                paid(draftPayment(b), b, Tax t) <- NUMERIC[14,2](n * left(b, t) / left(b));
+            }
+            APPLY;
+        }
+    }
+}
+
+changePaidDraftPayment (BillProject b, Tax t) {
+    INPUT n = paidDraftPayment(b, t) DO {
+        NEWSESSION {
+            paid(draftPayment(b), b, t) <- n;
+            APPLY;
+        }
+    }
+}
+
+payBill 'Pay bill' (BillProject b) {
+    IF NOT draftPayment(b) THEN {
+        NEWSESSION {
+            NEW p = OutgoingPayment {
+                dateTime(p) <- DATETIME(sum(currentDate(), 1));
+                fill(p, bill(b));
+                ready(p) <- TRUE;
+                paid(p, BillProject bp, Tax t) <- left(bp, t) WHERE bill(b) = bill(bp) AND NOT draftPayment(bp);
+                paid(p, BillProject bp) <- left(bp) WHERE bill(b) = bill(bp) AND NOT draftPayment(bp);
+            }
+            APPLY;
+        }
+    }
+}
+
+EXTEND FORM paymentProjectDashboard
+    PROPERTIES AFTER dueDateTime(b)
+        payBill(b) GRID,
+        dateDraftPayment(b) ON CHANGE changeDateDraftPayment(b),
+        paidDraftPayment(b) ON CHANGE changePaidDraftPayment(b) READONLYIF NOT draftPayment(b),
+        paidDraftPayment(b, t) ON CHANGE changePaidDraftPayment(b, t) READONLYIF NOT draftPayment(b)
+            COLUMNS (t) HEADER name(t)
+;
+
+NAVIGATOR {
+    dashboards {
+        NEW paymentProjectDashboard;
+    }
+}
+
+// filters
+EXTEND FORM paymentProjectDashboard
+    OBJECTS dates = INTERVAL[DATE] PANEL NULL BEFORE b
+    PROPERTIES dates '' = VALUE(dates)
+    
+    PROPERTIES prevInterval '<' = { SEEK paymentProjectDashboard.dates = prevMonthInterval(dates); },
+               nextInterval '>' = { SEEK paymentProjectDashboard.dates = nextMonthInterval(dates); }
+    
+    FILTERS NOT date(b) < from(dates) AND NOT date(b) > to(dates)
+;
+
+DESIGN paymentProjectDashboard {
+    filters {
+        NEW interval {
+            horizontal = TRUE;
+            MOVE PROPERTY(prevInterval);
+            MOVE PROPERTY(dates);
+            MOVE PROPERTY(nextInterval);
+        }
+    }
+}
+
+@defineDocFilter(paymentProjectDashboard, paymentProjectDashboard, Partner, vendor, b, 'Vendor', vendor);
+@defineDocFilter(paymentProjectDashboard, paymentProjectDashboard, Partner, company, b, 'Company', company);

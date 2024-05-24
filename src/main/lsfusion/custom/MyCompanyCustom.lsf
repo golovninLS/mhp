@@ -2,7 +2,8 @@ MODULE MyCompanyCustom;
 
 REQUIRE Eval, ProcessMonitor, Backup,
         MetaNumerator, PartnerGeo,
-        Individual, IndividualImport, IndividualInitial, Employee, EmployeeImport,
+        Individual, IndividualImport, IndividualInitial, 
+        Employee, EmployeeImport, EmployeeLocation,
         LegalEntity, LegalEntityImport,
         Contract, ContractPartner, ContractImport,
         Department, DepartmentPartner,
@@ -74,9 +75,10 @@ REQUIRE Eval, ProcessMonitor, Backup,
         ProjectAccomodation, ProjectTimeEntryCustom,
         
         ProjectLedgerReport, ProjectPayslipLedgerCustom, 
-        ProjectBillProjectLedger, ProjectInvoiceProjectLedger, PayslipProjectLedger,
+        InvoiceProjectLedger, PayslipProjectLedger,
 
-        BillAccomodation,
+        BillCustom, BillAccomodation,
+    
+        BillProject, BillProjectLedger,
 
-        EmployeeLocation
-;
+        BillPaymentDashboard, PaymentProjectDashboard, PaymentProjectDashboardReport, PaymentListDashboard;

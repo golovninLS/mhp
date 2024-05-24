@@ -1,0 +1,79 @@
+MODULE OutgoingPaymentBillProject;
+
+REQUIRE OutgoingPaymentDone, OutgoingPaymentDebt, BillProject;
+
+NAMESPACE Invoicing;
+
+paid 'Paid' = DATA NUMERIC[14,2] (OutgoingPayment, BillProject);
+paid 'Paid' (BillProject bp) = GROUP SUM paid(OutgoingPayment op, bp) IF done(op) MATERIALIZED;
+countBillProject (OutgoingPayment p) = GROUP SUM 1 IF paid(p, BillProject b);
+
+paidBillProject (OutgoingPayment p) = GROUP SUM paid(p, BillProject bp);
+WHEN LOCAL CHANGED(paidBillProject(OutgoingPayment p)) DO amount(p) <- paidBillProject(p);
+
+paid = DATA NUMERIC[14,2] (OutgoingPayment, BillProject, Tax);
+paid 'Paid' (BillProject bp, Tax t) = GROUP SUM paid(OutgoingPayment op, bp, t) IF done(op) MATERIALIZED;
+
+paidTax (OutgoingPayment op, BillProject bp) = GROUP SUM paid(op, bp, Tax t);
+untaxedPaid 'Paid (netto)' (OutgoingPayment op, BillProject bp) = paid(op, bp) (-) paidTax(op, bp);
+
+paidTax (BillProject bp) = GROUP SUM paid(bp, Tax t) MATERIALIZED;
+
+untaxedPaid '{Amount}' (BillProject bp) = paid(bp) (-) paidTax(bp);
+
+left 'To pay' (BillProject bp) = amount(bp) (-) paid(bp);
+left (BillProject bp, Tax t) = taxAmount(t, bp) (-) paid(bp, t);
+untaxedLeft 'To pay (netto)' (BillProject bp) = untaxedAmount(bp) (-) untaxedPaid(bp);
+
+// payment
+paid 'Paid' (OutgoingPayment op) = GROUP SUM paid(op, BillProject p);
+paid (OutgoingPayment op, Tax t) = GROUP SUM paid(op, BillProject p, t);
+untaxedPaid 'Paid (netto)' (OutgoingPayment op) = GROUP SUM untaxedPaid(op, BillProject p);
+
+// bill
+paid 'Paid' (OutgoingPayment op, Bill b) = GROUP SUM paid(op, BillProject p) IF bill(p) = b;
+paid (OutgoingPayment op, Bill b, Tax t) = GROUP SUM paid(op, BillProject p, t) IF bill(p) = b;
+untaxedPaid 'Paid (netto)' (OutgoingPayment op, Bill b) = GROUP SUM untaxedPaid(op, BillProject p) IF bill(p) = b;
+
+paid 'Paid' (Bill b) = GROUP SUM paid(BillProject p) IF bill(p) = b;
+paid (Bill b, Tax t) = GROUP SUM paid(BillProject p, t) IF bill(p) = b;
+untaxedPaid 'Paid (netto)' (Bill b) = GROUP SUM untaxedPaid(BillProject p) IF bill(p) = b;
+
+
+left 'To pay' (Bill b) = GROUP SUM left(BillProject p) IF bill(p) = b;
+left (Bill b, Tax t) = GROUP SUM left(BillProject p, t) IF bill(p) = b;
+untaxedLeft 'To pay (netto)' (Bill b) = GROUP SUM untaxedLeft(BillProject p) IF bill(p) = b;
+
+// draft payment
+draftPayment (BillProject b) = GROUP LAST OutgoingPayment p ORDER DESC date(p), p WHERE paid(p, b) AND NOT done(p);
+dateDraftPayment 'Date' (BillProject b) = date(draftPayment(b));
+paidDraftPayment 'Amount' (BillProject b) = paid(draftPayment(b), b);
+paidDraftPayment (BillProject b, Tax t) = paid(draftPayment(b), b, t);
+countBillProjectDraftPayment 'Project bills' (BillProject b) = countBillProject(draftPayment(b));
+
+editDraftPayment (BillProject b) { edit(draftPayment(b)); }
+
+//draftPayment (Bill b, DATE d) = GROUP MIN OutgoingPayment p IF paid(p, BillProject bp) AND bill(bp) = b AND date(bp) = d AND NOT done(p);
+
+EXTEND FORM outgoingPayment
+    OBJECTS bpt = Tax
+    
+    OBJECTS bp = BillProject
+    PROPERTIES(bp) READONLY nameCompany, nameVendor, number, date
+    PROPERTIES(bp) READONLY numberMonth, year, untaxedAmount
+    PROPERTIES READONLY taxAmount(bpt, bp) COLUMNS (bpt) HEADER name(bpt)
+
+    PROPERTIES(bp) READONLY amount, nameCurrency
+    PROPERTIES(bp) READONLY nameProject, note, items, dueDateTime
+    
+    PROPERTIES paid(p, bp), paid(p, bp, bpt) COLUMNS (bpt) HEADER name(bpt), untaxedPaid(p, bp) READONLY
+    FILTERS paid(p, bp) OR paidTax(p, bp)
+;
+
+DESIGN outgoingPayment {
+    details {
+        MOVE BOX(bp) FIRST {
+            caption = 'Project bills';
+        }
+    }
+}

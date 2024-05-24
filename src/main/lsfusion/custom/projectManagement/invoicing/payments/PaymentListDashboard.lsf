@@ -1,0 +1,34 @@
+MODULE PaymentListDashboard;
+
+REQUIRE OutgoingPaymentBillProject, OutgoingPaymentCurrency;
+
+NAMESPACE Invoicing;
+
+FORM paymentListDashboard 'Payment list'
+    OBJECTS t = Tax
+
+    OBJECTS o = OutgoingPayment
+    PROPERTIES(o) markAsDone GRID
+    PROPERTIES(o) READONLY imagedNameStatus BACKGROUND colorStatus(o),
+                           number, date, 
+                           nameCompany, nameCompanyAccount, 
+                           namePartner, namePartnerAccount,
+                           nameCurrency
+    PROPERTIES READONLY paid(o), paid(o, t) COLUMNS (t) HEADER 'Paid' + '(' + name(t) + ')', untaxedPaid(o)
+    PROPERTIES(o) EDIT
+
+    FILTERGROUP status
+        FILTER 'To pay' status(o) = OutgoingPaymentStatus.ready DEFAULT
+        FILTER 'Done' status(o) = OutgoingPaymentStatus.done
+;
+
+@defineDocObjectsForm(paymentListDashboard, o, 'Outgoing payments');
+
+@defineDocFilter(paymentListDashboard, paymentListDashboard, Partner, partner, o, 'Partner', partner);
+@defineDocFilter(paymentListDashboard, paymentListDashboard, Partner, company, o, 'Company', company);
+
+NAVIGATOR {
+    dashboards {
+        NEW paymentListDashboard;
+    }
+}
