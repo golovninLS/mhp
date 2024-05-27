@@ -37,7 +37,12 @@ DESIGN billPaymentDashboard {
         NEW bills {
             caption = 'Bills';
             MOVE BOX(b) { caption = ''; }
-            MOVE BOX(o) { fill = 0.2; }
+            MOVE BOX(o) { 
+                fill = 0.1;
+                GRID(o) {
+                    height = 100;
+                }
+            }
         }
     }
 

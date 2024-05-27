@@ -23,9 +23,9 @@ amount 'Total amount' (BillProject p) = untaxedAmount(p) (+) taxAmount(p);
 file1(BillProject o) = file1(bill(o));
 file2(BillProject o) = file2(bill(o));
 file3(BillProject o) = file3(bill(o));
-openFile1(BillProject o) { openFile(bill(o), 1); }
-openFile2(BillProject o) { openFile(bill(o), 2); }
-openFile3(BillProject o) { openFile(bill(o), 3); }
+openFile1 'File 1' (BillProject o) { openFile(bill(o), 1); }
+openFile2 'File 2' (BillProject o) { openFile(bill(o), 2); }
+openFile3 'File 3' (BillProject o) { openFile(bill(o), 3); }
 
 EXTEND FORM bill
     OBJECTS bpt = Tax
