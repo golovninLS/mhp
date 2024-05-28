@@ -81,4 +81,6 @@ REQUIRE Eval, ProcessMonitor, Backup,
     
         BillProject, BillProjectLedger,
 
-        BillPaymentDashboard, PaymentProjectDashboard, PaymentProjectDashboardReport, PaymentListDashboard;
+        BillPaymentDashboard, PaymentProjectDashboard, PaymentProjectDashboardReport, PaymentListDashboard,
+
+        TimesheetCustom;

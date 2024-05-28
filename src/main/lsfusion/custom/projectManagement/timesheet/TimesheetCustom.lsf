@@ -1,0 +1,18 @@
+MODULE TimesheetCustom;
+
+REQUIRE Timesheet;
+
+NAMESPACE ProjectManagement;
+
+supervisorTimesheetClosingDate 'Дата закрытия табеля (руководитель)' = DATA DATE ();
+
+EXTEND FORM options PROPERTIES() supervisorTimesheetClosingDate;
+
+DESIGN options {
+    commons {
+        NEW timesheet {
+            caption = 'Табель';
+            MOVE PROPERTY(supervisorTimesheetClosingDate());
+        }
+    }
+}

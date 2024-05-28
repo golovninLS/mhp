@@ -43,6 +43,8 @@ manager(Project o) <- currentUser() IF currentUser() IS Employee WHEN SET(o IS P
 
 description 'Description' = DATA RICHTEXT (Project);
 
+background = ABSTRACT CASE COLOR (Project);
+
 FORM project 'Project'
     OBJECTS p = Project PANEL
     
@@ -109,7 +111,7 @@ FORM dialogProjects 'Projects'
 ;
 
 FORM projects 'Projects'
-    OBJECTS p = Project
+    OBJECTS p = Project BACKGROUND background(p)
 
     PROPERTIES(p) READONLY number, startDate, endDate, namePartner, nameType, name, nameCompany, nameManager
     PROPERTIES(p) NEWSESSION NEW, EDIT, DELETE
