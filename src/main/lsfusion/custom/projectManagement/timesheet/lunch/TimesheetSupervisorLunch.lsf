@@ -19,7 +19,7 @@ EXTEND FORM timesheetSupervisor
     PROPERTIES symbolProductOrder(d, el) WAIT COLUMNS (d) HEADER extractDay(d) BACKGROUND backgroundHoursTimesheet(d, el)
                ON CHANGE {
                    FOR Product lp = timesheetLunchProduct() DO
-                       NEWSESSION APPLY {
+                       NEWSESSION {
                            FOR Order o = order(d, el) DO {
                                IF product(o) = lp THEN
                                    DELETE o;
@@ -32,7 +32,7 @@ EXTEND FORM timesheetSupervisor
                                    product(o) <- lp;
                                }
                            }
-
+                        APPLY;
                        }
                    ELSE
                        SHOW timesheetSupervisorDateEmployee OBJECTS i = interval(d, d), e = el FLOAT;
