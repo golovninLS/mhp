@@ -49,7 +49,7 @@ REQUIRE Eval, ProcessMonitor, Backup,
         Bill, BillFilter, BillSelection,
         BillReady, BillDone, BillCanceled,
         BillUom, BillCurrency, BillContract,
-        BillReport, BillItem, BillInitial,
+        BillReport, BillItem, BillInitial, BillReceiptCost,
 
         Invoice, InvoiceFilter, InvoiceSelection,
         InvoiceReady, InvoiceDone, InvoiceCanceled,

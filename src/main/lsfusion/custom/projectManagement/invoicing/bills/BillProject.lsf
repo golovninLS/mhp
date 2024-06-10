@@ -27,6 +27,9 @@ openFile1 'File 1' (BillProject o) { openFile(bill(o), 1); }
 openFile2 'File 2' (BillProject o) { openFile(bill(o), 2); }
 openFile3 'File 3' (BillProject o) { openFile(bill(o), 3); }
 
+defaultTax = GROUP MAX Tax t IF name(t) == 'VAT' MATERIALIZED;
+taxAmount (BillLine l) = taxAmount(defaultTax(), l);
+
 EXTEND FORM bill
     OBJECTS bpt = Tax
     
@@ -36,13 +39,25 @@ EXTEND FORM bill
     PROPERTIES(bp) amount READONLY
     PROPERTIES(bp) NEW, DELETE
     FILTERS bill(bp) = b
+    
+    PROPERTIES 'VAT' = taxAmount(l) ON CHANGE {
+        INPUT n = NUMERIC[14,2] DO {
+            in(l, defaultTax()) <- TRUE;
+            taxAmount(defaultTax(), l) <- n;
+        }
+    }, 'BRUTTO' = amount(l)
 ;
+WHEN SET (BillLine l IS BillLine) DO in(l, defaultTax()) <- TRUE;
 
 DESIGN bill {
     details {
-        NEW billProject FIRST {
+        REMOVE BOX (t);
+        linesFooter {
             caption = 'Projects';
-            MOVE BOX(bp) { caption = ''; }
+            MOVE BOX(bp) FIRST { 
+                caption = '';
+                PROPERTY (untaxedAmount(l)) {caption = 'NETTO'; }
+            };
         }
     }
 }
