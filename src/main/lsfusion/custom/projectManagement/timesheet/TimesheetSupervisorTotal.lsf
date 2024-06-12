@@ -31,11 +31,20 @@ changeRateSalary (Employee e, INTERVAL[DATE] i) {
         }
 }
 
+changeRateSalary (Employee e, INTERVAL[DATE] i, BOOLEAN autoSave) {
+    IF NOT autoSave THEN {
+        changeRateSalary(e, i);
+    } ELSE
+        NEWSESSION APPLY {
+            changeRateSalary(e, i);
+        }
+}
+
 EXTEND FORM timesheetSupervisor
     OBJECTS et = Employee
     PROPERTIES(et) READONLY firstName, lastName, namePosition, rolesTimesheet
     
-    PROPERTIES timesheetHoursProject(et, dates) SHOWIF timesheetProject(), rateSalary(et, dates) SHOWIF timesheetProject() ON CHANGE changeRateSalary(et, dates),
+    PROPERTIES timesheetHoursProject(et, dates) SHOWIF timesheetProject(), rateSalary(et, dates) SHOWIF timesheetProject() ON CHANGE {changeRateSalary(et, dates, autoSaveTimesheetHours());},
                hours(et, dates) SHOWIF NOT timesheetProject(), countLunches(et, dates) SHOWIF NOT timesheetProject(), countAccomodation(et, dates) SHOWIF NOT timesheetProject(), 
                timesheetSalaryProject(et, dates) SHOWIF timesheetProject() ON CHANGE {
                    SHOW timesheetSupervisorDateEmployee OBJECTS i = dates, e = et FLOAT;
@@ -62,7 +71,7 @@ DESIGN timesheetSupervisor {
 }
 
 openTimeSheetSupervisor 'Открыть табель' (Project p) {
-    NESTEDSESSION {
+    NEWSESSION {
         timesheetProject() <- p;
         SHOW timesheetSupervisor DOCKED;
     }
