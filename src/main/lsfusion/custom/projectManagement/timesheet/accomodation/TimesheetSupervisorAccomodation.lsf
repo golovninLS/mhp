@@ -9,13 +9,15 @@ NAMESPACE ProjectManagement;
 CONSTRAINT timesheetAccomodation() AND timesheetProject() AND NOT in(timesheetProject(), timesheetAccomodation())
     CHECKED BY timesheetAccomodation[] MESSAGE '';
 
+symbolAccomodationOrder 'Symbol' (DATE d, Employee e) = symbol(accomodation(order(d, e)));
+
 EXTEND FORM timesheetSupervisor
     PROPERTIES nameTimesheetAccomodation()
 
     OBJECTS ea = Employee
     PROPERTIES(ea) READONLY firstName, lastName, namePosition, rolesTimesheet
 
-    PROPERTIES hoursTimesheet(d, ea) WAIT COLUMNS (d) HEADER extractDay(d) BACKGROUND rgbColorAccomodationOrder(d, ea)
+    PROPERTIES symbolAccomodationOrder(d, ea) WAIT COLUMNS (d) HEADER extractDay(d) BACKGROUND rgbColorAccomodationOrder(d, ea)
                 ON CHANGE {
                     IF timesheetAccomodation() THEN {
                         NEWSESSION {
@@ -44,7 +46,7 @@ DESIGN timesheetSupervisor {
             MOVE PROPERTY(nameTimesheetAccomodation()) { alignment = START; }
             MOVE BOX(ea) {
                 caption = '';
-                PROPERTY(hoursTimesheet(d, ea)) {
+                PROPERTY(symbolAccomodationOrder(d, ea)) {
                     charWidth = 2;
                     //                valueTooltip = timeEntries(d, e);
                 }

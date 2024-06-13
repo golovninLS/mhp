@@ -15,8 +15,11 @@ EXTEND FORM timesheetSupervisor
 
 @defineLunchActions(timesheetSupervisor, );
 
+rgbColorProduct (Order o) = rgbColor(product(o));
+rgbColorProductOrder 'Symbols' (DATE d, Employee e) = rgbColorProduct(order(d, e));;
+
 EXTEND FORM timesheetSupervisor
-    PROPERTIES symbolProductOrder(d, el) WAIT COLUMNS (d) HEADER extractDay(d) BACKGROUND backgroundHoursTimesheet(d, el)
+    PROPERTIES symbolProductOrder(d, el) WAIT COLUMNS (d) HEADER extractDay(d) BACKGROUND rgbColorProductOrder(d, el)
                ON CHANGE {
                    FOR Product lp = timesheetLunchProduct() DO
                        NEWSESSION {

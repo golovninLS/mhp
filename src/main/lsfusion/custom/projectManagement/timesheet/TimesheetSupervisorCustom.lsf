@@ -1,0 +1,29 @@
+MODULE TimesheetSupervisorCustom;
+
+REQUIRE TimesheetSupervisor;
+
+PRIORITY MasterData;
+
+NAMESPACE ProjectManagement;
+
+clearTimeEntry 'Очистить для сотрудника' (Employee e, INTERVAL[DATE] dates) {
+    ASK 'This action cannot be undone. Continue ?' DO {
+        NEWSESSION {
+            DELETE TimeEntry te WHERE employee(te) == e AND iterate(date(te), from(dates), to(dates));
+            APPLY;
+        }
+    }
+} CONFIRM;
+
+EXTEND FORM timesheetSupervisor
+    PROPERTIES READONLY FIRST SHOWIF TRUE ON CONTEXTMENU clearTimeEntry(e, dates) firstName '{First_name}' = firstName(e), lastName 'Surname' = lastName(e) 
+;
+
+DESIGN timesheetSupervisor {
+    OBJECTS {        
+        BOX(e) {
+            PROPERTY(firstName(e)) {hide = TRUE;};
+            PROPERTY(lastName(e)) {hide = TRUE;};
+        }
+    }
+}

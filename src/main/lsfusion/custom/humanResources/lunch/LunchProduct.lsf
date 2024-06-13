@@ -28,10 +28,10 @@ price (Product p, DATE d) = GROUP LAST price(ProductPrice pp) ORDER date(pp), pp
 
 price 'Price' (Product p) = price(p, currentDate());
 
-//color 'Color' = DATA Color (Product);
-//nameColor 'Color' (Product p) = name(color(p));
-//idColor 'Color' (Product p) = id(color(p));
-//rgbColor 'Color' (Product p) = rgb(color(p));
+color 'Color' = DATA Color (Product);
+nameColor 'Color' (Product p) = name(color(p));
+idColor 'Color' (Product p) = id(color(p));
+rgbColor 'Color' (Product p) = rgb(color(p));
 
 symbol 'Symbol' = DATA STRING[20] (Product) CHARWIDTH 2;
 
@@ -40,7 +40,7 @@ active '{Active}' (Product b) = NOT archived(b);
 
 FORM product 'Lunch product'
     OBJECTS p = Product PANEL
-    PROPERTIES(p) name, nameVendor, symbol, archived
+    PROPERTIES(p) name, nameColor, rgbColor, nameVendor, symbol, archived
     
     OBJECTS pp = ProductPrice
     PROPERTIES(pp) date, price, NEW, DELETE
