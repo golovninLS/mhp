@@ -17,7 +17,7 @@ EXTEND FORM timesheetSupervisor
     OBJECTS ea = Employee
     PROPERTIES(ea) READONLY firstName, lastName, namePosition, rolesTimesheet
 
-    PROPERTIES symbolAccomodationOrder(d, ea) WAIT COLUMNS (d) HEADER extractDay(d) BACKGROUND rgbColorAccomodationOrder(d, ea)
+    PROPERTIES symbolAccomodationOrder(d, ea) WAIT COLUMNS (d) HEADER extractDay(d) BACKGROUND backgroundHoursTimesheet(d, ea)
                 ON CHANGE {
                     IF timesheetAccomodation() THEN {
                         NEWSESSION {

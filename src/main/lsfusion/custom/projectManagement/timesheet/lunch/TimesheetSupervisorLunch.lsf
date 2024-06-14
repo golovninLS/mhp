@@ -1,10 +1,13 @@
 MODULE TimesheetSupervisorLunch;
 
-REQUIRE TimesheetSupervisor, TimesheetLunch, LunchOrder;
+REQUIRE TimesheetSupervisor, TimesheetLunch, LunchOrder, ProjectLunchProduct;
 
 PRIORITY Lunch, MasterData;
 
 NAMESPACE ProjectManagement;
+
+CONSTRAINT SETCHANGED(timesheetLunchProduct()) AND timesheetProject() AND NOT in(timesheetProject(), timesheetLunchProduct()) CHECKED BY timesheetLunchProduct[]
+    MESSAGE 'Выбранный вид обеда относится к другому проекту';
 
 EXTEND FORM timesheetSupervisor
     PROPERTIES nameTimesheetLunchProduct()
@@ -23,7 +26,7 @@ countLunchProduct 'Lunch (days)' (Employee e, DATE from, DATE to) =
 countLunchProduct 'Lunch (days)' (Employee e, INTERVAL[DATE] i) = countLunchProduct(e, from(i), to(i));
 
 EXTEND FORM timesheetSupervisor
-    PROPERTIES symbolProductOrder(d, el) WAIT COLUMNS (d) HEADER extractDay(d) BACKGROUND rgbColorProductOrder(d, el)
+    PROPERTIES symbolProductOrder(d, el) WAIT COLUMNS (d) HEADER extractDay(d) BACKGROUND backgroundHoursTimesheet(d, el)
                ON CHANGE {
                    FOR Product lp = timesheetLunchProduct() DO
                        NEWSESSION {
