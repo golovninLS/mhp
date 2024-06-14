@@ -1,6 +1,6 @@
 MODULE LunchProduct;
 
-REQUIRE HumanResourcesSettings, MasterData, Partner, Color;
+REQUIRE HumanResourcesSettings, MasterData, Partner, Color, City;
 
 PRIORITY HumanResources;
 
@@ -38,20 +38,41 @@ symbol 'Symbol' = DATA STRING[20] (Product) CHARWIDTH 2;
 archived 'Archived' = DATA BOOLEAN (Product);
 active '{Active}' (Product b) = NOT archived(b);
 
+city = DATA City (Product);
+nameCity 'City' (Product p) = name(city(p));
+
+latitude 'Latitude' (Product p) = latitude(city(p));
+longitude 'Longitude' (Product p) = longitude(city(p));
+
 FORM product 'Lunch product'
     OBJECTS p = Product PANEL
-    PROPERTIES(p) name, nameColor, rgbColor, nameVendor, symbol, archived
+    PROPERTIES(p) name, nameColor, rgbColor, nameVendor, nameCity, symbol, archived
     
     OBJECTS pp = ProductPrice
     PROPERTIES(pp) date, price, NEW, DELETE
     FILTERS product(pp) = p
-    
+
+    OBJECTS mp = Product MAP
+    PROPERTIES(mp) name READONLY, latitude, longitude
+    FILTERS mp = p
+
     EDIT Product OBJECT p
 ;
 
+DESIGN product {
+    OBJECTS {
+        NEW tabbed {
+            fill = 1;
+            tabbed = TRUE;
+            MOVE BOX(pp);
+            MOVE BOX(mp) { caption = 'Map'; }
+        }
+    }
+}
+
 FORM products 'Lunch products'
     OBJECTS p = Product
-    PROPERTIES(p) READONLY name, nameVendor, price
+    PROPERTIES(p) READONLY name, nameVendor, price, nameCity
 
     FILTERGROUP active
         FILTER '{Active}' active(p) DEFAULT

@@ -1,6 +1,6 @@
 MODULE ProjectCustom;
 
-REQUIRE Project, TimesheetCustom;
+REQUIRE Project, TimesheetCustom, City;
 
 NAMESPACE ProjectManagement;
 
@@ -12,6 +12,12 @@ background(Project p) += WHEN activeTimesheet(p) AND supervisorTimesheetClosingD
 
 countActiveTimesheetProjects () = GROUP SUM 1 IF Project p IS Project AND activeTimesheet(p) AND supervisorTimesheetClosingDate();
 
+city = DATA City (Project);
+nameCity 'City' (Project a) = name(city(a));
+
+latitude 'Latitude' (Project a) = latitude(city(a));
+longitude 'Longitude' (Project a) = longitude(city(a));
+
 CONSTRAINT (SETCHANGED(date(TimeEntry te)) OR SETCHANGED(project(te)) OR SETCHANGED(hours(te)) OR SETCHANGED(employee(te)) OR SETCHANGED(type(te)) OR SETCHANGED(description(te)) OR DROPPED(te IS TimeEntry)) AND 
     managerTimesheetCloseDate(project(te)) AND (NOT managerTimesheetCloseDate(project(te)) < date(te) OR NOT managerTimesheetCloseDate(project(te)) < PREV(date(te)))
     MESSAGE 'Нельзя изменять отметку времени в табеле на дату меньшую даты закрытия табеля(менеджер) проекта';
@@ -21,11 +27,18 @@ CONSTRAINT DROPPED(TimeEntry te IS TimeEntry) AND
     MESSAGE 'Нельзя изменять отметку времени в табеле на дату меньшую даты закрытия табеля(менеджер) проекта';
 
 EXTEND FORM project
-    PROPERTIES(p) managerTimesheetCloseDate
+    PROPERTIES(p) managerTimesheetCloseDate, nameCity
+
+    OBJECTS pp = Project MAP
+    PROPERTIES(pp) name READONLY, latitude, longitude
+    FILTERS pp = p
 ;
 
 DESIGN project {
     header {
+        headerLeft {
+            MOVE PROPERTY(nameCity(p));
+        }
         headerRight {
             MOVE PROPERTY(managerTimesheetCloseDate(p));
         }
@@ -36,12 +49,14 @@ DESIGN project {
             fill = 1;
             caption = 'Staff';            
         }
+        
+        MOVE BOX(pp) { caption = 'Map'; }
     }
 }
 
 EXTEND FORM projects
     PROPERTIES() READONLY supervisorTimesheetClosingDate PANEL
-    PROPERTIES(p) READONLY managerTimesheetCloseDate
+    PROPERTIES(p) READONLY managerTimesheetCloseDate, nameCity AFTER nameManager(p)
 ;
 
 NAVIGATOR {

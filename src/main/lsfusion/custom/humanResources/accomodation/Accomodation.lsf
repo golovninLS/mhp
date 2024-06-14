@@ -42,7 +42,7 @@ city = DATA City (Accomodation);
 nameCity 'City' (Accomodation a) = name(city(a));
 
 latitude 'Latitude' (Accomodation a) = latitude(city(a));
-longitude 'Longitude' (Accomodation a) = latitude(city(a));
+longitude 'Longitude' (Accomodation a) = longitude(city(a));
 
 FORM accomodation 'Accomodation'
     OBJECTS p = Accomodation PANEL

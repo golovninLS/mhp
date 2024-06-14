@@ -1,0 +1,32 @@
+MODULE ProjectLunchProduct;
+
+REQUIRE Project, LunchProduct, ProjectCustom;
+
+PRIORITY Lunch;
+
+NAMESPACE ProjectManagement;
+
+in 'In' = DATA BOOLEAN (Project, Product);
+products 'Lunch products' (Project p) = GROUP CONCAT name(Product a) IF in(p, a), ', ' ORDER a;
+
+WHEN LOCAL SET(city(Project p)) DO {
+    in(p, Product a) <- TRUE WHERE city(p) == city(a);
+}
+
+FORM dialogProjectProducts 'Lunch products'
+    OBJECTS p = Project PANEL
+
+    OBJECTS a = Product
+    PROPERTIES in(p,a)
+    PROPERTIES(a) READONLY name, price, nameCity SELECTOR
+;
+
+EXTEND FORM project
+    PROPERTIES(p) products ON CHANGE { DIALOG dialogProjectProducts OBJECTS p = p; }
+;
+
+DESIGN project {
+    OBJECTS {
+        MOVE PROPERTY(products(p)) AFTER header;
+    }
+}

@@ -73,6 +73,7 @@ REQUIRE Eval, ProcessMonitor, Backup,
         TimesheetSupervisorPayslip,
 
         ProjectAccomodation, ProjectTimeEntryCustom,
+        ProjectLunchProduct,
         
         ProjectLedgerReport, ProjectPayslipLedgerCustom, 
         InvoiceProjectLedger, PayslipProjectLedger,
