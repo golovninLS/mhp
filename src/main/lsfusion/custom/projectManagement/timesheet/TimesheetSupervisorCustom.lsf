@@ -15,8 +15,17 @@ clearTimeEntry 'Очистить для сотрудника' (Employee e, INTER
     }
 } CONFIRM;
 
-EXTEND FORM timesheetSupervisor
-    PROPERTIES READONLY FIRST SHOWIF TRUE ON CONTEXTMENU clearTimeEntry(e, dates) firstName '{First_name}' = firstName(e), lastName 'Surname' = lastName(e) 
+countTimeEntryType (Employee e, DATE from, DATE to) =
+    GROUP SUM 1 IF countTimeEntryType(DATE d, e) AND iterate(d, from, to);
+
+countTimeEntryType (Employee e, INTERVAL[DATE] i) = countTimeEntryType(e, from(i), to(i));
+
+EXTEND FORM timesheetSupervisor    
+    PROPERTIES READONLY FIRST SHOWIF TRUE ON CONTEXTMENU clearTimeEntry(e, dates) firstName '{First_name}' = firstName(e), lastName 'Surname' = lastName(e)
+
+    
+    FILTERGROUP onlyFilledTimeEntry
+        FILTER 'Только заполненные' countTimeEntryType(e, dates)
 ;
 
 DESIGN timesheetSupervisor {

@@ -36,7 +36,10 @@ EXTEND FORM timesheetSupervisor
                         ELSE
                             SHOW timesheetSupervisorDateEmployee OBJECTS i = interval(d, d), e = ea FLOAT;
                 } ON CONTEXTMENU checkIn(d, ea) ON CONTEXTMENU checkOut(d, ea) ON CONTEXTMENU delete(d, ea)
-    FILTERS [FILTER timesheetSupervisor.e](ea)
+    FILTERS assigned(timesheetProject(), ea, dates) OR hours(ea, timesheetProject(), dates) OR (NOT countAssignments(timesheetProject()) AND NOT countAssignments(currentUser()))
+
+    FILTERGROUP onlyFilledAccomodation
+        FILTER 'Только заполненные' countAccomodation(ea, dates)
 ;
 
 DESIGN timesheetSupervisor {
