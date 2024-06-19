@@ -25,6 +25,21 @@ countLunchProduct 'Lunch (days)' (Employee e, DATE from, DATE to) =
     GROUP SUM 1 IF productOrder(DATE d, e) AND iterate(d, from, to);
 countLunchProduct 'Lunch (days)' (Employee e, INTERVAL[DATE] i) = countLunchProduct(e, from(i), to(i));
 
+symbolProduct 'Symbol' (Order o) = symbol(product(o));
+nameProduct '{master.data.name}' (Order o) = name(product(o));
+
+FORM timesheetSupervisorDateEmployeeLuncheOrders 'Lunches'
+    OBJECTS i = INTERVAL[DATE] PANEL
+    OBJECTS e = Employee PANEL
+
+    OBJECTS o = Order
+    PROPERTIES(o) READONLY date, symbolProduct, nameProduct
+    PROPERTIES(o) EDIT, DELETE
+    ORDERS date(o)
+    FILTERS date(o) >= from(i) AND date(o) <= to(i),
+        employee(o) = e
+;
+
 EXTEND FORM timesheetSupervisor
     PROPERTIES symbolProductOrder(d, el) WAIT COLUMNS (d) HEADER extractDay(d) BACKGROUND backgroundHoursTimesheet(d, el)
                ON CHANGE {
@@ -45,7 +60,7 @@ EXTEND FORM timesheetSupervisor
                         APPLY;
                        }
                    ELSE
-                       SHOW timesheetSupervisorDateEmployee OBJECTS i = interval(d, d), e = el FLOAT;
+                       SHOW timesheetSupervisorDateEmployeeLuncheOrders OBJECTS i = interval(d, d), e = el FLOAT;
                } ON CONTEXTMENU clearLunch(d) ON CONTEXTMENU fillLunch(d)
                  ON CONTEXTMENU clearLunch(el) ON CONTEXTMENU fillLunch(el)
                  ON CONTEXTMENU copyLunch(d)

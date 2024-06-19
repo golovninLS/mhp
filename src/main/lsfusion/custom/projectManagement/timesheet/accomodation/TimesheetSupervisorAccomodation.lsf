@@ -11,6 +11,22 @@ CONSTRAINT timesheetAccomodation() AND timesheetProject() AND NOT in(timesheetPr
 
 symbolAccomodationOrder 'Symbol' (DATE d, Employee e) = symbol(accomodation(order(d, e)));
 
+symbolAccomodation 'Symbol' (Order o) = symbol(accomodation(o));
+nameAccomodation '{master.data.name}' (Order o) = name(accomodation(o));
+
+FORM timesheetSupervisorDateEmployeeAccomodationOrders 'Accomodations'
+    OBJECTS i = INTERVAL[DATE] PANEL
+    OBJECTS e = Employee PANEL
+
+    OBJECTS o = Order
+    PROPERTIES(o) READONLY startDate, endDate, symbolAccomodation, nameAccomodation
+    PROPERTIES(o) EDIT, DELETE
+    ORDERS startDate(o)
+    FILTERS
+        startDate(o) < from(i) AND endDate(o) >= from(i) OR startDate(o) >= from(i) AND startDate(o) <= to(i) AND endDate(o) >= from(i),
+        employee(o) = e
+;
+
 EXTEND FORM timesheetSupervisor
     PROPERTIES nameTimesheetAccomodation()
 
@@ -31,10 +47,7 @@ EXTEND FORM timesheetSupervisor
                             APPLY;
                         }
                     } ELSE
-                        IF order(d, ea) THEN
-                            SHOW order OBJECTS o = order(d, ea) FLOAT;
-                        ELSE
-                            SHOW timesheetSupervisorDateEmployee OBJECTS i = interval(d, d), e = ea FLOAT;
+                        SHOW timesheetSupervisorDateEmployeeAccomodationOrders OBJECTS i = interval(d, d), e = ea FLOAT;
                 } ON CONTEXTMENU checkIn(d, ea) ON CONTEXTMENU checkOut(d, ea) ON CONTEXTMENU delete(d, ea)
     FILTERS assigned(timesheetProject(), ea, dates) OR hours(ea, timesheetProject(), dates) OR (NOT countAssignments(timesheetProject()) AND NOT countAssignments(currentUser()))
 

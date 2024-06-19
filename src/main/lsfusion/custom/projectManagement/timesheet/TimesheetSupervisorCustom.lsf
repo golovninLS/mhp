@@ -6,33 +6,144 @@ PRIORITY MasterData;
 
 NAMESPACE ProjectManagement;
 
-clearTimeEntry 'Очистить для сотрудника' (Employee e, INTERVAL[DATE] dates) {
+clearTimeEntry 'Очистить для сотрудника' (Project p, Employee e, INTERVAL[DATE] dates) {
     ASK 'This action cannot be undone. Continue ?' DO {
         NEWSESSION {
-            DELETE TimeEntry te WHERE employee(te) == e AND iterate(date(te), from(dates), to(dates));
+            DELETE TimeEntry te WHERE project(te) == p AND employee(te) == e AND iterate(date(te), from(dates), to(dates));
             APPLY;
         }
     }
 } CONFIRM;
 
-countTimeEntryType (Employee e, DATE from, DATE to) =
-    GROUP SUM 1 IF countTimeEntryType(DATE d, e) AND iterate(d, from, to);
+changeTimesheetHours (DATE d, Employee e, Project p, TimeEntryType et, NUMERIC[8,2] n, TimeEntryHours h) {
+    IF n THEN {
+        IF p THEN {
+            FOR TimeEntry t = timeEntry(d, e, p, et) DO {
+                IF hours(t) = n AND h THEN
+                    DELETE t;
+                ELSE {
+                    hours(t) <- n;
+                    timeEntryHours(t) <- h;
+                }
+            } ELSE {
+                DELETE TimeEntry te WHERE project(te) = p AND employee(te) = e AND date(te) = d;
+                NEW t = TimeEntry {
+                    project(t) <- p;
+                    type(t) <- et;
+                    employee(t) <- e;
+                    date(t) <- d;
+                    hours(t) <- n;
+                    timeEntryHours(t) <- h;
+                }
+            }
+        }
+    } ELSE
+        DELETE TimeEntry t WHERE matchesProject(t) AND employee(t) = e AND date(t) = d;
+}
 
-countTimeEntryType (Employee e, INTERVAL[DATE] i) = countTimeEntryType(e, from(i), to(i));
+changeSaveTimesheetHours (DATE d, Employee e, Project p, TimeEntryType et, NUMERIC[8,2] n, TimeEntryHours h, BOOLEAN autoSave) {
+    IF NOT autoSave THEN {
+        changeTimesheetHours(d, e, p, et, n, h);
+    } ELSE
+        NEWSESSION APPLY {
+            changeTimesheetHours(d, e, p, et, n, h);
+        }
+}
 
-EXTEND FORM timesheetSupervisor    
-    PROPERTIES READONLY FIRST SHOWIF TRUE ON CONTEXTMENU clearTimeEntry(e, dates) firstName '{First_name}' = firstName(e), lastName 'Surname' = lastName(e)
+countTimeEntryProject (DATE d, Project p) = GROUP SUM 1 IF date(TimeEntry t) = d AND project(t) = p;
 
+clear 'Clear' (DATE d, Project p) {
+    DELETE TimeEntry t WHERE date(t) = d AND project(t) = p;
+}
+
+maxDate (DATE to, Project p) = GROUP MAX date(TimeEntry t) IF date(t) < to AND project(t) = p;
+copy 'Copy' (DATE d, Project p) {
+    clear(d, p);
+    FOR date(TimeEntry t) = maxDate(d, p) AND project(t) = p INLINE DO NEW tn = TimeEntry {
+        date(tn) <- d;
+        hours(tn) <- hours(t);
+        employee(tn) <- employee(t);
+        project(tn) <- project(t);
+        type(tn) <- type(t);
+    }
+}
+
+copyApply 'Copy' (DATE d, Project p) {
+    ASK 'Copying will delete all time entries for the selected day. Continue ?' IF countTimeEntryProject(d, p) DO
+        NEWSESSION APPLY { copy(d, p); }
+}
+
+clearApply 'Clear' (DATE d, Project p) {
+    ASK 'This action cannot be undone. Continue ?' DO
+        NEWSESSION APPLY { clear(d, p); }
+};
+
+copyHours 'Copy' (DATE d, Project p) {
+    IF NOT autoSaveTimesheetHours() THEN
+        copy(d, p);
+    ELSE
+        copyApply(d, p);
+}
+
+clearHours 'Clear' (DATE d, Project p) {
+    IF NOT autoSaveTimesheetHours() THEN
+        clear(d, p);
+    ELSE
+        clearApply(d, p);
+}
+
+countTimeEntryType (DATE d, Employee e, Project p) = GROUP SUM 1 IF countTimeEntry(d, e, p, TimeEntryType et);
+
+countTimeEntryType (Project p, Employee e, DATE from, DATE to) =
+    GROUP SUM 1 IF countTimeEntryType(DATE d, e, p) AND iterate(d, from, to);
+
+countTimeEntryType (Project p, Employee e, INTERVAL[DATE] i) = countTimeEntryType(p, e, from(i), to(i));
+
+hoursTotSpecifiedProject 'Часов без проекта' (DATE d, Employee e) = GROUP SUM hours(TimeEntry t) IF date(t) = d AND employee(t) = e AND NOT project(t);
+hoursTimesheet 'Hours' (DATE d, Employee e, Project p)= hours(d, e, p);
+
+backgroundHoursTimesheet 'Hours' (DATE d, Employee e, Project p)=
+    IF countTimeEntryType(d, e, p) > 1 THEN RGB(255,192,0) ELSE
+        OVERRIDE
+            IF timesheetProject() THEN rgbColorHoursTimeEntry(timeEntry(d, e, p))
+            ELSE rgbColorHoursTimeEntry(timeEntry(d, e, p)),
+            RGB(255,224,224) IF extractDOWNumber(d) = 0 OR extractDOWNumber(d) = 6;
+
+EXTEND FORM timesheetSupervisor
+    OBJECTS pe = (p = Project, ep = Employee)
+    PROPERTIES READONLY name 'Project' = name(p)
+    PROPERTIES(ep) READONLY ON CONTEXTMENU clearTimeEntry(p, ep, dates)  firstName, lastName, namePosition, rolesTimesheet
+    PROPERTIES hoursTimesheet(d, ep, p) WAIT COLUMNS (d) HEADER extractDay(d) BACKGROUND backgroundHoursTimesheet(d, ep, p)
+    ON CHANGE {
+        FOR TimeEntryType et = timesheetTimeEntryType() AND (p OR NOT project(timeEntry(d, ep, timesheetTimeEntryType()))) DO {
+            IF NOT timesheetTimeEntryHours() THEN {
+                INPUT n = hoursTimesheet(d, ep) DO {
+                    changeSaveTimesheetHours(d, ep, p, et, n, NULL, autoSaveTimesheetHours());
+                }
+            } ELSE
+                changeSaveTimesheetHours(d, ep, p, et, hours(timesheetTimeEntryHours()), timesheetTimeEntryHours(), autoSaveTimesheetHours());
+        } ELSE
+        SHOW timesheetSupervisorDateEmployee OBJECTS i = interval(d, d), e = ep FLOAT;
+    } ON CONTEXTMENU copyHours(d, p) ON CONTEXTMENU clearHours(d, p) FOOTER hours(d, p)
+    FILTERS assigned(p, ep, dates) OR hours(ep, p, dates) OR (NOT countAssignments(p) AND NOT countAssignments(currentUser()))
+    FILTERS p == timesheetProject() OR NOT timesheetProject()
     
     FILTERGROUP onlyFilledTimeEntry
-        FILTER 'Только заполненные' countTimeEntryType(e, dates)
+        FILTER 'Только заполненные' countTimeEntryType(p, ep, dates)
 ;
 
 DESIGN timesheetSupervisor {
     OBJECTS {        
-        BOX(e) {
-            PROPERTY(firstName(e)) {hide = TRUE;};
-            PROPERTY(lastName(e)) {hide = TRUE;};
+        tabbedPane {
+            timesheet {
+                REMOVE BOX(e);
+                MOVE BOX(pe) {
+                    caption = '';
+                    PROPERTY(hoursTimesheet(d, ep, p)) {
+                        charWidth = 2;
+                    }
+                }
+            }
         }
     }
 }
