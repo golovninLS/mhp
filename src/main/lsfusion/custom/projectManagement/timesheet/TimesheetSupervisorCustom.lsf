@@ -109,6 +109,8 @@ backgroundHoursTimesheet 'Hours' (DATE d, Employee e, Project p)=
             ELSE rgbColorHoursTimeEntry(timeEntry(d, e, p)),
             RGB(255,224,224) IF extractDOWNumber(d) = 0 OR extractDOWNumber(d) = 6;
 
+hours 'Hours' (DATE d) = GROUP SUM hours(TimeEntry t) IF date(t) = d;
+
 EXTEND FORM timesheetSupervisor
     OBJECTS pe = (p = Project, ep = Employee)
     PROPERTIES READONLY name 'Project' = name(p)
@@ -124,7 +126,7 @@ EXTEND FORM timesheetSupervisor
                 changeSaveTimesheetHours(d, ep, p, et, hours(timesheetTimeEntryHours()), timesheetTimeEntryHours(), autoSaveTimesheetHours());
         } ELSE
         SHOW timesheetSupervisorDateEmployee OBJECTS i = interval(d, d), e = ep FLOAT;
-    } ON CONTEXTMENU copyHours(d, p) ON CONTEXTMENU clearHours(d, p) FOOTER hours(d, p)
+    } ON CONTEXTMENU copyHours(d, p) ON CONTEXTMENU clearHours(d, p) FOOTER (OVERRIDE hours(d, timesheetProject()), hours(d))
     FILTERS assigned(p, ep, dates) OR hours(ep, p, dates) OR (NOT countAssignments(p) AND NOT countAssignments(currentUser()))
     FILTERS p == timesheetProject() OR NOT timesheetProject()
     

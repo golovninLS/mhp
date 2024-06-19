@@ -25,7 +25,7 @@ done 'Done' = DATA NUMERIC[16,3] (ShipmentLine);
 
 weightDone 'Weight' (ShipmentLine l) = NUMERIC[16,3](done(l) * weight(product(l)));
 
-CONSTRAINT (done(ShipmentLine l) < 0 OR done(l) > initialDemand(l)) AND NOT doNotCheckDone(type(l))
+CONSTRAINT (done(ShipmentLine l) > initialDemand(l)) AND NOT doNotCheckDone(type(l))
     MESSAGE 'Done quantity must be between 0 and initial demand';
 
 setDone 'Fill done' (Shipment s) {
@@ -71,13 +71,19 @@ DESIGN shipment {
     primaryActions {                  
         MOVE PROPERTY(validate(s)) FIRST { valueClass = 'btn-primary'; }
     }
-    status {
-        MOVE PROPERTY(done(s));                              
+    statusGroup {
+        MOVE PROPERTY(done(s)) {
+            valueClass = 'btn-check';
+            captionClass = 'btn btn-outline-primary btn-arrow-right';
+        }                              
     } 
     headerLeft {
         MOVE PROPERTY(executionDateTime(s));
     }                  
 }
+
+@defineHistoryProperty(shipment, executionDateTime, 'Execution Date');
+@defineDocHistoryLineProperty(shipment, ShipmentLine, done, 'Done', nameProduct);
 
 EXTEND FORM shipments
     PROPERTIES(s) READONLYIF isReadonly() executionDateTime AFTER scheduledDateTime(s)
