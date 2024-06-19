@@ -51,13 +51,13 @@ WHEN SET (BillLine l IS BillLine) DO in(l, defaultTax()) <- TRUE;
 
 DESIGN bill {
     details {
-        REMOVE BOX (t);
-        linesFooter {
+        NEW billProjects FIRST {
             caption = 'Projects';
-            MOVE BOX(bp) FIRST { 
+            MOVE BOX(bp) {caption = ''; } 
+        }
+        linesFooter {
                 caption = '';
                 PROPERTY (untaxedAmount(l)) {caption = 'NETTO'; }
-            };
         }
     }
 }
