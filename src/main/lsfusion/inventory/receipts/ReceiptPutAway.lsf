@@ -34,8 +34,11 @@ DESIGN receipt {
     primaryActions {
         MOVE PROPERTY(markAsPutAway(r)) { valueClass = 'btn-primary'; }
     }
-    status {
-        MOVE PROPERTY(putAway(r));
+    statusGroup {
+        MOVE PROPERTY(putAway(r)) {
+            valueClass = 'btn-check';
+            captionClass = 'btn btn-outline-primary btn-arrow-right';
+        }
     }
 }
 
@@ -74,7 +77,7 @@ FORM putAwayLoc 'Locations'
     
     OBJECTS l = Location
     PROPERTIES(l) READONLY name, nameParent, canonicalName
-    FILTERS level(l,loc)
+    FILTERS level(l,loc), active(l)
 ;
 
 DESIGN putAwayLoc {
@@ -133,4 +136,4 @@ partner(ReceiptPutAwayLedger l) += vendor(receipt(receiptLine(line(l))));
 
 number(ReceiptPutAwayLedger l) += number(receipt(receiptLine(line(l))));
 
-edit (ReceiptPutAwayLedger l) + { edit(receipt(receiptLine(line(l)))); }
+edit (ReceiptPutAwayLedger l) + { edit(receiptLine(line(l))); }

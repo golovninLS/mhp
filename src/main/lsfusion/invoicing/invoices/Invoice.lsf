@@ -20,7 +20,7 @@ WHEN LOCAL SET(Invoice s IS Invoice) AND NOT CHANGED(type(s)) DO type(s) <- defa
 
 // dateTime
 dateTime 'Date' = DATA DATETIME (Invoice) NONULL IN id;
-WHEN LOCAL SET (Invoice b IS Invoice) DO dateTime(b) <- currentDateTime();
+WHEN LOCAL SET (Invoice b IS Invoice) AND NOT CHANGED(dateTime(b)) DO dateTime(b) <- currentDateTime();
 @defineDateTimeAggregation(Invoice);
 
 @defineNumberType(invoice);
@@ -250,7 +250,10 @@ DESIGN invoice {
     }
 }
 
-@defineDocHistory(invoice, i, item, quantity);
+@defineDocHistory(invoice, i, item);
+@defineDocHistoryLineProperty(invoice, InvoiceLine, quantity, 'Qty', nameItem);
+@defineDocHistoryLineProperty(invoice, InvoiceLine, untaxedAmount, '{Amount}', nameItem);
+
 @defineDocSearch(invoice, item, quantity, 'Quantity', i, canBeSold);
 @defineBarCodeSearch(invoice, i, l, quantity);
 
@@ -289,6 +292,7 @@ clone ABSTRACT LIST (Invoice, Invoice);
 clone (Invoice to, Invoice from) + {
     type(to) <- type(from);
     customer(to) <- customer(from);
+    company(to) <- company(from);
     note(to) <- note(from);
     FOR invoice(InvoiceLine l) = from INLINE NEW nl = InvoiceLine DO {
         invoice(nl) <- to;

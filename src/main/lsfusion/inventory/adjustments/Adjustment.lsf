@@ -170,7 +170,10 @@ DESIGN adjustment {
     }
 }
 
-@defineDocHistory(adjustment, a, product, theoreticalQuantity);
+edit (AdjustmentLine l) + { SHOW adjustment OBJECTS a = adjustment(l), l = l DOCKED; }
+
+@defineDocHistory(adjustment, a, product);
+@defineDocHistoryLineProperty(adjustment, AdjustmentLine, theoreticalQuantity, 'Theoretical quantity', nameProduct);
 
 FORM adjustments 'Adjustments'
     OBJECTS a = Adjustment
