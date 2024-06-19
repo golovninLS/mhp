@@ -50,18 +50,45 @@ income 'Income' = ABSTRACT NUMERIC[16,2] (ProjectLedger) MATERIALIZED;
 expense 'Expense' = ABSTRACT NUMERIC[16,2] (ProjectLedger) MATERIALIZED;
 profit 'Profit' (ProjectLedger l) = income(l) (-) expense(l);
 
+sumExpense 'Сумма затрат' (Project p, INTERVAL[DATE] i) = 
+    GROUP SUM expense(ProjectLedger l) IF expense(l) > 0 AND date(l) >= from(i) AND date(l) <= to(i) BY project(l);
+sumExpense 'Сумма затрат' (Project p) =
+    GROUP SUM expense(ProjectLedger l) IF expense(l) > 0  BY project(l);
+sumProfit 'Сумма прибыли' (Project p, INTERVAL[DATE] i) = 
+    GROUP SUM profit(ProjectLedger l) IF profit(l) > 0 AND date(l) >= from(i) AND date(l) <= to(i) BY project(l);
+sumProfit 'Сумма прибыли' (Project p) = 
+    GROUP SUM profit(ProjectLedger l) IF profit(l) > 0 BY project(l);
+
 EXTEND FORM project
+    OBJECTS i = INTERVAL[DATE] PANEL NULL
+    PROPERTIES i = VALUE(i)
+    PROPERTIES (p, i) SHOWIF i IS INTERVAL[DATE] sumExpense, sumProfit
+    PROPERTIES (p) SHOWIF NOT i IS INTERVAL[DATE] sumExpense, sumProfit
+    
     OBJECTS prl = ProjectLedger
     PROPERTIES(prl) READONLY class, date, number, nameProject, namePartner, category, description, income, expense, profit
     PROPERTIES(prl) EDIT
     FILTERS project(prl) = p,
-            active(prl)
+            active(prl),
+            date(prl) >= from(i) AND date(prl) <= to(i) OR NOT i
 ;
 
 DESIGN project {
     details {
-        MOVE BOX(prl) {
+        NEW projectLedger {
+            fill = 1;
             caption = 'Project ledger';
+            NEW dates {
+                horizontal = TRUE;
+                MOVE PROPERTY(i){caption = '';};
+                MOVE PROPERTY(sumExpense(p, i));
+                MOVE PROPERTY(sumExpense(p));
+                MOVE PROPERTY(sumProfit(p, i));
+                MOVE PROPERTY(sumProfit(p));
+            }
+            MOVE BOX(prl) {
+                caption = '';
+            }
         }
     }
 }
