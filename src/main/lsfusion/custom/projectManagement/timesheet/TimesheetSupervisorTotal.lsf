@@ -1,7 +1,7 @@
 MODULE TimesheetSupervisorTotal;
 
 REQUIRE TimesheetSupervisor, TimesheetSalary, 
-        ProjectSalary, LunchOrder, AccomodationOrder, LunchCompensation;
+        ProjectSalary, LunchOrder, AccomodationOrder, LunchCompensation, TimesheetSupervisorCustom;
 
 PRIORITY MasterData;
 
@@ -57,6 +57,12 @@ EXTEND FORM timesheetSupervisor
                }, lunchCompensation(et, dates)
 
     FILTERS [FILTER timesheetSupervisor.e](et)
+    FILTERGROUP onlyFilledTotal
+        FILTER 'Только заполненные'
+            salary(et, dates) OR lunches(et, dates) OR accomodation(et, dates) OR lunchCompensation(et, dates) OR
+            timesheetProject() AND (timesheetHoursProject(et, dates) OR rateSalary(et, dates) OR timesheetSalaryProject(et, dates)) OR
+            NOT timesheetProject() AND (hours(et, dates) OR countLunches(et, dates) OR countAccomodation(et, dates))
+    
 ;
 
 DESIGN timesheetSupervisor {

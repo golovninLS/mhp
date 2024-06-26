@@ -101,6 +101,8 @@ countTimeEntryType (Project p, Employee e, INTERVAL[DATE] i) = countTimeEntryTyp
 
 hoursTotSpecifiedProject 'Часов без проекта' (DATE d, Employee e) = GROUP SUM hours(TimeEntry t) IF date(t) = d AND employee(t) = e AND NOT project(t);
 hoursTimesheet 'Hours' (DATE d, Employee e, Project p)= hours(d, e, p);
+hoursTimesheet 'Hours' (DATE d, Project p)= GROUP SUM hours(d, Employee e, p);
+hoursTimesheet 'Hours' (DATE d)= GROUP SUM hours(d, Project p);
 
 backgroundHoursTimesheet 'Hours' (DATE d, Employee e, Project p)=
     IF countTimeEntryType(d, e, p) > 1 THEN RGB(255,192,0) ELSE
@@ -126,7 +128,7 @@ EXTEND FORM timesheetSupervisor
                 changeSaveTimesheetHours(d, ep, p, et, hours(timesheetTimeEntryHours()), timesheetTimeEntryHours(), autoSaveTimesheetHours());
         } ELSE
         SHOW timesheetSupervisorDateEmployee OBJECTS i = interval(d, d), e = ep FLOAT;
-    } ON CONTEXTMENU copyHours(d, p) ON CONTEXTMENU clearHours(d, p) FOOTER (OVERRIDE hours(d, timesheetProject()), hours(d))
+    } ON CONTEXTMENU copyHours(d, p) ON CONTEXTMENU clearHours(d, p) FOOTER (IF timesheetProject() THEN hoursTimesheet(d, timesheetProject()) ELSE hoursTimesheet(d))
     FILTERS assigned(p, ep, dates) OR hours(ep, p, dates) OR (NOT countAssignments(p) AND NOT countAssignments(currentUser()))
     FILTERS p == timesheetProject() OR NOT timesheetProject()
     
