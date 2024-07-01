@@ -1,6 +1,6 @@
 MODULE TimesheetSupervisorLunch;
 
-REQUIRE TimesheetSupervisor, TimesheetLunch, LunchOrder, ProjectLunchProduct;
+REQUIRE TimesheetSupervisor, TimesheetLunch, LunchOrder, ProjectLunchProduct, TimesheetSupervisorCustom;
 
 PRIORITY Lunch, MasterData;
 
@@ -11,22 +11,116 @@ CONSTRAINT SETCHANGED(timesheetLunchProduct()) AND timesheetProject() AND NOT in
 
 EXTEND FORM timesheetSupervisor
     PROPERTIES nameTimesheetLunchProduct()
-    
-    OBJECTS el = Employee
+
+    OBJECTS pel = (pl = Project, el = Employee)
+    PROPERTIES READONLY nameProjectLunch 'Project' = name(pl)
     PROPERTIES(el) READONLY firstName, lastName, namePosition, rolesTimesheet
 ;
 
-@defineLunchActions(timesheetSupervisor, );
+clearLunch 'Clear for date' (DATE d) {
+    ASK 'This action cannot be undone. Continue ?' DO {
+        LOCAL in = BOOLEAN (Project, Employee);
+        LOCAL in = BOOLEAN (Product, Employee);
+        in(Project p, Employee e) <- [FILTER timesheetSupervisor.pel](p, e);
+        in(Product p, Employee e) <- TRUE WHERE (GROUP MIN Project pr IF in(pr, p) AND in(pr, e));
+        
+        NEWSESSION  NESTED (in[Product, Employee]) {
+            DELETE Order o WHERE date(o) = d AND in(product(o), employee(o));
+            APPLY;            
+        }
+    }
+};
+
+clearLunch 'Clear for employee' (Project p, Employee e) {
+    ASK 'This action cannot be undone. Continue ?' DO {
+        LOCAL in = BOOLEAN (DATE);
+        in(DATE d) <- [FILTER timesheetSupervisor.d](d);
+        NEWSESSION NESTED (in) {
+            DELETE Order o WHERE in(date(o)) AND employee(o) = e AND in(p, product(o));
+            APPLY;
+        }
+    }
+} CONFIRM;
+
+copyLunch 'Copy' (DATE d) {
+    LOCAL in = BOOLEAN (Project, Employee);
+    LOCAL in = BOOLEAN (Product, Employee);    
+    
+    in(Project p, Employee e) <- [FILTER timesheetSupervisor.pel](p, e);
+    in(Product p, Employee e) <- TRUE WHERE (GROUP MIN Project pr IF in(pr, p) AND in(pr, e));
+    
+    ASK 'This action cannot be undone. Continue ?' IF (GROUP SUM 1 IF date(Order o) = d AND in(product(o), employee(o))) DO {
+        NEWSESSION NESTED (in[Project, Employee], in[Product, Employee]) {
+            LOCAL maxDate = DATE();
+            maxDate() <- GROUP MAX date(Order o) IF date(o) < d AND in(product(o), employee(o));
+            DELETE Order o WHERE date(o) = d AND in(product(o), employee(o));
+            FOR date(Order o) = maxDate() AND hoursTimesheet(d, employee(o), Project p) AND in(p, employee(o)) AND in(p, product(o)) AND in(product(o), employee(o)) INLINE DO NEW on = Order {
+                date(on) <- d;
+                employee(on) <- employee(o);
+                product(on) <- product(o);
+                vendor(on) <- vendor(o);
+            }
+            APPLY;
+        }
+    }
+} CONFIRM;
+
+fillLunch 'Fill for date' (DATE d) {
+    IF timesheetLunchProduct() THEN {
+        LOCAL in = BOOLEAN (Project, Employee);
+        LOCAL in = BOOLEAN (Product, Employee);
+        LOCAL in = BOOLEAN (Employee);
+
+        in(Project p, Employee e) <- [FILTER timesheetSupervisor.pel](p, e);
+        in(Employee e) <- TRUE WHERE (GROUP MAX in(Project p, e));
+        in(Product p, Employee e) <- TRUE WHERE (GROUP MIN Project pr IF in(pr, p) AND in(pr, e));
+                
+        ASK 'This action cannot be undone. Continue ?' IF (GROUP SUM 1 IF date(Order o) = d AND in(product(o), employee(o))) DO {
+            NEWSESSION NESTED (in[Employee], in[Project, Employee], in[Product, Employee]) {
+                DELETE Order o WHERE date(o) = d AND in(product(o), employee(o));
+                FOR hoursTimesheet(d, Employee e, Project p) AND in(e) AND in(p, e) INLINE DO NEW o = Order {
+                    date(o) <- d;
+                    employee(o) <- e;
+                    product(o) <- timesheetLunchProduct();
+                }
+                APPLY;
+            }
+        }
+    } ELSE
+        MESSAGE 'Lunch product is not specified';
+}
+
+fillLunch 'Fill for employee' (Project p, Employee e) {
+    IF timesheetLunchProduct() THEN {
+        LOCAL in = BOOLEAN (DATE);
+        in(DATE d) <- [FILTER timesheetSupervisor.d](d);
+        ASK 'This action cannot be undone. Continue ?' IF (GROUP SUM 1 IF in(date(Order o)) AND employee(o) = e AND in(p, product(o))) DO {
+            NEWSESSION NESTED (in) {
+                DELETE Order o WHERE in(date(o)) AND employee(o) = e AND in(p, product(o));
+                FOR hoursTimesheet(DATE d, e, p) AND in(d) INLINE DO NEW o = Order {
+                    date(o) <- d;
+                    employee(o) <- e;
+                    product(o) <- timesheetLunchProduct();
+                }
+                APPLY;
+            }
+        }
+    } ELSE
+        MESSAGE 'Lunch product is not specified';
+}
 
 rgbColorProduct (Order o) = rgbColor(product(o));
 rgbColorProductOrder 'Symbols' (DATE d, Employee e) = rgbColorProduct(order(d, e));;
 
-countLunchProduct 'Lunch (days)' (Employee e, DATE from, DATE to) =
-    GROUP SUM 1 IF productOrder(DATE d, e) AND iterate(d, from, to);
-countLunchProduct 'Lunch (days)' (Employee e, INTERVAL[DATE] i) = countLunchProduct(e, from(i), to(i));
+countLunchProduct 'Lunch (days)' (Project p, Employee e, DATE from, DATE to) =
+    GROUP SUM 1 IF in(p, productOrder(DATE d, e)) AND iterate(d, from, to);
+countLunchProduct 'Lunch (days)' (Project p, Employee e, INTERVAL[DATE] i) = countLunchProduct(p, e, from(i), to(i));
 
 symbolProduct 'Symbol' (Order o) = symbol(product(o));
 nameProduct '{master.data.name}' (Order o) = name(product(o));
+
+productOrder (DATE d, Employee e, Project p) = product(order(d, e)) IF in(p, product(order(d, e)));
+symbolProductOrder 'Lunch order' (DATE d, Employee e, Project p) = symbol(productOrder(d, e, p));
 
 FORM timesheetSupervisorDateEmployeeLuncheOrders 'Lunches'
     OBJECTS i = INTERVAL[DATE] PANEL
@@ -41,7 +135,7 @@ FORM timesheetSupervisorDateEmployeeLuncheOrders 'Lunches'
 ;
 
 EXTEND FORM timesheetSupervisor
-    PROPERTIES symbolProductOrder(d, el) WAIT COLUMNS (d) HEADER extractDay(d) BACKGROUND backgroundHoursTimesheet(d, el)
+    PROPERTIES symbolProductOrder(d, el, pl) WAIT COLUMNS (d) HEADER extractDay(d) BACKGROUND backgroundHoursTimesheet(d, el)
                ON CHANGE {
                    FOR Product lp = timesheetLunchProduct() DO
                        NEWSESSION {
@@ -62,12 +156,15 @@ EXTEND FORM timesheetSupervisor
                    ELSE
                        SHOW timesheetSupervisorDateEmployeeLuncheOrders OBJECTS i = interval(d, d), e = el FLOAT;
                } ON CONTEXTMENU clearLunch(d) ON CONTEXTMENU fillLunch(d)
-                 ON CONTEXTMENU clearLunch(el) ON CONTEXTMENU fillLunch(el)
+                 ON CONTEXTMENU clearLunch(pl, el) ON CONTEXTMENU fillLunch(pl, el)
                  ON CONTEXTMENU copyLunch(d)
-    FILTERS assigned(timesheetProject(), el, dates) OR hours(el, timesheetProject(), dates) OR (NOT countAssignments(timesheetProject()) AND NOT countAssignments(currentUser()))   
+    FILTERS assigned(pl, el, dates) OR hours(el, pl, dates) OR (NOT countAssignments(pl) AND NOT countAssignments(currentUser()))
+    FILTERS pl == timesheetProject() OR NOT timesheetProject()
+    FILTERS in(pl, timesheetLunchProduct()) OR NOT timesheetLunchProduct()
+    
     
     FILTERGROUP onlyFilledLunch
-        FILTER 'Только заполненные' countLunchProduct(el, dates)
+        FILTER 'Только заполненные' countLunchProduct(pl, el, dates)
 ;
 
 DESIGN timesheetSupervisor {
@@ -75,7 +172,7 @@ DESIGN timesheetSupervisor {
         NEW lunch {
             caption = 'Lunches';
             MOVE PROPERTY(nameTimesheetLunchProduct()) { alignment = START; }
-            MOVE BOX(el) {
+            MOVE BOX(pel) {
                 caption = '';
             }
         }
