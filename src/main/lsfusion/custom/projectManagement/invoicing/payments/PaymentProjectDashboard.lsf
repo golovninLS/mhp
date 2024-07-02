@@ -13,7 +13,7 @@ FORM paymentProjectDashboard 'Harmonogram'
     PROPERTIES READONLY taxAmount(t, b) COLUMNS (t) HEADER name(t)
     
     PROPERTIES(b) READONLY amount, nameCurrency
-    PROPERTIES(b) READONLY nameProject, note, items, dueDateTime
+    PROPERTIES(b) READONLY nameProject, nameSalesAccount, note, items, dueDateTime
     
     PROPERTIES READONLY left(b), left(b, t) COLUMNS (t) HEADER 'To pay' + ' (' + name(t) + ')', untaxedLeft(b)
 

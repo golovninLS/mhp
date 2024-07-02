@@ -4,6 +4,21 @@ REQUIRE Bill;
 
 NAMESPACE Invoicing;
 
+// default item
+
+defaultBillItem = DATA Item ();
+nameDefaultBillItem 'Default bill item' = name(defaultBillItem());
+
+EXTEND FORM options
+    PROPERTIES() nameDefaultBillItem
+;
+
+DESIGN options {
+    commons {
+        MOVE PROPERTY(nameDefaultBillItem());
+    }
+}
+
 changeItems (Bill b) {
     DIALOG items OBJECTS i INPUT LIST name(i) DO {
         IF NOT countBillLine(b) THEN
@@ -21,6 +36,7 @@ changeUntaxedAmount (Bill b) {
         IF NOT countBillLine(b) THEN
             NEW l = BillLine {
                 bill(l) <- b;
+                item(l) <- defaultBillItem();
                 untaxedAmount(l) <- a;
             }
         ELSE
@@ -33,6 +49,7 @@ changeTaxAmount (Tax t, Bill b) {
         IF NOT countBillLine(b) THEN
             NEW l = BillLine {
                 bill(l) <- b;
+                item(l) <- defaultBillItem();
                 in(l, t) <- TRUE;
                 taxAmount(t, l) <- a;
             }

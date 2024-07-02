@@ -1,6 +1,6 @@
 MODULE BillProject;
 
-REQUIRE BillCurrency, Project;
+REQUIRE BillCurrency, ProjectBill, SalesAccount;
 
 NAMESPACE ProjectManagement;
 
@@ -8,8 +8,14 @@ CLASS BillProject 'Project bill';
 
 bill 'Bill' = DATA Bill (BillProject) NONULL DELETE;
 
+countBillProject (Bill b) = GROUP SUM 1 IF bill(BillProject p) = b;
+minBillProject (Bill b) = GROUP MIN BillProject p IF bill(p) = b;
+
 project 'Project' = DATA Project (BillProject);
 nameProject 'Project' (BillProject b) = name(project(b));
+
+salesAccount 'Sales account' = DATA CustomSalesAccount (BillProject);
+nameSalesAccount 'Sales account' (BillProject p) = name(salesAccount(p));
 
 base 'Distribution base' = DATA NUMERIC[10,2] (BillProject);
 
@@ -34,7 +40,7 @@ EXTEND FORM bill
     OBJECTS bpt = Tax
     
     OBJECTS bp = BillProject
-    PROPERTIES(bp) nameProject, base, untaxedAmount
+    PROPERTIES(bp) nameProject, nameSalesAccount, base, untaxedAmount
     PROPERTIES taxAmount(bpt, bp) COLUMNS (bpt) HEADER name(bpt)
     PROPERTIES(bp) amount READONLY
     PROPERTIES(bp) NEW, DELETE
@@ -107,3 +113,35 @@ generateProject(Bill b) + {
 EXTEND FORM bill
     PROPERTIES(b) generateProject DRAW bp TOOLBAR
 ;
+
+WHEN LOCAL FORMS bill CHANGED(untaxedAmount(Bill b)) OR (GROUP SUM 1 IF CHANGED(taxAmount(Tax t, b))) OR
+           (GROUP SUM 1 IF CHANGED(base(BillProject bp)) AND bill(bp) = b) DO
+    generateProject(b);
+
+WHEN LOCAL FORMS bill SET(Bill b IS Bill) AND NOT countBillProject(b) DO {
+    NEW bp = BillProject {
+        bill(bp) <- b;
+        base(bp) <- 100;
+    }
+}
+
+WHEN LOCAL FORMS bill CHANGED(project(Bill b)) DO
+    project(minBillProject(b)) <- project(b);    
+
+// sales account
+
+salesAccount (Bill b) = salesAccount(minBillProject(b));
+nameSalesAccount 'Sales account' (Bill b) = name(salesAccount(b));
+EXTEND FORM bill
+    PROPERTIES(b) nameSalesAccount ON CHANGE {
+        DIALOG customSalesAccounts OBJECTS o INPUT LIST name(o) DO {
+            salesAccount(minBillProject(b)) <- o;
+        }
+    }
+;
+
+DESIGN bill {
+    headerRight {
+        MOVE PROPERTY(nameSalesAccount(b));
+    }
+}

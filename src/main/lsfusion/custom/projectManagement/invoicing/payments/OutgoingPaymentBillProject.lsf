@@ -64,7 +64,7 @@ EXTEND FORM outgoingPayment
     PROPERTIES READONLY taxAmount(bpt, bp) COLUMNS (bpt) HEADER name(bpt)
 
     PROPERTIES(bp) READONLY amount, nameCurrency
-    PROPERTIES(bp) READONLY nameProject, note, items, dueDateTime
+    PROPERTIES(bp) READONLY nameProject, nameSalesAccount, note, items, dueDateTime
     
     PROPERTIES paid(p, bp), paid(p, bp, bpt) COLUMNS (bpt) HEADER name(bpt), untaxedPaid(p, bp) READONLY
     FILTERS paid(p, bp) OR paidTax(p, bp)
