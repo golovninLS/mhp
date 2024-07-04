@@ -14,6 +14,8 @@ countSalaries = GROUP SUM 1 BY project(ProjectSalary s) MATERIALIZED;
 date 'Date' = DATA DATE (ProjectSalary) NONULL;
 date (ProjectSalary t) <- currentDate() WHEN SET(t IS ProjectSalary);
 
+dateTo 'Date to' = DATA DATE (ProjectSalary);
+
 employee 'Employee' = DATA Employee (ProjectSalary) NONULL;
 nameEmployee 'Employee' (ProjectSalary s) = name(employee(s));
 
@@ -22,7 +24,7 @@ rate 'Salary per hour' = DATA NUMERIC[10,2] (ProjectSalary) NONULL;
 INDEX project(ProjectSalary s), employee(s), date(s), s;
 
 salary (Project p, Employee e, DATE d) =
-    GROUP LAST ProjectSalary s ORDER date(s), s WHERE date(s) <= d BY project(s), employee(s);
+    GROUP LAST ProjectSalary s ORDER date(s), s WHERE date(s) <= d AND NOT dateTo(s) < d BY project(s), employee(s);
 
 rateSalary 'Salary per hour' (Project p, Employee e, DATE d) = rate(salary(p, e, d));
 
@@ -30,7 +32,7 @@ rateSalary (TimeEntry e) += rateSalary(project(e), employee(e), date(e));
 
 EXTEND FORM project
     OBJECTS ps = ProjectSalary
-    PROPERTIES(ps) nameEmployee, date, rate, NEW, DELETE
+    PROPERTIES(ps) nameEmployee, date, dateTo, rate, NEW, DELETE
     FILTERS project(ps) = p
 ;
 

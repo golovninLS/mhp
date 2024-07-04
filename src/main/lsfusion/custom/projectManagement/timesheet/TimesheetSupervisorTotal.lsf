@@ -15,7 +15,7 @@ timesheetSalaryProject 'Salary (project)' (Employee e, INTERVAL[DATE] i) = salar
 rateSalary 'Salary per hour (project)' (Employee e, INTERVAL[DATE] i) = rateSalary(timesheetProject(), e, from(i));
 
 salary (Project p, Employee e, INTERVAL[DATE] dates) =
-    GROUP LAST ProjectSalary s ORDER date(s), s WHERE date(s) = from(dates) BY project(s), employee(s);
+    GROUP LAST ProjectSalary s ORDER date(s), s WHERE date(s) <= from(dates) AND NOT to(dates) > dateTo(s) BY project(s), employee(s);
 
 changeRateSalary (Employee e, INTERVAL[DATE] i) {
     INPUT q = NUMERIC[10,2] DO
@@ -26,6 +26,7 @@ changeRateSalary (Employee e, INTERVAL[DATE] i) {
         } ELSE NEW p = ProjectSalary {
             project(p) <- timesheetProject();
             date(p) <- from(i);
+            dateTo(p) <- to(i);
             employee(p) <- e;
             rate(p) <- q;
         }
