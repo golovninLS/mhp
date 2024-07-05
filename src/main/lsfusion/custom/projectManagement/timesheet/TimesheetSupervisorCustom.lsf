@@ -38,7 +38,7 @@ changeTimesheetHours (DATE d, Employee e, Project p, TimeEntryType et, NUMERIC[8
             }
         }
     } ELSE
-        DELETE TimeEntry t WHERE matchesProject(t) AND employee(t) = e AND date(t) = d;
+        DELETE TimeEntry t WHERE project(t) = p AND employee(t) = e AND date(t) = d;
 }
 
 changeSaveTimesheetHours (DATE d, Employee e, Project p, TimeEntryType et, NUMERIC[8,2] n, TimeEntryHours h, BOOLEAN autoSave) {
