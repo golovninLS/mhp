@@ -41,7 +41,18 @@ changeRateSalary (Employee e, INTERVAL[DATE] i, BOOLEAN autoSave) {
         }
 }
 
+closeProject 'Закрыть период' (Project p, INTERVAL[DATE] dates) {
+    ASK 'Are you sure you want to close the project?' DO {
+        NEWSESSION {
+            managerTimesheetCloseDate(p) <- to(dates);
+            APPLY;
+        }
+    }
+} CONFIRM;
+
 EXTEND FORM timesheetSupervisor
+    PROPERTIES closeProject(p, dates) SHOWIF from(dates) > managerTimesheetCloseDate(p) OR NOT managerTimesheetCloseDate(p)
+    
     OBJECTS et = Employee
     PROPERTIES(et) READONLY firstName, lastName, namePosition, rolesTimesheet
     
@@ -67,6 +78,9 @@ EXTEND FORM timesheetSupervisor
 ;
 
 DESIGN timesheetSupervisor {
+    edit {
+        MOVE PROPERTY(closeProject(p, dates));
+    }
     tabbedPane {
         NEW total {
             caption = 'Total';
