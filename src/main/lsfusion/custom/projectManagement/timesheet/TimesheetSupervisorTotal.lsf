@@ -1,7 +1,7 @@
 MODULE TimesheetSupervisorTotal;
 
 REQUIRE TimesheetSupervisor, TimesheetSalary, 
-        ProjectSalary, LunchOrder, AccomodationOrder, LunchCompensation, TimesheetSupervisorCustom;
+        ProjectSalary, LunchOrder, AccomodationOrder, LunchCompensation, TimesheetSupervisorCustom, ProjectAccomodation, TimesheetSupervisorAccomodation;
 
 PRIORITY MasterData;
 
@@ -9,22 +9,26 @@ NAMESPACE ProjectManagement;
 
 toPay 'To pay' (Employee e, INTERVAL[DATE] i) = salary(e, i) (-) lunches(e, i) (-) accomodation(e, i) (+) lunchCompensation(e, i); 
 
-timesheetHoursProject 'Hours (project)' (Employee e, INTERVAL[DATE] i) = hours(e, timesheetProject(), i);
-timesheetSalaryProject 'Salary (project)' (Employee e, INTERVAL[DATE] i) = salary(e, timesheetProject(), i);
+timesheetHoursProject 'Hours (project)' (Employee e, Project p, INTERVAL[DATE] i) = hours(e, p, i);
+timesheetSalaryProject 'Salary (project)' (Employee e, Project p, INTERVAL[DATE] i) = salary(e, p, i);
 
-rateSalary 'Salary per hour (project)' (Employee e, INTERVAL[DATE] i) = rateSalary(timesheetProject(), e, from(i));
+rateSalary 'Salary per hour (project)' (Employee e, Project p, INTERVAL[DATE] i) = rateSalary(p, e, from(i));
 
 salary (Project p, Employee e, INTERVAL[DATE] dates) =
     GROUP LAST ProjectSalary s ORDER date(s), s WHERE date(s) <= from(dates) AND NOT to(dates) > dateTo(s) BY project(s), employee(s);
 
-changeRateSalary (Employee e, INTERVAL[DATE] i) {
+accomodation 'Accomodation order' (Employee e, Project p, DATE from, DATE to) =
+    GROUP SUM employeePriceAccomodationOrder(DATE d, e) IF iterate(d, from, to) AND in(p, accomodationOrder(d, e));
+accomodation 'Accomodation order' (Employee e, Project p, INTERVAL[DATE] i) = accomodation(e, p, from(i), to(i));
+
+changeRateSalary (Employee e, Project pr, INTERVAL[DATE] i) {
     INPUT q = NUMERIC[10,2] DO
-        IF salary(timesheetProject(), e, i) AND NOT q THEN {
-            delete(salary(timesheetProject(), e, i));
-        } ELSE IF salary(timesheetProject(), e, i) THEN {
-        rate(salary(timesheetProject(), e, i)) <- q;
+        IF salary(pr, e, i) AND NOT q THEN {
+            delete(salary(pr, e, i));
+        } ELSE IF salary(pr, e, i) THEN {
+        rate(salary(pr, e, i)) <- q;
         } ELSE NEW p = ProjectSalary {
-            project(p) <- timesheetProject();
+            project(p) <- pr;
             date(p) <- from(i);
             dateTo(p) <- to(i);
             employee(p) <- e;
@@ -32,12 +36,12 @@ changeRateSalary (Employee e, INTERVAL[DATE] i) {
         }
 }
 
-changeRateSalary (Employee e, INTERVAL[DATE] i, BOOLEAN autoSave) {
+changeRateSalary (Employee e, Project p, INTERVAL[DATE] i, BOOLEAN autoSave) {
     IF NOT autoSave THEN {
-        changeRateSalary(e, i);
+        changeRateSalary(e, p, i);
     } ELSE
         NEWSESSION APPLY {
-            changeRateSalary(e, i);
+            changeRateSalary(e, p, i);
         }
 }
 
@@ -52,29 +56,31 @@ closeProject 'Закрыть период' (Project p, INTERVAL[DATE] dates) {
 
 EXTEND FORM timesheetSupervisor
     PROPERTIES closeProject(p, dates) SHOWIF from(dates) > managerTimesheetCloseDate(p) OR NOT managerTimesheetCloseDate(p)
+
+    OBJECTS te = (tp = Project, et = Employee)
+    PROPERTIES READONLY nameProjectTotal 'Project' = name(tp)
     
-    OBJECTS et = Employee
+//    OBJECTS et = Employee
     PROPERTIES(et) READONLY firstName, lastName, namePosition, rolesTimesheet
     
-    PROPERTIES timesheetHoursProject(et, dates) SHOWIF timesheetProject(), rateSalary(et, dates) SHOWIF timesheetProject() ON CHANGE {changeRateSalary(et, dates, autoSaveTimesheetHours());},
-               hours(et, dates) SHOWIF NOT timesheetProject(), countLunches(et, dates) SHOWIF NOT timesheetProject(), countAccomodation(et, dates) SHOWIF NOT timesheetProject(), 
-               timesheetSalaryProject(et, dates) SHOWIF timesheetProject() ON CHANGE {
+    PROPERTIES timesheetHoursProject(et, tp, dates) SHOWIF timesheetProject(), rateSalary(et, tp, dates) SHOWIF timesheetProject() ON CHANGE {changeRateSalary(et, tp, dates, autoSaveTimesheetHours());},
+               hours(et, tp, dates) SHOWIF NOT timesheetProject(), countLunches(et, tp, dates) SHOWIF NOT timesheetProject(), countAccomodation(et, tp, dates) SHOWIF NOT timesheetProject(), 
+               timesheetSalaryProject(et, tp, dates) SHOWIF timesheetProject() ON CHANGE {
                    SHOW timesheetSupervisorDateEmployee OBJECTS i = dates, e = et FLOAT;
-               }, salary(et, dates) ON CHANGE {
+               }, salary(et, tp, dates) ON CHANGE {
                    SHOW timesheetSupervisorDateEmployee OBJECTS i = dates, e = et FLOAT;
-               }, lunches(et, dates) ON CHANGE {
+               }, lunches(et, tp, dates) ON CHANGE {
                    SHOW Lunch.ordersDateEmployee OBJECTS i = dates, e = et FLOAT;
-               }, accomodation(et, dates) ON CHANGE {
+               }, accomodation(et, tp, dates) ON CHANGE {
                     SHOW Accomodation.ordersDateEmployee OBJECTS i = dates, e = et FLOAT;
-               }, lunchCompensation(et, dates)
+               }, lunchCompensation(et, tp, dates)
 
-    FILTERS [FILTER timesheetSupervisor.e](et)
+    FILTERS assigned(tp, et, dates) OR (NOT countAssignments(p) AND NOT countAssignments(currentUser()))
+    FILTERS tp == timesheetProject() OR NOT timesheetProject()
     FILTERGROUP onlyFilledTotal
         FILTER 'Только заполненные'
-            salary(et, dates) OR lunches(et, dates) OR accomodation(et, dates) OR lunchCompensation(et, dates) OR
-            timesheetProject() AND (timesheetHoursProject(et, dates) OR rateSalary(et, dates) OR timesheetSalaryProject(et, dates)) OR
-            NOT timesheetProject() AND (hours(et, dates) OR countLunches(et, dates) OR countAccomodation(et, dates))
-    
+            salary(et, tp, dates) OR lunches(et, tp, dates) OR accomodation(et, tp, dates) OR lunchCompensation(et, tp, dates) OR
+            NOT timesheetProject() AND (hours(et, tp, dates) OR countLunches(et, tp, dates) OR countAccomodation(et, tp, dates))
 ;
 
 DESIGN timesheetSupervisor {
@@ -84,7 +90,7 @@ DESIGN timesheetSupervisor {
     tabbedPane {
         NEW total {
             caption = 'Total';
-            MOVE BOX(et) {
+            MOVE BOX(te) {
                 caption = '';
             }
         }

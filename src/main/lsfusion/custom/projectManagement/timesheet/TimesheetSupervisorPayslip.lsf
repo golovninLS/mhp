@@ -67,7 +67,7 @@ EXTEND FORM timesheetSupervisor
             company(ps) = timesheetCompany() OR NOT timesheetCompany()
     
     OBJECTS pcT = PayslipCategory
-    PROPERTIES (et, pcT, dates) totalTimesheet COLUMNS 'totalSection' (pcT) GRID DRAW et
+    PROPERTIES (et, pcT, dates) totalTimesheet COLUMNS 'totalSection' (pcT) GRID DRAW te
         HEADER name(pcT) + '(' + name(timesheetProject()) + ')' READONLYIF readonly(pcT) 
         SHOWIF timesheetProject() AND splitByProject(pcT)
         ON CHANGE {
