@@ -26,21 +26,21 @@ left (BillProject bp, Tax t) = taxAmount(t, bp) (-) paid(bp, t);
 untaxedLeft 'To pay (netto)' (BillProject bp) = untaxedAmount(bp) (-) untaxedPaid(bp);
 
 // payment
-paid 'Paid' (OutgoingPayment op) = GROUP SUM paid(op, BillProject p);
+paid 'Paid (brutto)' (OutgoingPayment op) = GROUP SUM paid(op, BillProject p);
 paid (OutgoingPayment op, Tax t) = GROUP SUM paid(op, BillProject p, t);
 untaxedPaid 'Paid (netto)' (OutgoingPayment op) = GROUP SUM untaxedPaid(op, BillProject p);
 
 // bill
-paid 'Paid' (OutgoingPayment op, Bill b) = GROUP SUM paid(op, BillProject p) IF bill(p) = b;
+paid 'Paid (brutto)' (OutgoingPayment op, Bill b) = GROUP SUM paid(op, BillProject p) IF bill(p) = b;
 paid (OutgoingPayment op, Bill b, Tax t) = GROUP SUM paid(op, BillProject p, t) IF bill(p) = b;
 untaxedPaid 'Paid (netto)' (OutgoingPayment op, Bill b) = GROUP SUM untaxedPaid(op, BillProject p) IF bill(p) = b;
 
-paid 'Paid' (Bill b) = GROUP SUM paid(BillProject p) IF bill(p) = b;
+paid 'Paid (brutto)' (Bill b) = GROUP SUM paid(BillProject p) IF bill(p) = b;
 paid (Bill b, Tax t) = GROUP SUM paid(BillProject p, t) IF bill(p) = b;
 untaxedPaid 'Paid (netto)' (Bill b) = GROUP SUM untaxedPaid(BillProject p) IF bill(p) = b;
 
 
-left 'To pay' (Bill b) = GROUP SUM left(BillProject p) IF bill(p) = b;
+left 'To pay (brutto)' (Bill b) = GROUP SUM left(BillProject p) IF bill(p) = b;
 left (Bill b, Tax t) = GROUP SUM left(BillProject p, t) IF bill(p) = b;
 untaxedLeft 'To pay (netto)' (Bill b) = GROUP SUM untaxedLeft(BillProject p) IF bill(p) = b;
 

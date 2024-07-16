@@ -1,6 +1,6 @@
 MODULE ProjectCustom;
 
-REQUIRE Project, TimesheetCustom, City;
+REQUIRE Project, TimesheetCustom, City, ProjectLedger;
 
 NAMESPACE ProjectManagement;
 

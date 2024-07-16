@@ -1,6 +1,6 @@
 MODULE BillCustom;
 
-REQUIRE Bill;
+REQUIRE BillReceipt, BillProject, ProjectBill;
 
 NAMESPACE Invoicing;
 
@@ -25,9 +25,28 @@ changeItems (Bill b) {
             NEW l = BillLine {
                 bill(l) <- b;
                 item(l) <- i;
+                in(l, defaultTax()) <- TRUE;
             }
         ELSE
             item(BillLine l) <- i WHERE bill(l) = b AND NOT item(l) IS Product;
+            in(BillLine l, defaultTax()) <- TRUE WHERE bill(l) = b;
+    }
+}
+changeAmount(Bill b){
+    INPUT a = NUMERIC[14,2] DO{
+        IF NOT countBillLine(b) THEN
+            NEW l = BillLine {
+                bill(l) <- b;
+                item(l) <- defaultBillItem();
+                in(l, defaultTax()) <- TRUE;
+                taxAmount(defaultTax(), l) <- round2([((X/(1+Y/100)) - X) * -1](a, value(defaultTax())));
+                untaxedAmount(l) <- a (-) taxAmount(defaultTax(), l);
+            }
+        ELSE{
+            in(BillLine l, defaultTax()) <- TRUE WHERE bill(l) = b;
+            taxAmount(defaultTax(), BillLine l) <- round2([((X/(1+Y/100)) - X) * -1](a, value(defaultTax()))) WHERE bill(l) = b;;
+            untaxedAmount(BillLine l) <- a (-) taxAmount(defaultTax(), l) WHERE bill(l) = b;
+        }
     }
 }
 
@@ -37,9 +56,11 @@ changeUntaxedAmount (Bill b) {
             NEW l = BillLine {
                 bill(l) <- b;
                 item(l) <- defaultBillItem();
+                taxAmount(defaultTax(), l) <- amount(b) (-) a;
                 untaxedAmount(l) <- a;
             }
         ELSE
+            taxAmount(defaultTax(), BillLine l) <- (amount(b) (-) a) WHERE bill(l) = b;
             untaxedAmount(BillLine l) <- a WHERE bill(l) = b;
     }
 }
@@ -59,20 +80,27 @@ changeTaxAmount (Tax t, Bill b) {
         }
     }
 }
+changeDueDate(Bill b){
+    INPUT d = DATE DO dueDateTime(b) <- DATETIME(d);
+}
+changeDate(Bill b){
+    INPUT d = DATE DO dateTime(b) <- DATETIME(d);
+}
 
 EXTEND FORM bill
     OBJECTS bt = Tax
     
-    PROPERTIES uta = untaxedAmount(b) ON CHANGE changeUntaxedAmount(b),
-               utt = taxAmount(bt, b) ON CHANGE changeTaxAmount(bt, b) COLUMNS (bt) HEADER name(bt),
-               items(b) ON CHANGE changeItems(b),
-               amn = amount(b)
+    PROPERTIES uta 'Netto' = untaxedAmount(b) ON CHANGE changeUntaxedAmount(b),
+               utt = taxAmount(bt, b) COLUMNS (bt) HEADER name(bt) READONLY ,
+               amn 'Brutto' = amount(b) ON CHANGE changeAmount(b)
+    PROPERTIES (b) 'Pay before' = dueDate ON CHANGE changeDueDate(b), date ON CHANGE changeDate(b)
 ;
 
 DESIGN bill {
     header {
         headerLeft {
-            MOVE PROPERTY(dueDateTime(b)) AFTER PROPERTY(dateTime(b));
+            MOVE PROPERTY(date(b)) AFTER PROPERTY(number(b));
+            MOVE PROPERTY(dueDate(b)) AFTER PROPERTY(date(b));
         }
         NEW headerLine AFTER headerRight {
             MOVE PROPERTY(uta);
@@ -81,7 +109,18 @@ DESIGN bill {
         }
     }
     OBJECTS {
+        BOX(r){
+            showIf = countReceipts(b);
+        }
+        lines{
+            showIf = countReceipts(b);
+        }
+        REMOVE search;
+        REMOVE detailsInformation;
+        REMOVE PROPERTY (nameProject(b));
+        REMOVE PROPERTY (dueDateTime(b));
+        REMOVE PROPERTY (dateTime(b));
+        REMOVE PROPERTY (dateTime(b));
         MOVE PROPERTY(note(b)) AFTER header { alignment = STRETCH; }
-        MOVE PROPERTY(items(b)) AFTER header { alignment = STRETCH; }
     }
 }

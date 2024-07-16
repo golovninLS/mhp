@@ -38,6 +38,6 @@ EXTEND FORM project
 
 DESIGN project {
     staff {
-        MOVE BOX(ps) { caption = badged('Salary', countSalaries(p)); }
+        REMOVE BOX(ps);
     }
 }

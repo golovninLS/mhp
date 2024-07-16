@@ -7,6 +7,19 @@ NAMESPACE ProjectManagement;
 countTimeEntryCustom 'Time entries' (Project p) = GROUP SUM 1 IF project(TimeEntry t) = p AND hours(t) > 0;
 hoursTimeEntryCustom 'Hours' (Project p) = GROUP SUM hours(TimeEntry t) IF project(t) = p AND hours(t) > 0;
 
+countTimeEntryCustom 'Time entries' (Project p, INTERVAL[DATE] i) = GROUP SUM 1 IF project(TimeEntry t) = p
+    AND date(t) >= from(i) AND date(t) <= to(i);
+hoursTimeEntryCustom 'Hours' (Project p, INTERVAL[DATE] i) = GROUP SUM hours(TimeEntry t) IF project(t) = p
+    AND date(t) >= from(i) AND date(t) <= to(i);
+
+countTimeEntryCustom(INTERVAL[DATE] i) = IF i IS INTERVAL[DATE] THEN GROUP SUM countTimeEntryCustom(Project p, i) IF filtered(p)
+    ELSE GROUP SUM countTimeEntryCustom(Project p) IF filtered(p)
+;
+
+hoursTimeEntryCustom(INTERVAL[DATE] i) = IF i IS INTERVAL[DATE] THEN GROUP SUM hoursTimeEntryCustom(Project p, i) IF filtered(p)
+    ELSE GROUP SUM hoursTimeEntryCustom(Project p) IF filtered(p)
+;
+
 EXTEND FORM project
     FILTERS hours(te) > 0
 ;
@@ -22,8 +35,12 @@ DESIGN project {
     }
 }
 
-EXTEND FORM projects PROPERTIES countTimeEntryCustom(p) BEFORE countTimeEntry(p);
+EXTEND FORM projects 
+    PROPERTIES GRID DRAW p countTimeEntryCustom(p) SHOWIF NOT dates IS INTERVAL[DATE] FOOTER countTimeEntryCustom(dates)
+    PROPERTIES GRID DRAW p SHOWIF dates IS INTERVAL[DATE] countTimeEntryCustom(p, dates) FOOTER countTimeEntryCustom(dates), hoursTimeEntryCustom(p, dates) FOOTER hoursTimeEntryCustom(dates)
+;
 
 DESIGN projects {
     PROPERTY(countTimeEntry(p)) { hide = TRUE; }
+    PROPERTY(hoursTimeEntry(p)) { hide = TRUE; }
 }

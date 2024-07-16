@@ -19,5 +19,5 @@ category (BillProject l) += nameType(l);
 
 description (BillProject l) += note(l);
 
-income(BillProject l) += -amount(l) IF isCreditNote(bill(l));
-expense(BillProject l) += amount(l) IF NOT isCreditNote(bill(l));
+income(BillProject l) += -untaxedAmount(l) IF isCreditNote(bill(l));
+expense(BillProject l) += untaxedAmount(l) IF NOT isCreditNote(bill(l));

@@ -1,7 +1,7 @@
 MODULE LunchOrder;
 
 REQUIRE HumanResourcesSettings,
-        Employee, LunchProduct;
+        Employee, LunchProduct, ProjectCustom, Time;
 
 PRIORITY MasterData;
 
@@ -25,6 +25,9 @@ WHEN LOCAL SETCHANGED(product(Order o)) AND vendor(product(o)) DO
 
 CONSTRAINT product(Order o) AND vendor(product(o)) AND NOT vendor(product(o)) = vendor(o)
     CHECKED BY product[Order] MESSAGE 'Incorrect product for lunch order';
+
+project = DATA Project (Order);
+nameProject 'Project' (Order o) = name(project(o));
 
 price 'Price' (Order o) = price(product(o), date(o));
 
@@ -50,7 +53,7 @@ FORM order 'Lunch order'
 
 FORM orders 'Lunch orders'
     OBJECTS o = Order
-    PROPERTIES(o) READONLY date, nameEmployee, nameProduct, nameVendor, price
+    PROPERTIES(o) READONLY date, nameEmployee, nameProduct, nameVendor, price, nameProject CHANGEABLE 
     PROPERTIES(o) NEWSESSION NEW, EDIT, DELETE
 ;
 
@@ -66,7 +69,7 @@ FORM ordersDateEmployee 'Lunch orders'
 ;
 
 NAVIGATOR {
-    operations {
+    HumanResources.operations {
         NEW orders;
     }
 }

@@ -15,8 +15,9 @@ DESIGN options {
 
 timesheetProject = DATA LOCAL NESTED Project ();
 nameTimesheetProject 'Project' = name(timesheetProject());
+skipCheckAssigned = ABSTRACT CASE BOOLEAN (CustomUser);
 
-CONSTRAINT timesheetProject() AND countAssignments(currentUser()) AND NOT assigned(timesheetProject(), currentUser())
+CONSTRAINT timesheetProject() AND countAssignments(currentUser()) AND NOT assigned(timesheetProject(), currentUser()) AND NOT skipCheckAssigned(currentUser())
     CHECKED BY timesheetProject[] MESSAGE '';
 
 matchesProject (TimeEntry t) = project(t) = timesheetProject() OR (NOT timesheetProject() AND NOT project(t));

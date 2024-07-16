@@ -39,6 +39,8 @@ INDEX project (ProjectLedger l), date(l);
 //type = ABSTRACT ProjectLedgerType (ProjectLedger) MATERIALIZED;
 //nameType 'Type' (ProjectLedger l) = name(type(l));
 
+filtered (Project p) = FILTER projects.p;
+
 partner 'Partner' = ABSTRACT Partner (ProjectLedger) MATERIALIZED;
 namePartner 'Partner' (ProjectLedger l) = name(partner(l));
 
@@ -54,16 +56,27 @@ sumExpense 'Сумма затрат' (Project p, INTERVAL[DATE] i) =
     GROUP SUM expense(ProjectLedger l) IF expense(l) > 0 AND date(l) >= from(i) AND date(l) <= to(i) BY project(l);
 sumExpense 'Сумма затрат' (Project p) =
     GROUP SUM expense(ProjectLedger l) IF expense(l) > 0  BY project(l);
+
 sumProfit 'Сумма прибыли' (Project p, INTERVAL[DATE] i) = 
     GROUP SUM profit(ProjectLedger l) IF profit(l) > 0 AND date(l) >= from(i) AND date(l) <= to(i) BY project(l);
 sumProfit 'Сумма прибыли' (Project p) = 
     GROUP SUM profit(ProjectLedger l) IF profit(l) > 0 BY project(l);
 
+sumExpense 'Сума затрат' (INTERVAL[DATE] i) = IF i IS INTERVAL[DATE] THEN 
+    GROUP SUM sumExpense(Project p, i) IF filtered(p) ELSE 
+    GROUP SUM sumExpense(Project p) IF filtered(p)
+;
+
+sumProfit 'Сума затрат' (INTERVAL[DATE] i) = IF i IS INTERVAL[DATE] THEN
+    GROUP SUM sumProfit(Project p, i) IF filtered(p) ELSE
+    GROUP SUM sumProfit(Project p) IF filtered(p)
+;
+
 EXTEND FORM project
     OBJECTS i = INTERVAL[DATE] PANEL NULL
     PROPERTIES i = VALUE(i)
-    PROPERTIES (p, i) SHOWIF i IS INTERVAL[DATE] sumExpense, sumProfit
-    PROPERTIES (p) SHOWIF NOT i IS INTERVAL[DATE] sumExpense, sumProfit
+    PROPERTIES (p, i) SHOWIF i IS INTERVAL[DATE] sumExpense FOOTER sumExpense(i), sumProfit FOOTER sumProfit(i)
+    PROPERTIES (p) SHOWIF NOT i IS INTERVAL[DATE] sumExpense FOOTER sumExpense(i), sumProfit FOOTER sumProfit(i)
     
     OBJECTS prl = ProjectLedger
     PROPERTIES(prl) READONLY class, date, number, nameProject, namePartner, category, description, income, expense, profit
@@ -89,6 +102,52 @@ DESIGN project {
             MOVE BOX(prl) {
                 caption = '';
             }
+        }
+    }
+}
+
+
+
+filterProject (Project p, INTERVAL[DATE]  dates) = startDate(p) <= to(dates) AND (NOT(endDate(p) < from(dates)) OR NOT endDate(p) OR NOT dates);
+balance 'Balance' (Project p, INTERVAL[DATE] dates) = IF dates IS INTERVAL[DATE] THEN sumProfit(p, dates) (-) sumExpense(p, dates)
+    ELSE sumProfit(p) (-) sumExpense(p)
+;
+balance(INTERVAL[DATE] dates) = IF dates IS INTERVAL[DATE] THEN GROUP SUM balance(Project p, dates) ELSE 
+    GROUP SUM (sumProfit(Project p) (-) sumExpense(p)) IF filtered(p)
+;
+
+EXTEND FORM projects
+    OBJECTS dates = INTERVAL[DATE] PANEL NULL BEFORE p
+    PROPERTIES i = VALUE(dates)
+    PROPERTIES (p, dates) GRID DRAW p SHOWIF dates IS INTERVAL[DATE] sumExpense FOOTER sumExpense(dates), sumProfit FOOTER sumProfit(dates)
+    PROPERTIES (p) GRID DRAW p SHOWIF NOT dates IS INTERVAL[DATE] sumExpense, sumProfit
+    PROPERTIES balance(p, dates) FOOTER balance(dates)
+    
+    PROPERTIES prevInterval '<' = { SEEK projects.dates = prevMonthInterval(dates); },
+        nextInterval '>' = { SEEK projects.dates = nextMonthInterval(dates); },
+        dropInterval 'X' = { SEEK NULL projects.dates; }
+    EVENTS ON INIT {
+        SEEK projects.dates = interval(firstDayOfMonth(currentDate()), lastDayOfMonth(currentDate()));
+    }
+    
+    FILTERS filterProject(p, dates) OR NOT dates
+;
+
+DESIGN projects{
+    tabbedPane{
+        NEW projects{
+            caption = '{Projects}';
+            NEW dates {
+                alignment = STRETCH;
+                horizontal = TRUE;
+                MOVE PROPERTY (prevInterval);
+                MOVE PROPERTY (i) {caption = ''; };
+                MOVE PROPERTY (nextInterval);
+                MOVE PROPERTY (dropInterval);
+            }
+            MOVE BOX (p){
+                caption = '';
+            };
         }
     }
 }

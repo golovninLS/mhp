@@ -59,6 +59,7 @@ copyLunch 'Copy' (DATE d) {
                 employee(on) <- employee(o);
                 product(on) <- product(o);
                 vendor(on) <- vendor(o);
+                project(on) <- project(o);
             }
             APPLY;
         }
@@ -82,6 +83,7 @@ fillLunch 'Fill for date' (DATE d) {
                     date(o) <- d;
                     employee(o) <- e;
                     product(o) <- timesheetLunchProduct();
+                    project(o) <- timesheetProject();
                 }
                 APPLY;
             }
@@ -101,6 +103,7 @@ fillLunch 'Fill for employee' (Project p, Employee e) {
                     date(o) <- d;
                     employee(o) <- e;
                     product(o) <- timesheetLunchProduct();
+                    project(o) <- timesheetProject();
                 }
                 APPLY;
             }
@@ -148,6 +151,7 @@ EXTEND FORM timesheetSupervisor
                                NEW o = Order {
                                    date(o) <- d;
                                    employee(o) <- el;
+                                   project(o) <- timesheetProject();
                                    product(o) <- lp;
                                }
                            }

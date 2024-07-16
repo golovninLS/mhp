@@ -22,6 +22,8 @@ FORM billPaymentDashboard 'Bill list'
 
     PROPERTIES GRID openFile1(b) DISABLEIF NOT file1(b), openFile2(b) DISABLEIF NOT file2(b), openFile3(b) DISABLEIF NOT file3(b)
     
+    FILTERGROUP payments
+        FILTER 'К оплате' left(b) 
     OBJECTS o = OutgoingPayment
     PROPERTIES(o) READONLY imagedNameStatus BACKGROUND colorStatus(o),
                            number, date, nameCompanyAccount, namePartnerAccount 
@@ -33,6 +35,7 @@ FORM billPaymentDashboard 'Bill list'
 @defineDocObjectsForm(billPaymentDashboard, b, 'Bills');
 
 DESIGN billPaymentDashboard {
+    PROPERTY (year(b)) { pattern = '0000'; }
     tabbedPane {
         NEW bills {
             caption = 'Bills';

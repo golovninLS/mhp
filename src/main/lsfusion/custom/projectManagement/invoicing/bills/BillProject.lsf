@@ -16,6 +16,9 @@ nameProject 'Project' (BillProject b) = name(project(b));
 
 salesAccount 'Sales account' = DATA CustomSalesAccount (BillProject);
 nameSalesAccount 'Sales account' (BillProject p) = name(salesAccount(p));
+monthAccount = DATA Month (BillProject);
+numberMonthAccount 'Month' (BillProject b) = number(monthAccount(b));
+yearAccount 'Year' = DATA INTEGER (BillProject) PATTERN '0000';
 
 base 'Distribution base' = DATA NUMERIC[10,2] (BillProject);
 
@@ -40,7 +43,7 @@ EXTEND FORM bill
     OBJECTS bpt = Tax
     
     OBJECTS bp = BillProject
-    PROPERTIES(bp) nameProject, nameSalesAccount, base, untaxedAmount
+    PROPERTIES(bp) nameProject, nameSalesAccount, numberMonthAccount, yearAccount, base, untaxedAmount
     PROPERTIES taxAmount(bpt, bp) COLUMNS (bpt) HEADER name(bpt)
     PROPERTIES(bp) amount READONLY
     PROPERTIES(bp) NEW, DELETE
@@ -95,12 +98,12 @@ generateProject 'Generate' ABSTRACT LIST (Bill);
 
 calcUntaxedAmount (BillProject p) =
     PARTITION UNGROUP untaxedAmount
-        PROPORTION STRICT ROUND(0) base(p)
+        PROPORTION STRICT ROUND(2) base(p)
         ORDER p BY bill(p);
 
 calcTaxAmount (Tax t, BillProject p) =
     PARTITION UNGROUP taxAmount
-        PROPORTION STRICT ROUND(0) base(p)
+        PROPORTION STRICT ROUND(2) base(p)
         ORDER p BY t, bill(p);
 
 generateProject(Bill b) + {
@@ -128,20 +131,24 @@ WHEN LOCAL FORMS bill SET(Bill b IS Bill) AND NOT countBillProject(b) DO {
 WHEN LOCAL FORMS bill CHANGED(project(Bill b)) DO
     project(minBillProject(b)) <- project(b);    
 
-// sales account
-
-salesAccount (Bill b) = salesAccount(minBillProject(b));
-nameSalesAccount 'Sales account' (Bill b) = name(salesAccount(b));
-EXTEND FORM bill
-    PROPERTIES(b) nameSalesAccount ON CHANGE {
-        DIALOG customSalesAccounts OBJECTS o INPUT LIST name(o) DO {
-            salesAccount(minBillProject(b)) <- o;
-        }
-    }
-;
-
-DESIGN bill {
-    headerRight {
-        MOVE PROPERTY(nameSalesAccount(b));
-    }
+WHEN LOCAL FORMS bill CHANGED(project(BillProject bp)) AND (NOT monthAccount(bp) OR NOT yearAccount(bp)) DO {
+    monthAccount(bp) <- extractMonth(currentDate());
+    yearAccount(bp) <- extractYear(currentDate());
 }
+// sales account
+//
+//salesAccount (Bill b) = salesAccount(minBillProject(b));
+//nameSalesAccount 'Sales account' (Bill b) = name(salesAccount(b));
+//EXTEND FORM bill
+//    PROPERTIES(b) nameSalesAccount ON CHANGE {
+//        DIALOG customSalesAccounts OBJECTS o INPUT LIST name(o) DO {
+//            salesAccount(minBillProject(b)) <- o;
+//        }
+//    }
+//;
+//
+//DESIGN bill {
+//    headerRight {
+//        MOVE PROPERTY(nameSalesAccount(b));
+//    }
+//}

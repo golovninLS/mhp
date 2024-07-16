@@ -13,6 +13,6 @@ salary 'Salary per hour' = DATA NUMERIC[10,2] (ProjectAssignment); // remove
 DESIGN project {
     staff {
         MOVE BOX(pa);
-        MOVE employees;
+        REMOVE employees;
     }
 }

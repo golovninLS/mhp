@@ -29,11 +29,11 @@ payslipLunch = GROUP AGGR PayslipLunch pt BY payslip(pt), project(pt);
 project (DATE d, Employee e) = project(timeEntry(d, e));
 
 lunches 'Lunches' (Employee e, Project p, DATE from, DATE to) =
-    GROUP SUM price(Order o) IF employee(o) = e AND date(o) >= from AND date(o) <= to AND project(date(o), employee(o)) = p;
+    GROUP SUM price(Order o) IF employee(o) = e AND date(o) >= from AND date(o) <= to AND project(o) = p;
 lunches 'Lunches (days)' (Employee e, Project p, INTERVAL[DATE] i) = lunches(e, p, from(i), to(i));
 
 countLunches 'Lunches (days)' (Employee e, Project p, DATE from, DATE to) =
-    GROUP SUM 1 IF employee(Order o) = e AND date(o) >= from AND date(o) <= to AND project(date(o), employee(o)) = p;
+    GROUP SUM 1 IF employee(Order o) = e AND date(o) >= from AND date(o) <= to AND project(o) = p;
 countLunches 'Lunches (days)' (Employee e, Project p, INTERVAL[DATE] i) = countLunches(e, p, from(i), to(i));
 
 //countLunches 'Lunches (days)' (Employee e, Project p, INTERVAL[DATE] i) =
@@ -76,4 +76,10 @@ DESIGN payslip {
             caption = badged('Lunches', countLunch(p));
         }
     }
+}
+
+fiilLunchesProject(){
+    FOR Employee e = employee(Order o) AND NOT project(o) AND Project p = project(timeEntry(date(o), e)) DO 
+        project(o) <- p;
+    APPLY;
 }

@@ -19,5 +19,5 @@ category (InvoiceLine l) += nameType(l);
 
 description (InvoiceLine l) += nameItem(l);
 
-income(InvoiceLine l) += amount(l) IF NOT isRefund(invoice(l));
-expense(InvoiceLine l) += -amount(l) IF isRefund(invoice(l));
+income(InvoiceLine l) += untaxedAmount(l) IF NOT isRefund(invoice(l));
+expense(InvoiceLine l) += -untaxedAmount(l) IF isRefund(invoice(l));

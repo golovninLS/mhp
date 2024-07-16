@@ -151,3 +151,14 @@ DESIGN timesheetSupervisor {
         }
     }
 }
+showAllProjects 'Отображать все проекты' = DATA BOOLEAN (Employee);
+
+EXTEND FORM employee
+    PROPERTIES showAllProjects(e)
+;
+DESIGN employee{
+    info{
+        MOVE PROPERTY (showAllProjects(e));
+    }
+}
+skipCheckAssigned(CustomUser c) += WHEN showAllProjects(c) THEN TRUE;

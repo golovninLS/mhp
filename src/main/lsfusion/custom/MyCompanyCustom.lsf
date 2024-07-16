@@ -3,7 +3,7 @@ MODULE MyCompanyCustom;
 REQUIRE Eval, ProcessMonitor, Backup,
         MetaNumerator, PartnerGeo,
         Individual, IndividualImport, IndividualInitial, 
-        Employee, EmployeeImport, EmployeeLocation,
+        Employee, EmployeeImport, EmployeeLocation, EmployeeDocs,
         LegalEntity, LegalEntityImport,
         Contract, ContractPartner, ContractImport,
         Department, DepartmentPartner,
@@ -83,6 +83,7 @@ REQUIRE Eval, ProcessMonitor, Backup,
         BillProject, BillProjectLedger,
 
         BillPaymentDashboard, PaymentProjectDashboard, PaymentProjectDashboardReport, PaymentListDashboard,
-
+        BankAccountVat,    
+    
         TimesheetCustom,
         TimesheetSupervisorCustom;

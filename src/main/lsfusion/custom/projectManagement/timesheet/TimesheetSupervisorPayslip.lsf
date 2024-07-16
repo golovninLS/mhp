@@ -21,6 +21,15 @@ generatePayslips 'Generate' (INTERVAL[DATE] period) {
     }    
 } CONFIRM;
 
+generatePayslip(Company c, INTERVAL[DATE] d){
+    IF NOT payslipBatch(timesheetCompany(), d) THEN NEW b = PayslipBatch {
+        company(b) <- timesheetCompany();
+        period(b) <- d;
+    }
+    generate(payslipBatch(timesheetCompany(), d));
+    APPLY;
+}
+
 splitByProject 'Split by project' = DATA BOOLEAN (PayslipCategory);
 EXTEND FORM payslipCategory
     PROPERTIES(c) splitByProject
@@ -30,8 +39,11 @@ totalTimesheet (Payslip p, PayslipCategory c) = total(p, c, timesheetProject());
 payslipTimesheet (Employee e, INTERVAL[DATE] dates) = GROUP MAX Payslip ps IF employee(ps) = e AND startDate(ps) >= from(dates) AND startDate(ps) <= to(dates) AND
     (company(ps) = timesheetCompany() OR NOT timesheetCompany());
 totalTimesheet (Employee e, PayslipCategory c, INTERVAL[DATE] dates) = total(payslipTimesheet(e, dates), c, timesheetProject());
+totalTimesheet (PayslipCategory c, INTERVAL[DATE] dates) = GROUP SUM total(payslipTimesheet(Employee e, dates), c, timesheetProject());
 
-totalTimesheet 'To pay' (Employee e, INTERVAL[DATE]  dates) = salary(e, dates) + GROUP SUM totalTimesheet(e, PayslipCategory c, dates) * (IF deduction(c) THEN -1 ELSE 1) IF c IS PayslipCategory AND NOT isTimeEntry(c) AND NOT skip(c); 
+
+totalTimesheet 'To pay' (Employee e, Project p, INTERVAL[DATE]  dates) = timesheetSalaryProject(e, p, dates) (+) GROUP SUM totalTimesheet(e, PayslipCategory c, dates) * (IF deduction(c) THEN -1 ELSE 1) IF c IS PayslipCategory AND NOT isTimeEntry(c) AND NOT skip(c); 
+totalTimesheet 'To pay' (INTERVAL[DATE] dates, Project p) = GROUP SUM totalTimesheet(Employee e, p, dates);
 
 EXTEND FORM timesheetSupervisor
     OBJECTS pc = PayslipCategory
@@ -69,14 +81,14 @@ EXTEND FORM timesheetSupervisor
     OBJECTS pcT = PayslipCategory
     PROPERTIES (et, pcT, dates) totalTimesheet COLUMNS 'totalSection' (pcT) GRID DRAW te
         HEADER name(pcT) + '(' + name(timesheetProject()) + ')' READONLYIF readonly(pcT) 
-        SHOWIF timesheetProject() AND splitByProject(pcT)
+        SHOWIF timesheetProject() AND splitByProject(pcT) FOOTER totalTimesheet(pcT, dates)
         ON CHANGE {
             NEWSESSION {
                 changeTotal(payslipTimesheet(et, dates), pcT, timesheetProject()); 
                 APPLY;
             } 
         }
-    PROPERTIES READONLY  totalTimesheet(et, dates) SHOWIF timesheetProject() LAST
+    PROPERTIES READONLY totalTimesheet(et, tp, dates) LAST FOOTER totalTimesheet(dates, tp)
 
 ;
 

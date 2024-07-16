@@ -19,9 +19,9 @@ lunchCompensation (DATE d, Employee e) = hours(d, e) AND NOT order(d, e);
 countLunchCompensation (Employee e, Project p, DATE from, DATE to) = GROUP SUM 1 IF lunchCompensation(DATE d, e) AND d >= from AND d <= to AND project(d, e) = p;
 countLunchCompensation (Employee e, Project p, INTERVAL[DATE] i) = countLunchCompensation(e, p, from(i), to(i));
 
-lunchCompensation (Employee e, Project p, DATE from, DATE to) = 
+lunchCompensation 'Lunch compensation' (Employee e, Project p, DATE from, DATE to) = 
     GROUP SUM costLunchCompensation(e, DATE d) IF lunchCompensation(d, e) AND d >= from AND d <= to AND project(d, e) = p;
-lunchCompensation (Employee e, Project p, INTERVAL[DATE] i) = lunchCompensation(e, p, from(i), to(i));
+lunchCompensation 'Lunch compensation' (Employee e, Project p, INTERVAL[DATE] i) = lunchCompensation(e, p, from(i), to(i));
 
 lunchCompensation (Employee e, DATE from, DATE to) =
     GROUP SUM costLunchCompensation(e, DATE d) IF lunchCompensation(d, e) AND d >= from AND d <= to;

@@ -1,0 +1,16 @@
+MODULE BankAccountVat;
+
+REQUIRE BankAccount, Company;
+
+NAMESPACE Invoicing;
+
+isVat 'Account for VAT' = DATA BOOLEAN (BankAccount);
+
+EXTEND FORM account
+    PROPERTIES isVat(a) SHOWIF holder(a) IS Company
+;
+DESIGN account{
+    bank{
+        MOVE PROPERTY (isVat(a));
+    }
+}

@@ -1,0 +1,1265 @@
+MODULE EmployeeDocs;
+
+REQUIRE Employee;
+
+NAMESPACE MasterData;
+
+CLASS DocType 'Типы документов';
+name 'Наименование' = DATA STRING(DocType);
+inactive 'Неактивный' = DATA BOOLEAN (DocType);
+active (DocType t) = NOT inactive(t);
+index (DocType t) = PARTITION SUM 1 IF t IS DocType AND active(t) ORDER t;
+
+FORM docTypes 'Типы документов'
+    OBJECTS t = DocType
+    PROPERTIES (t) index, name, inactive
+    PROPERTIES (t) NEW, DELETE 
+    
+    LIST DocType OBJECT t
+;
+
+DESIGN employee{
+    details{
+        NEW infoDetails FIRST {
+            caption = 'Инфо'; 
+        }
+    }
+}
+
+META docType(int)
+EXTEND FORM employee
+    OBJECTS t##int = DocType PANEL
+    FILTERS index(t##int) = int
+;
+
+DESIGN employee{
+    infoDetails{
+        MOVE BOX (t##int){
+            caption = name(t##int);
+        }
+    }
+}
+    EXTEND FORM employees
+        OBJECTS t##int = DocType
+        FILTERS index(t##int) = int
+    ;
+END
+
+META docTypePanel(capt)
+    @docType(1){
+EXTEND FORM employee
+    OBJECTS t1 = DocType PANEL
+    FILTERS index(t1) = 1
+;
+
+DESIGN employee{
+    infoDetails{
+        MOVE BOX (t1){
+            caption = name(t1);
+        }
+    }
+}
+    EXTEND FORM employees
+        OBJECTS t1 = DocType
+        FILTERS index(t1) = 1
+    ;
+};
+    @docType(2){
+EXTEND FORM employee
+    OBJECTS t2 = DocType PANEL
+    FILTERS index(t2) = 2
+;
+
+DESIGN employee{
+    infoDetails{
+        MOVE BOX (t2){
+            caption = name(t2);
+        }
+    }
+}
+    EXTEND FORM employees
+        OBJECTS t2 = DocType
+        FILTERS index(t2) = 2
+    ;
+};
+    @docType(3){
+EXTEND FORM employee
+    OBJECTS t3 = DocType PANEL
+    FILTERS index(t3) = 3
+;
+
+DESIGN employee{
+    infoDetails{
+        MOVE BOX (t3){
+            caption = name(t3);
+        }
+    }
+}
+    EXTEND FORM employees
+        OBJECTS t3 = DocType
+        FILTERS index(t3) = 3
+    ;
+};
+    @docType(4){
+EXTEND FORM employee
+    OBJECTS t4 = DocType PANEL
+    FILTERS index(t4) = 4
+;
+
+DESIGN employee{
+    infoDetails{
+        MOVE BOX (t4){
+            caption = name(t4);
+        }
+    }
+}
+    EXTEND FORM employees
+        OBJECTS t4 = DocType
+        FILTERS index(t4) = 4
+    ;
+};
+    @docType(5){
+EXTEND FORM employee
+    OBJECTS t5 = DocType PANEL
+    FILTERS index(t5) = 5
+;
+
+DESIGN employee{
+    infoDetails{
+        MOVE BOX (t5){
+            caption = name(t5);
+        }
+    }
+}
+    EXTEND FORM employees
+        OBJECTS t5 = DocType
+        FILTERS index(t5) = 5
+    ;
+};
+    @docType(6){
+EXTEND FORM employee
+    OBJECTS t6 = DocType PANEL
+    FILTERS index(t6) = 6
+;
+
+DESIGN employee{
+    infoDetails{
+        MOVE BOX (t6){
+            caption = name(t6);
+        }
+    }
+}
+    EXTEND FORM employees
+        OBJECTS t6 = DocType
+        FILTERS index(t6) = 6
+    ;
+};
+    @docType(7){
+EXTEND FORM employee
+    OBJECTS t7 = DocType PANEL
+    FILTERS index(t7) = 7
+;
+
+DESIGN employee{
+    infoDetails{
+        MOVE BOX (t7){
+            caption = name(t7);
+        }
+    }
+}
+    EXTEND FORM employees
+        OBJECTS t7 = DocType
+        FILTERS index(t7) = 7
+    ;
+};
+    @docType(8){
+EXTEND FORM employee
+    OBJECTS t8 = DocType PANEL
+    FILTERS index(t8) = 8
+;
+
+DESIGN employee{
+    infoDetails{
+        MOVE BOX (t8){
+            caption = name(t8);
+        }
+    }
+}
+    EXTEND FORM employees
+        OBJECTS t8 = DocType
+        FILTERS index(t8) = 8
+    ;
+};
+    @docType(9){
+EXTEND FORM employee
+    OBJECTS t9 = DocType PANEL
+    FILTERS index(t9) = 9
+;
+
+DESIGN employee{
+    infoDetails{
+        MOVE BOX (t9){
+            caption = name(t9);
+        }
+    }
+}
+    EXTEND FORM employees
+        OBJECTS t9 = DocType
+        FILTERS index(t9) = 9
+    ;
+};
+    @docType(10){
+EXTEND FORM employee
+    OBJECTS t10 = DocType PANEL
+    FILTERS index(t10) = 10
+;
+
+DESIGN employee{
+    infoDetails{
+        MOVE BOX (t10){
+            caption = name(t10);
+        }
+    }
+}
+    EXTEND FORM employees
+        OBJECTS t10 = DocType
+        FILTERS index(t10) = 10
+    ;
+};
+    @docType(11){
+EXTEND FORM employee
+    OBJECTS t11 = DocType PANEL
+    FILTERS index(t11) = 11
+;
+
+DESIGN employee{
+    infoDetails{
+        MOVE BOX (t11){
+            caption = name(t11);
+        }
+    }
+}
+    EXTEND FORM employees
+        OBJECTS t11 = DocType
+        FILTERS index(t11) = 11
+    ;
+};
+    @docType(12){
+EXTEND FORM employee
+    OBJECTS t12 = DocType PANEL
+    FILTERS index(t12) = 12
+;
+
+DESIGN employee{
+    infoDetails{
+        MOVE BOX (t12){
+            caption = name(t12);
+        }
+    }
+}
+    EXTEND FORM employees
+        OBJECTS t12 = DocType
+        FILTERS index(t12) = 12
+    ;
+};
+END
+
+@docTypePanel(){
+    @docType(1){
+EXTEND FORM employee
+    OBJECTS t1 = DocType PANEL
+    FILTERS index(t1) = 1
+;
+
+DESIGN employee{
+    infoDetails{
+        MOVE BOX (t1){
+            caption = name(t1);
+        }
+    }
+}
+    EXTEND FORM employees
+        OBJECTS t1 = DocType
+        FILTERS index(t1) = 1
+    ;
+};
+    @docType(2){
+EXTEND FORM employee
+    OBJECTS t2 = DocType PANEL
+    FILTERS index(t2) = 2
+;
+
+DESIGN employee{
+    infoDetails{
+        MOVE BOX (t2){
+            caption = name(t2);
+        }
+    }
+}
+    EXTEND FORM employees
+        OBJECTS t2 = DocType
+        FILTERS index(t2) = 2
+    ;
+};
+    @docType(3){
+EXTEND FORM employee
+    OBJECTS t3 = DocType PANEL
+    FILTERS index(t3) = 3
+;
+
+DESIGN employee{
+    infoDetails{
+        MOVE BOX (t3){
+            caption = name(t3);
+        }
+    }
+}
+    EXTEND FORM employees
+        OBJECTS t3 = DocType
+        FILTERS index(t3) = 3
+    ;
+};
+    @docType(4){
+EXTEND FORM employee
+    OBJECTS t4 = DocType PANEL
+    FILTERS index(t4) = 4
+;
+
+DESIGN employee{
+    infoDetails{
+        MOVE BOX (t4){
+            caption = name(t4);
+        }
+    }
+}
+    EXTEND FORM employees
+        OBJECTS t4 = DocType
+        FILTERS index(t4) = 4
+    ;
+};
+    @docType(5){
+EXTEND FORM employee
+    OBJECTS t5 = DocType PANEL
+    FILTERS index(t5) = 5
+;
+
+DESIGN employee{
+    infoDetails{
+        MOVE BOX (t5){
+            caption = name(t5);
+        }
+    }
+}
+    EXTEND FORM employees
+        OBJECTS t5 = DocType
+        FILTERS index(t5) = 5
+    ;
+};
+    @docType(6){
+EXTEND FORM employee
+    OBJECTS t6 = DocType PANEL
+    FILTERS index(t6) = 6
+;
+
+DESIGN employee{
+    infoDetails{
+        MOVE BOX (t6){
+            caption = name(t6);
+        }
+    }
+}
+    EXTEND FORM employees
+        OBJECTS t6 = DocType
+        FILTERS index(t6) = 6
+    ;
+};
+    @docType(7){
+EXTEND FORM employee
+    OBJECTS t7 = DocType PANEL
+    FILTERS index(t7) = 7
+;
+
+DESIGN employee{
+    infoDetails{
+        MOVE BOX (t7){
+            caption = name(t7);
+        }
+    }
+}
+    EXTEND FORM employees
+        OBJECTS t7 = DocType
+        FILTERS index(t7) = 7
+    ;
+};
+    @docType(8){
+EXTEND FORM employee
+    OBJECTS t8 = DocType PANEL
+    FILTERS index(t8) = 8
+;
+
+DESIGN employee{
+    infoDetails{
+        MOVE BOX (t8){
+            caption = name(t8);
+        }
+    }
+}
+    EXTEND FORM employees
+        OBJECTS t8 = DocType
+        FILTERS index(t8) = 8
+    ;
+};
+    @docType(9){
+EXTEND FORM employee
+    OBJECTS t9 = DocType PANEL
+    FILTERS index(t9) = 9
+;
+
+DESIGN employee{
+    infoDetails{
+        MOVE BOX (t9){
+            caption = name(t9);
+        }
+    }
+}
+    EXTEND FORM employees
+        OBJECTS t9 = DocType
+        FILTERS index(t9) = 9
+    ;
+};
+    @docType(10){
+EXTEND FORM employee
+    OBJECTS t10 = DocType PANEL
+    FILTERS index(t10) = 10
+;
+
+DESIGN employee{
+    infoDetails{
+        MOVE BOX (t10){
+            caption = name(t10);
+        }
+    }
+}
+    EXTEND FORM employees
+        OBJECTS t10 = DocType
+        FILTERS index(t10) = 10
+    ;
+};
+    @docType(11){
+EXTEND FORM employee
+    OBJECTS t11 = DocType PANEL
+    FILTERS index(t11) = 11
+;
+
+DESIGN employee{
+    infoDetails{
+        MOVE BOX (t11){
+            caption = name(t11);
+        }
+    }
+}
+    EXTEND FORM employees
+        OBJECTS t11 = DocType
+        FILTERS index(t11) = 11
+    ;
+};
+    @docType(12){
+EXTEND FORM employee
+    OBJECTS t12 = DocType PANEL
+    FILTERS index(t12) = 12
+;
+
+DESIGN employee{
+    infoDetails{
+        MOVE BOX (t12){
+            caption = name(t12);
+        }
+    }
+}
+    EXTEND FORM employees
+        OBJECTS t12 = DocType
+        FILTERS index(t12) = 12
+    ;
+};
+};
+
+META docTypePropertyAddInt(prop, caption, type, int);
+    EXTEND FORM employee
+        PROPERTIES (t##int, e) prop SHOWIF use###prop(t##int)
+    ;
+END
+
+META docTypePropertyAdd(prop, caption, type);
+    use###prop caption = DATA BOOLEAN (DocType);
+    prop caption = DATA type (DocType, Employee);
+    
+    EXTEND FORM docTypes
+        PROPERTIES (t) use###prop
+    ;
+    @docTypePropertyAddInt(prop, caption, type, 1){;
+    EXTEND FORM employee
+        PROPERTIES (t1, e) prop SHOWIF use###prop(t1)
+    ;
+};
+    @docTypePropertyAddInt(prop, caption, type, 2){;
+    EXTEND FORM employee
+        PROPERTIES (t2, e) prop SHOWIF use###prop(t2)
+    ;
+};
+    @docTypePropertyAddInt(prop, caption, type, 3){;
+    EXTEND FORM employee
+        PROPERTIES (t3, e) prop SHOWIF use###prop(t3)
+    ;
+};
+    @docTypePropertyAddInt(prop, caption, type, 4){;
+    EXTEND FORM employee
+        PROPERTIES (t4, e) prop SHOWIF use###prop(t4)
+    ;
+};
+    @docTypePropertyAddInt(prop, caption, type, 5){;
+    EXTEND FORM employee
+        PROPERTIES (t5, e) prop SHOWIF use###prop(t5)
+    ;
+};
+    @docTypePropertyAddInt(prop, caption, type, 6){;
+    EXTEND FORM employee
+        PROPERTIES (t6, e) prop SHOWIF use###prop(t6)
+    ;
+};
+    @docTypePropertyAddInt(prop, caption, type, 7){;
+    EXTEND FORM employee
+        PROPERTIES (t7, e) prop SHOWIF use###prop(t7)
+    ;
+};
+    @docTypePropertyAddInt(prop, caption, type, 8){;
+    EXTEND FORM employee
+        PROPERTIES (t8, e) prop SHOWIF use###prop(t8)
+    ;
+};
+    @docTypePropertyAddInt(prop, caption, type, 9){;
+    EXTEND FORM employee
+        PROPERTIES (t9, e) prop SHOWIF use###prop(t9)
+    ;
+};
+    @docTypePropertyAddInt(prop, caption, type, 10){;
+    EXTEND FORM employee
+        PROPERTIES (t10, e) prop SHOWIF use###prop(t10)
+    ;
+};
+    @docTypePropertyAddInt(prop, caption, type, 11){;
+    EXTEND FORM employee
+        PROPERTIES (t11, e) prop SHOWIF use###prop(t11)
+    ;
+};
+    @docTypePropertyAddInt(prop, caption, type, 12){;
+    EXTEND FORM employee
+        PROPERTIES (t12, e) prop SHOWIF use###prop(t12)
+    ;
+};
+END;
+
+META docTypeSimplePropertyAddInt(prop, type, capt, int);
+    EXTEND FORM employee
+        PROPERTIES (t##int, e) prop SHOWIF use###prop(t##int) HEADER name(t##int) FIRST
+    ;
+
+    EXTEND FORM employees 
+        PROPERTIES prop(t##int, e) SHOWIF use###prop(t##int) COLUMNS (t##int) HEADER name(t##int)
+    ;
+END
+
+META docTypeSimplePropertyAdd(prop, caption, type);
+    use###prop caption = DATA BOOLEAN (DocType);
+    prop caption = DATA type (DocType, Employee);
+
+    EXTEND FORM docTypes
+        PROPERTIES (t) use###prop
+    ;
+    @docTypeSimplePropertyAddInt(prop, capt, type, 1){;
+    EXTEND FORM employee
+        PROPERTIES (t1, e) prop SHOWIF use###prop(t1) HEADER name(t1) FIRST
+    ;
+
+    EXTEND FORM employees 
+        PROPERTIES prop(t1, e) SHOWIF use###prop(t1) COLUMNS (t1) HEADER name(t1)
+    ;
+};
+    @docTypeSimplePropertyAddInt(prop, capt, type, 2){;
+    EXTEND FORM employee
+        PROPERTIES (t2, e) prop SHOWIF use###prop(t2) HEADER name(t2) FIRST
+    ;
+
+    EXTEND FORM employees 
+        PROPERTIES prop(t2, e) SHOWIF use###prop(t2) COLUMNS (t2) HEADER name(t2)
+    ;
+};
+    @docTypeSimplePropertyAddInt(prop, capt, type, 3){;
+    EXTEND FORM employee
+        PROPERTIES (t3, e) prop SHOWIF use###prop(t3) HEADER name(t3) FIRST
+    ;
+
+    EXTEND FORM employees 
+        PROPERTIES prop(t3, e) SHOWIF use###prop(t3) COLUMNS (t3) HEADER name(t3)
+    ;
+};
+    @docTypeSimplePropertyAddInt(prop, capt, type, 4){;
+    EXTEND FORM employee
+        PROPERTIES (t4, e) prop SHOWIF use###prop(t4) HEADER name(t4) FIRST
+    ;
+
+    EXTEND FORM employees 
+        PROPERTIES prop(t4, e) SHOWIF use###prop(t4) COLUMNS (t4) HEADER name(t4)
+    ;
+};
+    @docTypeSimplePropertyAddInt(prop, capt, type, 5){;
+    EXTEND FORM employee
+        PROPERTIES (t5, e) prop SHOWIF use###prop(t5) HEADER name(t5) FIRST
+    ;
+
+    EXTEND FORM employees 
+        PROPERTIES prop(t5, e) SHOWIF use###prop(t5) COLUMNS (t5) HEADER name(t5)
+    ;
+};
+    @docTypeSimplePropertyAddInt(prop, capt, type, 6){;
+    EXTEND FORM employee
+        PROPERTIES (t6, e) prop SHOWIF use###prop(t6) HEADER name(t6) FIRST
+    ;
+
+    EXTEND FORM employees 
+        PROPERTIES prop(t6, e) SHOWIF use###prop(t6) COLUMNS (t6) HEADER name(t6)
+    ;
+};
+    @docTypeSimplePropertyAddInt(prop, capt, type, 7){;
+    EXTEND FORM employee
+        PROPERTIES (t7, e) prop SHOWIF use###prop(t7) HEADER name(t7) FIRST
+    ;
+
+    EXTEND FORM employees 
+        PROPERTIES prop(t7, e) SHOWIF use###prop(t7) COLUMNS (t7) HEADER name(t7)
+    ;
+};
+    @docTypeSimplePropertyAddInt(prop, capt, type, 8){;
+    EXTEND FORM employee
+        PROPERTIES (t8, e) prop SHOWIF use###prop(t8) HEADER name(t8) FIRST
+    ;
+
+    EXTEND FORM employees 
+        PROPERTIES prop(t8, e) SHOWIF use###prop(t8) COLUMNS (t8) HEADER name(t8)
+    ;
+};
+    @docTypeSimplePropertyAddInt(prop, capt, type, 9){;
+    EXTEND FORM employee
+        PROPERTIES (t9, e) prop SHOWIF use###prop(t9) HEADER name(t9) FIRST
+    ;
+
+    EXTEND FORM employees 
+        PROPERTIES prop(t9, e) SHOWIF use###prop(t9) COLUMNS (t9) HEADER name(t9)
+    ;
+};
+    @docTypeSimplePropertyAddInt(prop, capt, type, 10){;
+    EXTEND FORM employee
+        PROPERTIES (t10, e) prop SHOWIF use###prop(t10) HEADER name(t10) FIRST
+    ;
+
+    EXTEND FORM employees 
+        PROPERTIES prop(t10, e) SHOWIF use###prop(t10) COLUMNS (t10) HEADER name(t10)
+    ;
+};
+    @docTypeSimplePropertyAddInt(prop, capt, type, 11){;
+    EXTEND FORM employee
+        PROPERTIES (t11, e) prop SHOWIF use###prop(t11) HEADER name(t11) FIRST
+    ;
+
+    EXTEND FORM employees 
+        PROPERTIES prop(t11, e) SHOWIF use###prop(t11) COLUMNS (t11) HEADER name(t11)
+    ;
+};
+    @docTypeSimplePropertyAddInt(prop, capt, type, 12){;
+    EXTEND FORM employee
+        PROPERTIES (t12, e) prop SHOWIF use###prop(t12) HEADER name(t12) FIRST
+    ;
+
+    EXTEND FORM employees 
+        PROPERTIES prop(t12, e) SHOWIF use###prop(t12) COLUMNS (t12) HEADER name(t12)
+    ;
+};
+END;
+
+//files
+META docTypeFilePropertyAddInt(prop,  capt, type, int);
+EXTEND FORM employee
+    PROPERTIES (t##int, e) upload##prop SHOWIF use###prop(t##int) HEADER ('Upload ' + capt)
+    PROPERTIES (t##int, e) open##prop SHOWIF use###prop(t##int) AND prop(t##int, e) HEADER ('Open ' + capt)
+;
+END
+
+META docTypeFilePropertyAdd(prop, capt);
+use###prop capt = DATA BOOLEAN (DocType);
+prop capt = DATA FILE (DocType, Employee);
+open##prop (DocType t, Employee e){
+    open(prop(t, e), CONCAT '_', name(e), name(t));
+}
+upload##prop (DocType t, Employee e){
+    INPUT = prop(t,e) CHANGE;
+}
+
+EXTEND FORM docTypes
+    PROPERTIES (t) use###prop
+;
+@docTypeFilePropertyAddInt(prop, capt, FILE, 1){;
+EXTEND FORM employee
+    PROPERTIES (t1, e) upload##prop SHOWIF use###prop(t1) HEADER ('Upload ' + capt)
+    PROPERTIES (t1, e) open##prop SHOWIF use###prop(t1) AND prop(t1, e) HEADER ('Open ' + capt)
+;
+};
+@docTypeFilePropertyAddInt(prop, capt, FILE, 2){;
+EXTEND FORM employee
+    PROPERTIES (t2, e) upload##prop SHOWIF use###prop(t2) HEADER ('Upload ' + capt)
+    PROPERTIES (t2, e) open##prop SHOWIF use###prop(t2) AND prop(t2, e) HEADER ('Open ' + capt)
+;
+};
+@docTypeFilePropertyAddInt(prop, capt, FILE, 3){;
+EXTEND FORM employee
+    PROPERTIES (t3, e) upload##prop SHOWIF use###prop(t3) HEADER ('Upload ' + capt)
+    PROPERTIES (t3, e) open##prop SHOWIF use###prop(t3) AND prop(t3, e) HEADER ('Open ' + capt)
+;
+};
+@docTypeFilePropertyAddInt(prop, capt, FILE, 4){;
+EXTEND FORM employee
+    PROPERTIES (t4, e) upload##prop SHOWIF use###prop(t4) HEADER ('Upload ' + capt)
+    PROPERTIES (t4, e) open##prop SHOWIF use###prop(t4) AND prop(t4, e) HEADER ('Open ' + capt)
+;
+};
+@docTypeFilePropertyAddInt(prop, capt, FILE, 5){;
+EXTEND FORM employee
+    PROPERTIES (t5, e) upload##prop SHOWIF use###prop(t5) HEADER ('Upload ' + capt)
+    PROPERTIES (t5, e) open##prop SHOWIF use###prop(t5) AND prop(t5, e) HEADER ('Open ' + capt)
+;
+};
+@docTypeFilePropertyAddInt(prop, capt, FILE, 6){;
+EXTEND FORM employee
+    PROPERTIES (t6, e) upload##prop SHOWIF use###prop(t6) HEADER ('Upload ' + capt)
+    PROPERTIES (t6, e) open##prop SHOWIF use###prop(t6) AND prop(t6, e) HEADER ('Open ' + capt)
+;
+};
+@docTypeFilePropertyAddInt(prop, capt, FILE, 7){;
+EXTEND FORM employee
+    PROPERTIES (t7, e) upload##prop SHOWIF use###prop(t7) HEADER ('Upload ' + capt)
+    PROPERTIES (t7, e) open##prop SHOWIF use###prop(t7) AND prop(t7, e) HEADER ('Open ' + capt)
+;
+};
+@docTypeFilePropertyAddInt(prop, capt, FILE, 8){;
+EXTEND FORM employee
+    PROPERTIES (t8, e) upload##prop SHOWIF use###prop(t8) HEADER ('Upload ' + capt)
+    PROPERTIES (t8, e) open##prop SHOWIF use###prop(t8) AND prop(t8, e) HEADER ('Open ' + capt)
+;
+};
+@docTypeFilePropertyAddInt(prop, capt, FILE, 9){;
+EXTEND FORM employee
+    PROPERTIES (t9, e) upload##prop SHOWIF use###prop(t9) HEADER ('Upload ' + capt)
+    PROPERTIES (t9, e) open##prop SHOWIF use###prop(t9) AND prop(t9, e) HEADER ('Open ' + capt)
+;
+};
+@docTypeFilePropertyAddInt(prop, capt, FILE, 10){;
+EXTEND FORM employee
+    PROPERTIES (t10, e) upload##prop SHOWIF use###prop(t10) HEADER ('Upload ' + capt)
+    PROPERTIES (t10, e) open##prop SHOWIF use###prop(t10) AND prop(t10, e) HEADER ('Open ' + capt)
+;
+};
+@docTypeFilePropertyAddInt(prop, capt, FILE, 11){;
+EXTEND FORM employee
+    PROPERTIES (t11, e) upload##prop SHOWIF use###prop(t11) HEADER ('Upload ' + capt)
+    PROPERTIES (t11, e) open##prop SHOWIF use###prop(t11) AND prop(t11, e) HEADER ('Open ' + capt)
+;
+};
+@docTypeFilePropertyAddInt(prop, capt, FILE, 12){;
+EXTEND FORM employee
+    PROPERTIES (t12, e) upload##prop SHOWIF use###prop(t12) HEADER ('Upload ' + capt)
+    PROPERTIES (t12, e) open##prop SHOWIF use###prop(t12) AND prop(t12, e) HEADER ('Open ' + capt)
+;
+};
+END;
+
+
+@docTypePropertyAdd(dateFrom, 'Дата от', DATE){;
+    useDateFrom 'Дата от' = DATA BOOLEAN (DocType);
+    dateFrom 'Дата от' = DATA DATE (DocType, Employee);
+    
+    EXTEND FORM docTypes
+        PROPERTIES (t) useDateFrom
+    ;
+    @docTypePropertyAddInt(dateFrom, 'Дата от', DATE, 1){;
+    EXTEND FORM employee
+        PROPERTIES (t1, e) dateFrom SHOWIF useDateFrom(t1)
+    ;
+};
+    @docTypePropertyAddInt(dateFrom, 'Дата от', DATE, 2){;
+    EXTEND FORM employee
+        PROPERTIES (t2, e) dateFrom SHOWIF useDateFrom(t2)
+    ;
+};
+    @docTypePropertyAddInt(dateFrom, 'Дата от', DATE, 3){;
+    EXTEND FORM employee
+        PROPERTIES (t3, e) dateFrom SHOWIF useDateFrom(t3)
+    ;
+};
+    @docTypePropertyAddInt(dateFrom, 'Дата от', DATE, 4){;
+    EXTEND FORM employee
+        PROPERTIES (t4, e) dateFrom SHOWIF useDateFrom(t4)
+    ;
+};
+    @docTypePropertyAddInt(dateFrom, 'Дата от', DATE, 5){;
+    EXTEND FORM employee
+        PROPERTIES (t5, e) dateFrom SHOWIF useDateFrom(t5)
+    ;
+};
+    @docTypePropertyAddInt(dateFrom, 'Дата от', DATE, 6){;
+    EXTEND FORM employee
+        PROPERTIES (t6, e) dateFrom SHOWIF useDateFrom(t6)
+    ;
+};
+    @docTypePropertyAddInt(dateFrom, 'Дата от', DATE, 7){;
+    EXTEND FORM employee
+        PROPERTIES (t7, e) dateFrom SHOWIF useDateFrom(t7)
+    ;
+};
+    @docTypePropertyAddInt(dateFrom, 'Дата от', DATE, 8){;
+    EXTEND FORM employee
+        PROPERTIES (t8, e) dateFrom SHOWIF useDateFrom(t8)
+    ;
+};
+    @docTypePropertyAddInt(dateFrom, 'Дата от', DATE, 9){;
+    EXTEND FORM employee
+        PROPERTIES (t9, e) dateFrom SHOWIF useDateFrom(t9)
+    ;
+};
+    @docTypePropertyAddInt(dateFrom, 'Дата от', DATE, 10){;
+    EXTEND FORM employee
+        PROPERTIES (t10, e) dateFrom SHOWIF useDateFrom(t10)
+    ;
+};
+    @docTypePropertyAddInt(dateFrom, 'Дата от', DATE, 11){;
+    EXTEND FORM employee
+        PROPERTIES (t11, e) dateFrom SHOWIF useDateFrom(t11)
+    ;
+};
+    @docTypePropertyAddInt(dateFrom, 'Дата от', DATE, 12){;
+    EXTEND FORM employee
+        PROPERTIES (t12, e) dateFrom SHOWIF useDateFrom(t12)
+    ;
+};
+};
+@docTypePropertyAdd(dateTo, 'Дата до', DATE){;
+    useDateTo 'Дата до' = DATA BOOLEAN (DocType);
+    dateTo 'Дата до' = DATA DATE (DocType, Employee);
+    
+    EXTEND FORM docTypes
+        PROPERTIES (t) useDateTo
+    ;
+    @docTypePropertyAddInt(dateTo, 'Дата до', DATE, 1){;
+    EXTEND FORM employee
+        PROPERTIES (t1, e) dateTo SHOWIF useDateTo(t1)
+    ;
+};
+    @docTypePropertyAddInt(dateTo, 'Дата до', DATE, 2){;
+    EXTEND FORM employee
+        PROPERTIES (t2, e) dateTo SHOWIF useDateTo(t2)
+    ;
+};
+    @docTypePropertyAddInt(dateTo, 'Дата до', DATE, 3){;
+    EXTEND FORM employee
+        PROPERTIES (t3, e) dateTo SHOWIF useDateTo(t3)
+    ;
+};
+    @docTypePropertyAddInt(dateTo, 'Дата до', DATE, 4){;
+    EXTEND FORM employee
+        PROPERTIES (t4, e) dateTo SHOWIF useDateTo(t4)
+    ;
+};
+    @docTypePropertyAddInt(dateTo, 'Дата до', DATE, 5){;
+    EXTEND FORM employee
+        PROPERTIES (t5, e) dateTo SHOWIF useDateTo(t5)
+    ;
+};
+    @docTypePropertyAddInt(dateTo, 'Дата до', DATE, 6){;
+    EXTEND FORM employee
+        PROPERTIES (t6, e) dateTo SHOWIF useDateTo(t6)
+    ;
+};
+    @docTypePropertyAddInt(dateTo, 'Дата до', DATE, 7){;
+    EXTEND FORM employee
+        PROPERTIES (t7, e) dateTo SHOWIF useDateTo(t7)
+    ;
+};
+    @docTypePropertyAddInt(dateTo, 'Дата до', DATE, 8){;
+    EXTEND FORM employee
+        PROPERTIES (t8, e) dateTo SHOWIF useDateTo(t8)
+    ;
+};
+    @docTypePropertyAddInt(dateTo, 'Дата до', DATE, 9){;
+    EXTEND FORM employee
+        PROPERTIES (t9, e) dateTo SHOWIF useDateTo(t9)
+    ;
+};
+    @docTypePropertyAddInt(dateTo, 'Дата до', DATE, 10){;
+    EXTEND FORM employee
+        PROPERTIES (t10, e) dateTo SHOWIF useDateTo(t10)
+    ;
+};
+    @docTypePropertyAddInt(dateTo, 'Дата до', DATE, 11){;
+    EXTEND FORM employee
+        PROPERTIES (t11, e) dateTo SHOWIF useDateTo(t11)
+    ;
+};
+    @docTypePropertyAddInt(dateTo, 'Дата до', DATE, 12){;
+    EXTEND FORM employee
+        PROPERTIES (t12, e) dateTo SHOWIF useDateTo(t12)
+    ;
+};
+};
+@docTypePropertyAdd(number, 'Номер', STRING){;
+    useNumber 'Номер' = DATA BOOLEAN (DocType);
+    number 'Номер' = DATA STRING (DocType, Employee);
+    
+    EXTEND FORM docTypes
+        PROPERTIES (t) useNumber
+    ;
+    @docTypePropertyAddInt(number, 'Номер', STRING, 1){;
+    EXTEND FORM employee
+        PROPERTIES (t1, e) number SHOWIF useNumber(t1)
+    ;
+};
+    @docTypePropertyAddInt(number, 'Номер', STRING, 2){;
+    EXTEND FORM employee
+        PROPERTIES (t2, e) number SHOWIF useNumber(t2)
+    ;
+};
+    @docTypePropertyAddInt(number, 'Номер', STRING, 3){;
+    EXTEND FORM employee
+        PROPERTIES (t3, e) number SHOWIF useNumber(t3)
+    ;
+};
+    @docTypePropertyAddInt(number, 'Номер', STRING, 4){;
+    EXTEND FORM employee
+        PROPERTIES (t4, e) number SHOWIF useNumber(t4)
+    ;
+};
+    @docTypePropertyAddInt(number, 'Номер', STRING, 5){;
+    EXTEND FORM employee
+        PROPERTIES (t5, e) number SHOWIF useNumber(t5)
+    ;
+};
+    @docTypePropertyAddInt(number, 'Номер', STRING, 6){;
+    EXTEND FORM employee
+        PROPERTIES (t6, e) number SHOWIF useNumber(t6)
+    ;
+};
+    @docTypePropertyAddInt(number, 'Номер', STRING, 7){;
+    EXTEND FORM employee
+        PROPERTIES (t7, e) number SHOWIF useNumber(t7)
+    ;
+};
+    @docTypePropertyAddInt(number, 'Номер', STRING, 8){;
+    EXTEND FORM employee
+        PROPERTIES (t8, e) number SHOWIF useNumber(t8)
+    ;
+};
+    @docTypePropertyAddInt(number, 'Номер', STRING, 9){;
+    EXTEND FORM employee
+        PROPERTIES (t9, e) number SHOWIF useNumber(t9)
+    ;
+};
+    @docTypePropertyAddInt(number, 'Номер', STRING, 10){;
+    EXTEND FORM employee
+        PROPERTIES (t10, e) number SHOWIF useNumber(t10)
+    ;
+};
+    @docTypePropertyAddInt(number, 'Номер', STRING, 11){;
+    EXTEND FORM employee
+        PROPERTIES (t11, e) number SHOWIF useNumber(t11)
+    ;
+};
+    @docTypePropertyAddInt(number, 'Номер', STRING, 12){;
+    EXTEND FORM employee
+        PROPERTIES (t12, e) number SHOWIF useNumber(t12)
+    ;
+};
+};
+@docTypePropertyAdd(note, 'Примечание', STRING){;
+    useNote 'Примечание' = DATA BOOLEAN (DocType);
+    note 'Примечание' = DATA STRING (DocType, Employee);
+    
+    EXTEND FORM docTypes
+        PROPERTIES (t) useNote
+    ;
+    @docTypePropertyAddInt(note, 'Примечание', STRING, 1){;
+    EXTEND FORM employee
+        PROPERTIES (t1, e) note SHOWIF useNote(t1)
+    ;
+};
+    @docTypePropertyAddInt(note, 'Примечание', STRING, 2){;
+    EXTEND FORM employee
+        PROPERTIES (t2, e) note SHOWIF useNote(t2)
+    ;
+};
+    @docTypePropertyAddInt(note, 'Примечание', STRING, 3){;
+    EXTEND FORM employee
+        PROPERTIES (t3, e) note SHOWIF useNote(t3)
+    ;
+};
+    @docTypePropertyAddInt(note, 'Примечание', STRING, 4){;
+    EXTEND FORM employee
+        PROPERTIES (t4, e) note SHOWIF useNote(t4)
+    ;
+};
+    @docTypePropertyAddInt(note, 'Примечание', STRING, 5){;
+    EXTEND FORM employee
+        PROPERTIES (t5, e) note SHOWIF useNote(t5)
+    ;
+};
+    @docTypePropertyAddInt(note, 'Примечание', STRING, 6){;
+    EXTEND FORM employee
+        PROPERTIES (t6, e) note SHOWIF useNote(t6)
+    ;
+};
+    @docTypePropertyAddInt(note, 'Примечание', STRING, 7){;
+    EXTEND FORM employee
+        PROPERTIES (t7, e) note SHOWIF useNote(t7)
+    ;
+};
+    @docTypePropertyAddInt(note, 'Примечание', STRING, 8){;
+    EXTEND FORM employee
+        PROPERTIES (t8, e) note SHOWIF useNote(t8)
+    ;
+};
+    @docTypePropertyAddInt(note, 'Примечание', STRING, 9){;
+    EXTEND FORM employee
+        PROPERTIES (t9, e) note SHOWIF useNote(t9)
+    ;
+};
+    @docTypePropertyAddInt(note, 'Примечание', STRING, 10){;
+    EXTEND FORM employee
+        PROPERTIES (t10, e) note SHOWIF useNote(t10)
+    ;
+};
+    @docTypePropertyAddInt(note, 'Примечание', STRING, 11){;
+    EXTEND FORM employee
+        PROPERTIES (t11, e) note SHOWIF useNote(t11)
+    ;
+};
+    @docTypePropertyAddInt(note, 'Примечание', STRING, 12){;
+    EXTEND FORM employee
+        PROPERTIES (t12, e) note SHOWIF useNote(t12)
+    ;
+};
+};
+@docTypeFilePropertyAdd(scan, 'скан'){;
+useScan 'скан' = DATA BOOLEAN (DocType);
+scan 'скан' = DATA FILE (DocType, Employee);
+openscan (DocType t, Employee e){
+    open(scan(t, e), extension(scan(t, e)));
+}
+uploadscan (DocType t, Employee e){
+    INPUT = scan(t,e) CHANGE;
+}
+
+EXTEND FORM docTypes
+    PROPERTIES (t) useScan
+;
+@docTypeFilePropertyAddInt(scan, 'скан', FILE, 1){;
+EXTEND FORM employee
+    PROPERTIES (t1, e) uploadscan SHOWIF useScan(t1) HEADER ('Upload ' + 'скан')
+    PROPERTIES (t1, e) openscan SHOWIF useScan(t1) AND scan(t1, e) HEADER ('Open ' + 'скан')
+;
+};
+@docTypeFilePropertyAddInt(scan, 'скан', FILE, 2){;
+EXTEND FORM employee
+    PROPERTIES (t2, e) uploadscan SHOWIF useScan(t2) HEADER ('Upload ' + 'скан')
+    PROPERTIES (t2, e) openscan SHOWIF useScan(t2) AND scan(t2, e) HEADER ('Open ' + 'скан')
+;
+};
+@docTypeFilePropertyAddInt(scan, 'скан', FILE, 3){;
+EXTEND FORM employee
+    PROPERTIES (t3, e) uploadscan SHOWIF useScan(t3) HEADER ('Upload ' + 'скан')
+    PROPERTIES (t3, e) openscan SHOWIF useScan(t3) AND scan(t3, e) HEADER ('Open ' + 'скан')
+;
+};
+@docTypeFilePropertyAddInt(scan, 'скан', FILE, 4){;
+EXTEND FORM employee
+    PROPERTIES (t4, e) uploadscan SHOWIF useScan(t4) HEADER ('Upload ' + 'скан')
+    PROPERTIES (t4, e) openscan SHOWIF useScan(t4) AND scan(t4, e) HEADER ('Open ' + 'скан')
+;
+};
+@docTypeFilePropertyAddInt(scan, 'скан', FILE, 5){;
+EXTEND FORM employee
+    PROPERTIES (t5, e) uploadscan SHOWIF useScan(t5) HEADER ('Upload ' + 'скан')
+    PROPERTIES (t5, e) openscan SHOWIF useScan(t5) AND scan(t5, e) HEADER ('Open ' + 'скан')
+;
+};
+@docTypeFilePropertyAddInt(scan, 'скан', FILE, 6){;
+EXTEND FORM employee
+    PROPERTIES (t6, e) uploadscan SHOWIF useScan(t6) HEADER ('Upload ' + 'скан')
+    PROPERTIES (t6, e) openscan SHOWIF useScan(t6) AND scan(t6, e) HEADER ('Open ' + 'скан')
+;
+};
+@docTypeFilePropertyAddInt(scan, 'скан', FILE, 7){;
+EXTEND FORM employee
+    PROPERTIES (t7, e) uploadscan SHOWIF useScan(t7) HEADER ('Upload ' + 'скан')
+    PROPERTIES (t7, e) openscan SHOWIF useScan(t7) AND scan(t7, e) HEADER ('Open ' + 'скан')
+;
+};
+@docTypeFilePropertyAddInt(scan, 'скан', FILE, 8){;
+EXTEND FORM employee
+    PROPERTIES (t8, e) uploadscan SHOWIF useScan(t8) HEADER ('Upload ' + 'скан')
+    PROPERTIES (t8, e) openscan SHOWIF useScan(t8) AND scan(t8, e) HEADER ('Open ' + 'скан')
+;
+};
+@docTypeFilePropertyAddInt(scan, 'скан', FILE, 9){;
+EXTEND FORM employee
+    PROPERTIES (t9, e) uploadscan SHOWIF useScan(t9) HEADER ('Upload ' + 'скан')
+    PROPERTIES (t9, e) openscan SHOWIF useScan(t9) AND scan(t9, e) HEADER ('Open ' + 'скан')
+;
+};
+@docTypeFilePropertyAddInt(scan, 'скан', FILE, 10){;
+EXTEND FORM employee
+    PROPERTIES (t10, e) uploadscan SHOWIF useScan(t10) HEADER ('Upload ' + 'скан')
+    PROPERTIES (t10, e) openscan SHOWIF useScan(t10) AND scan(t10, e) HEADER ('Open ' + 'скан')
+;
+};
+@docTypeFilePropertyAddInt(scan, 'скан', FILE, 11){;
+EXTEND FORM employee
+    PROPERTIES (t11, e) uploadscan SHOWIF useScan(t11) HEADER ('Upload ' + 'скан')
+    PROPERTIES (t11, e) openscan SHOWIF useScan(t11) AND scan(t11, e) HEADER ('Open ' + 'скан')
+;
+};
+@docTypeFilePropertyAddInt(scan, 'скан', FILE, 12){;
+EXTEND FORM employee
+    PROPERTIES (t12, e) uploadscan SHOWIF useScan(t12) HEADER ('Upload ' + 'скан')
+    PROPERTIES (t12, e) openscan SHOWIF useScan(t12) AND scan(t12, e) HEADER ('Open ' + 'скан')
+;
+};
+};
+
+@docTypeSimplePropertyAdd(nameProp, 'Наименование', STRING){;
+    useNameProp 'Наименование' = DATA BOOLEAN (DocType);
+    nameProp 'Наименование' = DATA STRING (DocType, Employee);
+
+    EXTEND FORM docTypes
+        PROPERTIES (t) useNameProp
+    ;
+    @docTypeSimplePropertyAddInt(nameProp, capt, STRING, 1){;
+    EXTEND FORM employee
+        PROPERTIES (t1, e) nameProp SHOWIF useNameProp(t1) HEADER name(t1) FIRST
+    ;
+
+    EXTEND FORM employees 
+        PROPERTIES nameProp(t1, e) SHOWIF useNameProp(t1) COLUMNS (t1) HEADER name(t1)
+    ;
+};
+    @docTypeSimplePropertyAddInt(nameProp, capt, STRING, 2){;
+    EXTEND FORM employee
+        PROPERTIES (t2, e) nameProp SHOWIF useNameProp(t2) HEADER name(t2) FIRST
+    ;
+
+    EXTEND FORM employees 
+        PROPERTIES nameProp(t2, e) SHOWIF useNameProp(t2) COLUMNS (t2) HEADER name(t2)
+    ;
+};
+    @docTypeSimplePropertyAddInt(nameProp, capt, STRING, 3){;
+    EXTEND FORM employee
+        PROPERTIES (t3, e) nameProp SHOWIF useNameProp(t3) HEADER name(t3) FIRST
+    ;
+
+    EXTEND FORM employees 
+        PROPERTIES nameProp(t3, e) SHOWIF useNameProp(t3) COLUMNS (t3) HEADER name(t3)
+    ;
+};
+    @docTypeSimplePropertyAddInt(nameProp, capt, STRING, 4){;
+    EXTEND FORM employee
+        PROPERTIES (t4, e) nameProp SHOWIF useNameProp(t4) HEADER name(t4) FIRST
+    ;
+
+    EXTEND FORM employees 
+        PROPERTIES nameProp(t4, e) SHOWIF useNameProp(t4) COLUMNS (t4) HEADER name(t4)
+    ;
+};
+    @docTypeSimplePropertyAddInt(nameProp, capt, STRING, 5){;
+    EXTEND FORM employee
+        PROPERTIES (t5, e) nameProp SHOWIF useNameProp(t5) HEADER name(t5) FIRST
+    ;
+
+    EXTEND FORM employees 
+        PROPERTIES nameProp(t5, e) SHOWIF useNameProp(t5) COLUMNS (t5) HEADER name(t5)
+    ;
+};
+    @docTypeSimplePropertyAddInt(nameProp, capt, STRING, 6){;
+    EXTEND FORM employee
+        PROPERTIES (t6, e) nameProp SHOWIF useNameProp(t6) HEADER name(t6) FIRST
+    ;
+
+    EXTEND FORM employees 
+        PROPERTIES nameProp(t6, e) SHOWIF useNameProp(t6) COLUMNS (t6) HEADER name(t6)
+    ;
+};
+    @docTypeSimplePropertyAddInt(nameProp, capt, STRING, 7){;
+    EXTEND FORM employee
+        PROPERTIES (t7, e) nameProp SHOWIF useNameProp(t7) HEADER name(t7) FIRST
+    ;
+
+    EXTEND FORM employees 
+        PROPERTIES nameProp(t7, e) SHOWIF useNameProp(t7) COLUMNS (t7) HEADER name(t7)
+    ;
+};
+    @docTypeSimplePropertyAddInt(nameProp, capt, STRING, 8){;
+    EXTEND FORM employee
+        PROPERTIES (t8, e) nameProp SHOWIF useNameProp(t8) HEADER name(t8) FIRST
+    ;
+
+    EXTEND FORM employees 
+        PROPERTIES nameProp(t8, e) SHOWIF useNameProp(t8) COLUMNS (t8) HEADER name(t8)
+    ;
+};
+    @docTypeSimplePropertyAddInt(nameProp, capt, STRING, 9){;
+    EXTEND FORM employee
+        PROPERTIES (t9, e) nameProp SHOWIF useNameProp(t9) HEADER name(t9) FIRST
+    ;
+
+    EXTEND FORM employees 
+        PROPERTIES nameProp(t9, e) SHOWIF useNameProp(t9) COLUMNS (t9) HEADER name(t9)
+    ;
+};
+    @docTypeSimplePropertyAddInt(nameProp, capt, STRING, 10){;
+    EXTEND FORM employee
+        PROPERTIES (t10, e) nameProp SHOWIF useNameProp(t10) HEADER name(t10) FIRST
+    ;
+
+    EXTEND FORM employees 
+        PROPERTIES nameProp(t10, e) SHOWIF useNameProp(t10) COLUMNS (t10) HEADER name(t10)
+    ;
+};
+    @docTypeSimplePropertyAddInt(nameProp, capt, STRING, 11){;
+    EXTEND FORM employee
+        PROPERTIES (t11, e) nameProp SHOWIF useNameProp(t11) HEADER name(t11) FIRST
+    ;
+
+    EXTEND FORM employees 
+        PROPERTIES nameProp(t11, e) SHOWIF useNameProp(t11) COLUMNS (t11) HEADER name(t11)
+    ;
+};
+    @docTypeSimplePropertyAddInt(nameProp, capt, STRING, 12){;
+    EXTEND FORM employee
+        PROPERTIES (t12, e) nameProp SHOWIF useNameProp(t12) HEADER name(t12) FIRST
+    ;
+
+    EXTEND FORM employees 
+        PROPERTIES nameProp(t12, e) SHOWIF useNameProp(t12) COLUMNS (t12) HEADER name(t12)
+    ;
+};
+};
+
+
+NAVIGATOR {
+    masterData{
+        NEW docTypes;
+    }
+}
