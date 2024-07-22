@@ -13,7 +13,7 @@ FORM billPaymentDashboard 'Bill list'
     PROPERTIES READONLY taxAmount(t, b) COLUMNS (t) HEADER name(t)
 
     PROPERTIES(b) READONLY amount, nameCurrency
-    PROPERTIES(b) READONLY nameProject, note, items, dueDateTime
+    PROPERTIES(b) READONLY nameProject, note, items, dueDate
 
     PROPERTIES READONLY left(b), left(b, t) COLUMNS (t) HEADER 'To pay' + ' (' + name(t) + ')', untaxedLeft(b)
 

@@ -35,6 +35,7 @@ EXTEND FORM project
 ;
 
 DESIGN project {
+    caption = badged('Project', name(p));
     header {
         headerLeft {
             MOVE PROPERTY(nameCity(p));

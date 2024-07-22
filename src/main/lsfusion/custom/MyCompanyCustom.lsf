@@ -59,8 +59,8 @@ REQUIRE Eval, ProcessMonitor, Backup,
 
         Project, ProjectFilter, ProjectTimeEntry,
         ProjectAssignment,
-        ProjectBill,
-        ProjectInvoice, ProjectTimeEntryInvoice,
+        ProjectBill, AccountBillProject, 
+        ProjectInvoice, ProjectTimeEntryInvoice, ProjectInvoiceCustom, 
         ProjectSalesLedgerInvoice,
         TimesheetSupervisor, TimesheetSupervisorMobile,
 

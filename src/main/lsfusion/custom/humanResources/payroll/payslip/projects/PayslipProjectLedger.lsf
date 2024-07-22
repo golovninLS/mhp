@@ -6,7 +6,7 @@ NAMESPACE Payroll;
 
 EXTEND CLASS PayslipLedger : ProjectLedger;
 
-active (PayslipLedger l) += l IS PayslipLedger;
+active (PayslipLedger l) += l IS PayslipLedger AND NOT deduction(l);
 
 project (PayslipLedger l) += project(l);
 
@@ -19,4 +19,4 @@ category[ProjectLedger] (PayslipLedger l) += nameCategory(l);
 
 description[ProjectLedger] (PayslipLedger l) += description(l);
 
-expense(PayslipLedger l) += signedTotal(l);
+expense(PayslipLedger l) += signedTotal(l) IF NOT deduction(l);

@@ -1,17 +1,17 @@
 MODULE BillProjectLedger;
 
-REQUIRE BillProject, ProjectLedger, CreditNote;
+REQUIRE AccountBillProject, ProjectLedger, CreditNote;
 
 NAMESPACE ProjectManagement;
 
 EXTEND CLASS BillProject : ProjectLedger;
 
-active (BillProject l) += active(bill(l));
+active (BillProject l) += active(bill(l)) AND accountObject(l) IS Project;
 
 project (BillProject l) += project(l);
 
 number (BillProject l) += number(l);
-date (BillProject l) += date(l);
+date (BillProject l) += dateAccount(l);
 
 partner (BillProject l) += vendor(l);
 

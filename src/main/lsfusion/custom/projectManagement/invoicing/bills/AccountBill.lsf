@@ -1,0 +1,91 @@
+MODULE AccountBillProject;
+
+REQUIRE Bill, BillProject;
+
+NAMESPACE Bill;
+
+CLASS AccountObject 'Account object';
+name 'Name' = ABSTRACT STRING (AccountObject);
+type 'Type' = ABSTRACT STRING (AccountObject);
+
+EXTEND CLASS Project : AccountObject;
+name(Project p) += ProjectManagement.name(p);
+type(Project p) += 'Project';
+
+CLASS ExtraAccountObject  'Extra account object' : AccountObject;
+name 'Name' = DATA STRING (ExtraAccountObject);
+name(ExtraAccountObject o) += name(o);
+type(ExtraAccountObject o) += 'Extra account object';
+
+EXTEND FORM Invoicing.options
+    OBJECTS ao = ExtraAccountObject
+    PROPERTIES (ao) name, type
+    PROPERTIES (ao) NEW, DELETE 
+;
+DESIGN Invoicing.options{
+    tabbedPane{
+        NEW extraAccount{
+            caption = 'Extra account objects';
+            MOVE BOX (ao);
+        }
+    }
+}
+
+FORM accountObjects 'Account objects'
+    OBJECTS o = AccountObject
+    PROPERTIES(o) READONLY name ORDER, type
+    
+    LIST AccountObject OBJECT o
+;
+
+//Bill
+accountObject = DATA AccountObject (BillProject);
+nameAccountObject 'Account object' (BillProject p) = name(accountObject(p));
+typeAccountObject 'Type' (BillProject p) = type(accountObject(p));
+project(BillProject p) <- accountObject(p) WHEN accountObject(p) IS Project;
+WHEN LOCAL FORMS bill CHANGED(accountObject(BillProject bp)) AND (NOT monthAccount(bp) OR NOT yearAccount(bp)) DO {
+    monthAccount(bp) <- extractMonth(currentDate());
+    yearAccount(bp) <- extractYear(currentDate());
+}
+
+EXTEND FORM bill
+    PROPERTIES (bp) nameAccountObject FIRST 
+;
+DESIGN bill{
+    PROPERTY (nameProject(bp)) {hide = TRUE; }
+}
+
+onStarted()+{
+    FOR Project pr = project(BillProject p) AND NOT accountObject(p) DO accountObject(p) <- pr;
+}
+
+newBill 'Add' (Project p){
+    NEW b = Bill{
+        NEW bp = BillProject{
+            accountObject(bp) <- p;
+            bill(bp) <- b;
+        }
+        SHOW bill OBJECTS b = b DOCKED;
+    }
+} IMAGE 'add.png';
+
+EXTEND FORM project
+    OBJECTS bp = BillProject
+    PROPERTIES (bp) READONLY number, date, nameSalesAccount, imagedNameStatus, nameType, dueDate, untaxedAmount
+    PROPERTIES NEWSESSION newBill(p) TOOLBAR DRAW bp
+    FILTERS accountObject(bp) = p
+;
+
+countBillProjects = GROUP SUM 1 BY accountObject(BillProject bp);
+
+DESIGN project{
+    REMOVE BOX(b);
+    details {
+        MOVE BOX(bp) {
+            caption = badged('Bills', countBillProjects(p));
+        }
+    }
+}
+
+
+

@@ -17,7 +17,7 @@ FORM position 'Position'
 
 FORM positions 'Positions'
     OBJECTS o = Position
-    PROPERTIES(o) READONLY name
+    PROPERTIES(o) READONLY name ORDER
     PROPERTIES(o) NEWSESSION NEW, EDIT, DELETE
 
     LIST Position OBJECT o

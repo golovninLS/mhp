@@ -19,6 +19,7 @@ nameSalesAccount 'Sales account' (BillProject p) = name(salesAccount(p));
 monthAccount = DATA Month (BillProject);
 numberMonthAccount 'Month' (BillProject b) = number(monthAccount(b));
 yearAccount 'Year' = DATA INTEGER (BillProject) PATTERN '0000';
+dateAccount (BillProject p) = OVERRIDE lastDayOfMonth(DATE('01.' + numberMonthAccount(p) + '.' + yearAccount(p))), date(bill(p));
 
 base 'Distribution base' = DATA NUMERIC[10,2] (BillProject);
 
@@ -78,7 +79,7 @@ imagedNameStatus 'Status' (BillProject l) = imagedNameStatus(bill(l));
 dateTime 'Date' (BillProject l) = dateTime(bill(l)) IN id;
 date 'Date' (BillProject l) = date(bill(l));
 dueDateTime 'Pay before' (BillProject l) = dueDateTime(bill(l)) IN id;
-dueDate 'Date' (BillProject l) = dueDate(bill(l));
+dueDate 'Pay before' (BillProject l) = dueDate(bill(l));
 number 'Number' (BillProject l) = number(bill(l)) IN id;
 numberDate 'Description' (BillProject l) = numberDate(bill(l));
 vendor (BillProject l) = vendor(bill(l));
@@ -131,10 +132,6 @@ WHEN LOCAL FORMS bill SET(Bill b IS Bill) AND NOT countBillProject(b) DO {
 WHEN LOCAL FORMS bill CHANGED(project(Bill b)) DO
     project(minBillProject(b)) <- project(b);    
 
-WHEN LOCAL FORMS bill CHANGED(project(BillProject bp)) AND (NOT monthAccount(bp) OR NOT yearAccount(bp)) DO {
-    monthAccount(bp) <- extractMonth(currentDate());
-    yearAccount(bp) <- extractYear(currentDate());
-}
 // sales account
 //
 //salesAccount (Bill b) = salesAccount(minBillProject(b));

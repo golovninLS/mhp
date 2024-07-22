@@ -1,0 +1,19 @@
+MODULE ProjectInvoiceCustom;
+
+REQUIRE ProjectInvoice;
+
+NAMESPACE ProjectManagement;
+
+fileInvoice (Invoice i) = GROUP MAX InvoiceFile f BY invoice(f);
+
+openFile 'Open' (Invoice i){
+    open(fileInvoice(i));
+}
+
+EXTEND FORM project
+    PROPERTIES READONLY dueDate 'Pay before' = DATE(dueDateTime(i)), untaxedAmount(i), openFile(i) GRID CHANGEABLE
+;
+DESIGN project{
+    PROPERTY(dueDateTime(i)) { hide = TRUE; }
+    PROPERTY(amount(i)) { hide = TRUE; }
+}
