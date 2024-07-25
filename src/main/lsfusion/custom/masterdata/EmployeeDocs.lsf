@@ -205,8 +205,8 @@ EXTEND FORM docTypes
     PROPERTIES (t) trackDays
 ;
 
-background(DocType dt, Employee e) += WHEN dateTo(dt, e) AND trackDays(dt) AND dateTo(dt, e) < subtract(currentDate(), trackDays(dt)) THEN RGB(250,150,157);
-background(Employee e) += WHEN (GROUP MAX TRUE IF dateTo(DocType dt, e) AND trackDays(dt) AND dateTo(dt, e) < subtract(currentDate(), trackDays(dt))) THEN RGB(250,150,157);
+background(DocType dt, Employee e) += WHEN dateTo(dt, e) AND trackDays(dt) AND dateTo(dt, e) < sum(currentDate(), trackDays(dt)) THEN RGB(250,150,157);
+background(Employee e) += WHEN (GROUP MAX TRUE IF dateTo(DocType dt, e) AND trackDays(dt) AND dateTo(dt, e) < sum(currentDate(), trackDays(dt))) THEN RGB(250,150,157);
 
 NAVIGATOR {
     masterData{
