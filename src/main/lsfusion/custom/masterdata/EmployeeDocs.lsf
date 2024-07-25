@@ -1,6 +1,6 @@
 MODULE EmployeeDocs;
 
-REQUIRE Employee;
+REQUIRE EmployeeCustom;
 
 NAMESPACE MasterData;
 
@@ -21,13 +21,19 @@ FORM docTypes 'Типы документов'
 DESIGN employee{
     details{
         NEW infoDetails FIRST {
-            caption = 'Инфо'; 
+            caption = 'Инфо';
+
+            NEW infoFiles LAST {
+                caption = '';
+            }
         }
     }
 }
 
+background = ABSTRACT CASE COLOR (DocType, Employee);
+
 META docType(int)
-EXTEND FORM employee
+EXTEND FORM employee 
     OBJECTS t##int = DocType PANEL
     FILTERS index(t##int) = int
 ;
@@ -36,10 +42,13 @@ DESIGN employee{
     infoDetails{
         MOVE BOX (t##int){
             caption = name(t##int);
+            NEW infoFiles##int {
+                horizontal = TRUE;
+            }
         }
     }
 }
-    EXTEND FORM employees
+    EXTEND FORM employeesCustom
         OBJECTS t##int = DocType
         FILTERS index(t##int) = int
     ;
@@ -58,17 +67,21 @@ META docTypePanel(capt)
     @docType(10);
     @docType(11);
     @docType(12);
+    @docType(13);
+    @docType(14);
+    @docType(15);
+    @docType(16);
 END
 
 @docTypePanel();
 
-META docTypePropertyAddInt(prop, caption, type, int);
+META docTypePropertyAddInt(prop, caption, type, int)
     EXTEND FORM employee
-        PROPERTIES (t##int, e) prop SHOWIF use###prop(t##int)
+        PROPERTIES (t##int, e) prop SHOWIF use###prop(t##int) BACKGROUND background(t##int, e)
     ;
 END
 
-META docTypePropertyAdd(prop, caption, type);
+META docTypePropertyAdd(prop, caption, type)
     use###prop caption = DATA BOOLEAN (DocType);
     prop caption = DATA type (DocType, Employee);
     
@@ -87,19 +100,23 @@ META docTypePropertyAdd(prop, caption, type);
     @docTypePropertyAddInt(prop, caption, type, 10);
     @docTypePropertyAddInt(prop, caption, type, 11);
     @docTypePropertyAddInt(prop, caption, type, 12);
+    @docTypePropertyAddInt(prop, caption, type, 13);
+    @docTypePropertyAddInt(prop, caption, type, 14);
+    @docTypePropertyAddInt(prop, caption, type, 15);
+    @docTypePropertyAddInt(prop, caption, type, 16);
 END;
 
-META docTypeSimplePropertyAddInt(prop, type, capt, int);
+META docTypeSimplePropertyAddInt(prop, type, capt, int)
     EXTEND FORM employee
-        PROPERTIES (t##int, e) prop SHOWIF use###prop(t##int) HEADER name(t##int) FIRST
+        PROPERTIES (t##int, e) prop SHOWIF use###prop(t##int) HEADER name(t##int) FIRST BACKGROUND background(t##int, e)
     ;
 
-    EXTEND FORM employees 
-        PROPERTIES prop(t##int, e) SHOWIF use###prop(t##int) COLUMNS (t##int) HEADER name(t##int)
+    EXTEND FORM employeesCustom 
+        PROPERTIES prop(t##int, e) SHOWIF use###prop(t##int) COLUMNS (t##int) HEADER name(t##int) 
     ;
 END
 
-META docTypeSimplePropertyAdd(prop, caption, type);
+META docTypeSimplePropertyAdd(prop, caption, type)
     use###prop caption = DATA BOOLEAN (DocType);
     prop caption = DATA type (DocType, Employee);
 
@@ -118,14 +135,28 @@ META docTypeSimplePropertyAdd(prop, caption, type);
     @docTypeSimplePropertyAddInt(prop, capt, type, 10);
     @docTypeSimplePropertyAddInt(prop, capt, type, 11);
     @docTypeSimplePropertyAddInt(prop, capt, type, 12);
+    @docTypeSimplePropertyAddInt(prop, capt, type, 13);
+    @docTypeSimplePropertyAddInt(prop, capt, type, 14);
+    @docTypeSimplePropertyAddInt(prop, capt, type, 15);
+    @docTypeSimplePropertyAddInt(prop, capt, type, 16);
 END;
 
 //files
-META docTypeFilePropertyAddInt(prop,  capt, type, int);
+META docTypeFilePropertyAddInt(prop, capt, type, int)
 EXTEND FORM employee
     PROPERTIES (t##int, e) upload##prop SHOWIF use###prop(t##int) HEADER ('Upload ' + capt)
     PROPERTIES (t##int, e) open##prop SHOWIF use###prop(t##int) AND prop(t##int, e) HEADER ('Open ' + capt)
 ;
+DESIGN employee{
+    BOX (t##int){
+        infoFiles##int {
+            NEW infoFile##prop##int {
+                MOVE PROPERTY (upload##prop(t##int, e));
+                MOVE PROPERTY (open##prop(t##int, e));
+            }
+        }
+    }
+}
 END
 
 META docTypeFilePropertyAdd(prop, capt);
@@ -153,17 +184,29 @@ EXTEND FORM docTypes
 @docTypeFilePropertyAddInt(prop, capt, FILE, 10);
 @docTypeFilePropertyAddInt(prop, capt, FILE, 11);
 @docTypeFilePropertyAddInt(prop, capt, FILE, 12);
+@docTypeFilePropertyAddInt(prop, capt, FILE, 13);
+@docTypeFilePropertyAddInt(prop, capt, FILE, 14);
+@docTypeFilePropertyAddInt(prop, capt, FILE, 15);
+@docTypeFilePropertyAddInt(prop, capt, FILE, 16);
 END;
-
 
 @docTypePropertyAdd(dateFrom, 'Дата от', DATE);
 @docTypePropertyAdd(dateTo, 'Дата до', DATE);
 @docTypePropertyAdd(number, 'Номер', STRING);
 @docTypePropertyAdd(note, 'Примечание', STRING);
-@docTypeFilePropertyAdd(scan, 'скан');
+@docTypeFilePropertyAdd(scan, 'Скан');
+@docTypeFilePropertyAdd(scan2, 'Скан2');
+@docTypeFilePropertyAdd(scan3, 'Скан3');
 
 @docTypeSimplePropertyAdd(nameProp, 'Наименование', STRING);
 
+trackDays 'Отслеживать(дней)' = DATA INTEGER (DocType);
+EXTEND FORM docTypes
+    PROPERTIES (t) trackDays
+;
+
+background(DocType dt, Employee e) += WHEN dateTo(dt, e) AND trackDays(dt) AND dateTo(dt, e) < subtract(currentDate(), trackDays(dt)) THEN RGB(250,150,157);
+background(Employee e) += WHEN (GROUP MAX TRUE IF dateTo(DocType dt, e) AND trackDays(dt) AND dateTo(dt, e) < subtract(currentDate(), trackDays(dt))) THEN RGB(250,150,157);
 
 NAVIGATOR {
     masterData{

@@ -3,7 +3,7 @@ MODULE MyCompanyCustom;
 REQUIRE Eval, ProcessMonitor, Backup,
         MetaNumerator, PartnerGeo,
         Individual, IndividualImport, IndividualInitial, 
-        Employee, EmployeeImport, EmployeeLocation, EmployeeDocs,
+        Employee, EmployeeImport, EmployeeLocation, EmployeeDocs, EmployeeCustom,
         LegalEntity, LegalEntityImport,
         Contract, ContractPartner, ContractImport,
         Department, DepartmentPartner,

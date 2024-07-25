@@ -1,0 +1,21 @@
+MODULE EmployeeCustom;
+
+REQUIRE Employee;
+
+NAMESPACE MasterData;
+
+background = ABSTRACT CASE COLOR (Employee);
+
+FORM employeesCustom 'Employees'
+    OBJECTS e = Employee BACKGROUND background(e)
+    PROPERTIES(e) READONLY  name, login, namePosition, nameLegalEntity
+    PROPERTIES(e) NEWSESSION NEW, EDIT, DELETE
+
+    LIST Employee OBJECT e
+;
+
+NAVIGATOR {
+    masterData {
+        NEW employeesCustom AFTER companies;
+    }
+}
