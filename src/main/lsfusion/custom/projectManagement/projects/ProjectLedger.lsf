@@ -53,14 +53,14 @@ expense 'Expense' = ABSTRACT NUMERIC[16,2] (ProjectLedger) MATERIALIZED;
 profit 'Profit' (ProjectLedger l) = income(l) (-) expense(l);
 
 sumExpense 'Сумма затрат' (Project p, INTERVAL[DATE] i) = 
-    GROUP SUM expense(ProjectLedger l) IF expense(l) > 0 AND date(l) >= from(i) AND date(l) <= to(i) BY project(l);
+    GROUP SUM expense(ProjectLedger l) IF expense(l) > 0 AND active(l) AND date(l) >= from(i) AND date(l) <= to(i) BY project(l);
 sumExpense 'Сумма затрат' (Project p) =
-    GROUP SUM expense(ProjectLedger l) IF expense(l) > 0  BY project(l);
+    GROUP SUM expense(ProjectLedger l) IF expense(l) > 0  AND active(l) BY project(l);
 
 sumProfit 'Сумма прибыли' (Project p, INTERVAL[DATE] i) = 
-    GROUP SUM profit(ProjectLedger l) IF profit(l) > 0 AND date(l) >= from(i) AND date(l) <= to(i) BY project(l);
+    GROUP SUM profit(ProjectLedger l) IF profit(l) > 0 AND active(l) AND date(l) >= from(i) AND date(l) <= to(i) BY project(l);
 sumProfit 'Сумма прибыли' (Project p) = 
-    GROUP SUM profit(ProjectLedger l) IF profit(l) > 0 BY project(l);
+    GROUP SUM profit(ProjectLedger l) IF profit(l) > 0 AND active(l) BY project(l);
 
 sumExpense 'Сума затрат' (INTERVAL[DATE] i) = IF i IS INTERVAL[DATE] THEN 
     GROUP SUM sumExpense(Project p, i) IF filtered(p) ELSE 
