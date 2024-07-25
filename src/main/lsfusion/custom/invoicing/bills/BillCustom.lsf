@@ -52,16 +52,18 @@ changeAmount(Bill b){
 
 changeUntaxedAmount (Bill b) {
     INPUT a = untaxedAmount(b) DO {
+        LOCAL sum = NUMERIC[14,2]();
+        IF a > amount(b) THEN sum() <- amount(b); ELSE sum() <- a;
         IF NOT countBillLine(b) THEN
             NEW l = BillLine {
                 bill(l) <- b;
                 item(l) <- defaultBillItem();
-                taxAmount(defaultTax(), l) <- amount(b) (-) a;
-                untaxedAmount(l) <- a;
+                taxAmount(defaultTax(), l) <- amount(b) (-) sum();
+                untaxedAmount(l) <- sum();
             }
         ELSE
-            taxAmount(defaultTax(), BillLine l) <- (amount(b) (-) a) WHERE bill(l) = b;
-            untaxedAmount(BillLine l) <- a WHERE bill(l) = b;
+            taxAmount(defaultTax(), BillLine l) <- (amount(b) (-) sum()) WHERE bill(l) = b;
+            untaxedAmount(BillLine l) <- sum() WHERE bill(l) = b;
     }
 }
 

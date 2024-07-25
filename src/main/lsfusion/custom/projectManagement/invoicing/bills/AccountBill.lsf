@@ -64,6 +64,7 @@ newBill 'Add' (Project p){
         NEW bp = BillProject{
             accountObject(bp) <- p;
             bill(bp) <- b;
+            base(bp) <- 100;
         }
         SHOW bill OBJECTS b = b DOCKED;
     }
