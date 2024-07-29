@@ -1,0 +1,61 @@
+MODULE Speciality;
+
+REQUIRE EmployeeCustom;
+
+NAMESPACE MasterData;
+
+CLASS Speciality 'Специальность';
+name 'Наименование' = DATA STRING(Speciality) CHARWIDTH 15;
+
+mainSpeciality 'Основная специальность' = DATA Speciality (Employee);
+nameMainSpeciality 'Основная специальность' (Employee e) = name(mainSpeciality(e));
+
+isAddSpecialties 'Дополнительная' = DATA BOOLEAN (Speciality, Employee);
+nameAddSpecialties 'Дополнительные специальности' (Employee e) = GROUP CONCAT name(Speciality s) IF isAddSpecialties(s, e), ', ' ORDER s CHARWIDTH 40;
+
+FORM speciality 'Cпециальность'
+    OBJECTS s = Speciality PANEL
+    PROPERTIES(s) name
+
+    EDIT Speciality OBJECT s
+;
+
+FORM specialities 'Cпециальности'
+    OBJECTS s = Speciality
+    PROPERTIES (s) READONLY name
+    PROPERTIES (s) NEWSESSION NEW, EDIT, DELETE
+
+    LIST Speciality OBJECT s
+;
+
+FORM dialogSpecialities 'Выбор дополнительных специальностей'
+    OBJECTS e = Employee PANEL 
+    PROPERTIES(e) READONLY id, login, lastName, firstName, middleName
+    
+    OBJECTS s = Speciality 
+    PROPERTIES(s, e)  isAddSpecialties
+    PROPERTIES(s) READONLY name
+;
+
+EXTEND FORM employees
+    PROPERTIES (e) READONLY AFTER namePosition(e)  nameMainSpeciality, nameAddSpecialties
+;
+
+EXTEND FORM employee
+    PROPERTIES(e) nameMainSpeciality, nameAddSpecialties ON CHANGE {DIALOG dialogSpecialities OBJECTS e = e;}
+
+    EDIT Employee OBJECT e
+;
+
+DESIGN employee {       
+    info {
+        MOVE PROPERTY(nameMainSpeciality(e));
+        MOVE PROPERTY(nameAddSpecialties(e));
+    }    
+}
+
+NAVIGATOR {
+    masterData{
+        NEW specialities;
+    }
+}
