@@ -86,4 +86,6 @@ REQUIRE Eval, ProcessMonitor, Backup,
         BankAccountVat,    
     
         TimesheetCustom,
-        TimesheetSupervisorCustom;
+        TimesheetSupervisorCustom,
+
+        TimeEntryTypeCustom;

@@ -1,6 +1,6 @@
 MODULE TimesheetSupervisorCustom;
 
-REQUIRE TimesheetSupervisor;
+REQUIRE TimesheetSupervisor, TimeEntryTypeCustom;
 
 PRIORITY MasterData;
 
@@ -104,6 +104,14 @@ hoursTimesheet 'Hours' (DATE d, Employee e, Project p)= hours(d, e, p);
 hoursTimesheet 'Hours' (DATE d, Project p)= GROUP SUM hours(d, Employee e, p);
 hoursTimesheet 'Hours' (DATE d)= GROUP SUM hours(d, Project p);
 
+nameTimeEntryHours 'Time entry' (DATE d, Employee e, Project p) =
+    GROUP CONCAT name(timeEntryHours(TimeEntry t)) IF date(t) = d AND employee(t) = e AND project(t) = p AND showName(type(t)), ', ' ORDER t;
+
+trunc = FORMULA INTEGER 'trunc($1)';
+descriptionTimesheet 'Hours' (DATE d, Employee e, Project p) =
+    GROUP CONCAT (CONCAT '', IF hours(TimeEntry t) - trunc(hours(t)) < 0.001 THEN trunc(hours(t)) ELSE hours(t), '(' + nameTimeEntryHours(t) + ')' IF showName(type(t))) 
+        IF date(t) = d AND employee(t) = e AND project(t) = p, '+' ORDER t CHARWIDTH 7;
+
 backgroundHoursTimesheet 'Hours' (DATE d, Employee e, Project p)=
     IF countTimeEntryType(d, e, p) > 1 THEN RGB(255,192,0) ELSE
         OVERRIDE
@@ -117,7 +125,7 @@ EXTEND FORM timesheetSupervisor
     OBJECTS pe = (p = Project, ep = Employee)
     PROPERTIES READONLY name 'Project' = name(p)
     PROPERTIES(ep) READONLY ON CONTEXTMENU clearTimeEntry(p, ep, dates)  firstName, lastName, namePosition, rolesTimesheet
-    PROPERTIES hoursTimesheet(d, ep, p) WAIT COLUMNS (d) HEADER extractDay(d) BACKGROUND backgroundHoursTimesheet(d, ep, p)
+    PROPERTIES descriptionTimesheet(d, ep, p) WAIT COLUMNS (d) HEADER extractDay(d) BACKGROUND backgroundHoursTimesheet(d, ep, p)
     ON CHANGE {
         FOR TimeEntryType et = timesheetTimeEntryType() AND (p OR NOT project(timeEntry(d, ep, timesheetTimeEntryType()))) DO {
             IF NOT timesheetTimeEntryHours() THEN {
@@ -143,8 +151,8 @@ DESIGN timesheetSupervisor {
                 REMOVE BOX(e);
                 MOVE BOX(pe) {
                     caption = '';
-                    PROPERTY(hoursTimesheet(d, ep, p)) {
-                        charWidth = 2;
+                    PROPERTY(descriptionTimesheet(d, ep, p)) {
+                        charWidth = 7;
                     }
                 }
             }

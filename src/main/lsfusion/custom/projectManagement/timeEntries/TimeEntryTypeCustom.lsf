@@ -1,0 +1,11 @@
+MODULE TimeEntryTypeCustom;
+
+REQUIRE TimeEntryType;
+
+NAMESPACE ProjectManagement;
+
+showName 'Отображать наименование' = DATA BOOLEAN (TimeEntryType);
+
+EXTEND FORM timeEntryType
+    PROPERTIES(o) showName
+;
