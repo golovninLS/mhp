@@ -120,3 +120,8 @@ NAVIGATOR {
         NEW employees;
     }
 }
+
+EXTEND FORM employees
+    FILTERGROUP filters
+        FILTER '{Active}' NOT archived(e) DEFAULT
+;
