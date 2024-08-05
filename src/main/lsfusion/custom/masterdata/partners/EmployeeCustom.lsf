@@ -21,3 +21,8 @@ NAVIGATOR {
         NEW employeesCustom AFTER companies;
     }
 }
+
+EXTEND FORM employeesCustom
+    FILTERGROUP filters
+        FILTER '{Active}' NOT archived(e) DEFAULT
+;
