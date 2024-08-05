@@ -1,0 +1,46 @@
+MODULE AccountDistributionCanceled;
+
+REQUIRE AccountDistribution;
+
+NAMESPACE Invoicing;
+
+EXTEND CLASS AccountDistributionStatus {
+    canceled 'Cancelled'
+}
+canceled 'Cancelled' = DATA BOOLEAN (AccountDistribution);
+active '{Active}' (AccountDistribution d) = d IS AccountDistribution AND NOT canceled(d);
+
+status(AccountDistribution d) += WHEN canceled(d) THEN AccountDistributionStatus.canceled;
+
+cancel 'Cancel' (AccountDistribution d) {
+    APPLY;
+    IF canceled() THEN RETURN;
+
+    NEWSESSION {
+        canceled(d) <- TRUE;
+        APPLY;
+    }
+}
+
+EXTEND FORM accountDistribution
+    PROPERTIES(a) cancel SHOWIF NOT (status(a) = AccountDistributionStatus.draft OR status(a) = AccountDistributionStatus.canceled), canceled
+;
+
+DESIGN accountDistribution {
+    secondaryActions {
+        MOVE PROPERTY(cancel(a)) { valueClass = 'btn-danger'; }
+    }
+    statusGroup {
+        MOVE PROPERTY(canceled(a)) {
+            valueClass = 'btn-check';
+            captionClass = 'btn btn-outline-primary btn-arrow-right';
+        }
+    }
+}
+
+EXTEND FORM accountDistributions
+    EXTEND FILTERGROUP status
+        FILTER 'Cancelled' status(a) = AccountDistributionStatus.canceled
+;
+
+@defineSelectionAction(accountDistributions, AccountDistribution, cancel, 'Cancel', statuses);

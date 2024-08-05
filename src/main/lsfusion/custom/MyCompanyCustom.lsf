@@ -88,4 +88,6 @@ REQUIRE Eval, ProcessMonitor, Backup,
         TimesheetCustom,
         TimesheetSupervisorCustom,
 
-        TimeEntryTypeCustom;
+        TimeEntryTypeCustom,
+
+        AccountDistribution, AccountDistributionLineLedger, AccountDistributionCanceled;

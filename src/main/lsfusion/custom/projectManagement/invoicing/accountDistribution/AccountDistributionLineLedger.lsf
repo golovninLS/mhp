@@ -1,0 +1,35 @@
+MODULE AccountDistributionLineLedger;
+
+REQUIRE AccountDistributionCanceled, ProjectLedger, BillProjectLedger;
+
+NAMESPACE ProjectManagement;
+
+inactive (BillProject l) += (inner(project(l)) OR accountObject(l) IS ExtraAccountObject) AND l IS BillProject;
+
+EXTEND CLASS AccountDistributionLine: ProjectLedger;
+
+active (AccountDistributionLine l) += active(accountDistribution(l)) AND project(l) IS Project AND NOT inner(project(l));
+
+project (AccountDistributionLine l) += Invoicing.project(l);
+
+number (AccountDistributionLine l) += number(accountDistribution(l));
+date (AccountDistributionLine l) += dateAccount(l);
+
+partner (AccountDistributionLine l) += vendor(l);
+
+category (AccountDistributionLine l) += 'Распределение затрат' IF l IS AccountDistributionLine;
+
+description (AccountDistributionLine l) += note(l);
+
+income(AccountDistributionLine l) += -untaxedAmount(l);
+expense(AccountDistributionLine l) += untaxedAmount(l);
+
+
+
+
+
+
+
+
+
+

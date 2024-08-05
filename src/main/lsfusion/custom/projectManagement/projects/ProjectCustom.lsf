@@ -18,6 +18,8 @@ nameCity 'City' (Project a) = name(city(a));
 latitude 'Latitude' (Project a) = latitude(city(a));
 longitude 'Longitude' (Project a) = longitude(city(a));
 
+inner 'Внутренний' = DATA BOOLEAN (Project);
+
 CONSTRAINT (SETCHANGED(date(TimeEntry te)) OR SETCHANGED(project(te)) OR SETCHANGED(hours(te)) OR SETCHANGED(employee(te)) OR SETCHANGED(type(te)) OR SETCHANGED(description(te)) OR DROPPED(te IS TimeEntry)) AND 
     managerTimesheetCloseDate(project(te)) AND (NOT managerTimesheetCloseDate(project(te)) < date(te) OR NOT managerTimesheetCloseDate(project(te)) < PREV(date(te)))
     MESSAGE 'Нельзя изменять отметку времени в табеле на дату меньшую даты закрытия табеля(менеджер) проекта';
@@ -27,7 +29,7 @@ CONSTRAINT DROPPED(TimeEntry te IS TimeEntry) AND
     MESSAGE 'Нельзя изменять отметку времени в табеле на дату меньшую даты закрытия табеля(менеджер) проекта';
 
 EXTEND FORM project
-    PROPERTIES(p) managerTimesheetCloseDate, nameCity
+    PROPERTIES(p) managerTimesheetCloseDate, nameCity, inner
 
     OBJECTS pp = Project MAP
     PROPERTIES(pp) name READONLY, latitude, longitude
@@ -39,9 +41,10 @@ DESIGN project {
     header {
         headerLeft {
             MOVE PROPERTY(nameCity(p));
+            MOVE PROPERTY(inner(p));
         }
         headerRight {
-            MOVE PROPERTY(managerTimesheetCloseDate(p));
+            MOVE PROPERTY(managerTimesheetCloseDate(p));            
         }
     }
     details {

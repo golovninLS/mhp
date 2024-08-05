@@ -1,0 +1,324 @@
+MODULE AccountDistribution;
+
+REQUIRE SalesAccount, ProjectCustom, AccountBillProject;
+
+NAMESPACE Invoicing;
+
+CLASS AccountDistribution 'Распределение затрат';
+
+@defineDocStatus(accountDistribution, 'Распределение затрат');
+
+// dateTime
+dateTime 'Date' = DATA DATETIME (AccountDistribution) NONULL IN id;
+WHEN LOCAL SET (AccountDistribution b IS AccountDistribution) AND NOT CHANGED(dateTime(b)) DO dateTime(b) <- currentDateTime();
+@defineDateTimeAggregation(AccountDistribution);
+
+@defineNumber(accountDistribution, 'Распределение затрат', 'AD');
+
+numberDate 'Description' (AccountDistribution b) = number(b) + ' (' + dateTime(b) + ')' IN id;
+
+// vendor
+vendor 'Vendor' = DATA Partner (AccountDistribution);
+nameVendor 'Vendor' (AccountDistribution b) = name(vendor(b));
+
+isVendor = ABSTRACT VALUE BOOLEAN (AccountDistribution);
+isVendor(AccountDistribution b) += isVendor(vendor(b));
+CONSTRAINT vendor(AccountDistribution b) AND NOT isVendor(b)
+    CHECKED BY vendor[AccountDistribution]
+    MESSAGE 'The partner must be a vendor';
+
+// company
+company 'Company' = DATA Company (AccountDistribution) NONULL;
+nameCompany 'Company' (AccountDistribution b) = name(company(b));
+WHEN LOCAL SET(AccountDistribution b IS AccountDistribution) AND NOT CHANGED(company(b)) DO company(b) <- defaultCompany();
+
+currency = DATA Currency (AccountDistribution);
+nameCurrency 'Currency' (AccountDistribution o) = name(currency(o));
+
+// representative
+representative 'Our representative' = DATA Employee (AccountDistribution);
+nameRepresentative 'Our representative' (AccountDistribution o)= MasterData.name(representative(o));
+
+representative(AccountDistribution o) <- currentUser() IF currentUser() IS Employee WHEN SET(o IS AccountDistribution);
+
+vendorReference 'Vendor reference' = DATA STRING[30] (AccountDistribution) INDEXED;
+note 'Note' = DATA ISTRING (AccountDistribution) CHARWIDTH 20;
+
+details 'Details' = DATA RICHTEXT (AccountDistribution);
+
+monthAccount = DATA Month (AccountDistribution);
+numberMonthAccount 'Месяц распределения' (AccountDistribution d) = number(monthAccount(d));
+yearAccount 'Год распределения' = DATA INTEGER (AccountDistribution) PATTERN '0000';
+dateAccount (AccountDistribution d) = OVERRIDE lastDayOfMonth(DATE('01.' + numberMonthAccount(d) + '.' + yearAccount(d))), date(d);
+
+CLASS AccountDistributionLine 'Распределение затрат по проекту';
+
+accountDistribution 'Bill' = DATA AccountDistribution (AccountDistributionLine) NONULL DELETE;
+
+countAccountDistributionLine (AccountDistribution a) = GROUP SUM 1 IF accountDistribution(AccountDistributionLine p) = a;
+minAccountDistributionLine (AccountDistribution a) = GROUP MIN AccountDistributionLine p IF accountDistribution(p) = a;
+
+//salesAccount 'Sales account' = DATA CustomSalesAccount (AccountDistributionLine);
+//nameSalesAccount 'Sales account' (AccountDistributionLine p) = name(salesAccount(p));
+monthAccount (AccountDistributionLine l ) = monthAccount(accountDistribution(l));
+numberMonthAccount 'Month' (AccountDistributionLine l) = number(monthAccount(l));
+yearAccount 'Year' (AccountDistributionLine l) = yearAccount(accountDistribution(l));
+overDateAccount = ABSTRACT VALUE DATE (AccountDistributionLine);
+dateAccount (AccountDistributionLine p) = OVERRIDE lastDayOfMonth(DATE('01.' + numberMonthAccount(p) + '.' + yearAccount(p))), overDateAccount(p);
+overDateAccount(AccountDistributionLine p) += date(accountDistribution(p));
+
+project 'Project' = DATA Project (AccountDistributionLine);
+nameProject 'Project' (AccountDistributionLine b) = name(project(b));
+
+base 'Distribution base' = DATA NUMERIC[10,2] (AccountDistributionLine);
+
+untaxedAmount '{Amount}'  = DATA NUMERIC[14,2] (AccountDistributionLine);
+
+taxAmount 'Taxes' (Tax t, AccountDistributionLine p) = DATA NUMERIC[14,2] (Tax, AccountDistributionLine);
+taxAmount 'Taxes' (AccountDistributionLine p) = GROUP SUM taxAmount(Tax t, p);
+
+amount 'Total amount' (AccountDistributionLine p) = untaxedAmount(p) (+) taxAmount(p);
+
+imagedNameStatus 'Status' (AccountDistributionLine l) = imagedNameStatus(accountDistribution(l));
+dateTime 'Date' (AccountDistributionLine l) = dateTime(accountDistribution(l)) IN id;
+date 'Date' (AccountDistributionLine l) = date(accountDistribution(l));
+number 'Number' (AccountDistributionLine l) = number(accountDistribution(l)) IN id;
+numberDate 'Description' (AccountDistributionLine l) = numberDate(accountDistribution(l));
+vendor (AccountDistributionLine l) = vendor(accountDistribution(l));
+nameVendor 'Vendor' (AccountDistributionLine l) = nameVendor(accountDistribution(l));
+company 'Company' (AccountDistributionLine l) = company(accountDistribution(l));
+nameCompany 'Company' (AccountDistributionLine l) = nameCompany(accountDistribution(l));
+nameCurrency 'Currency' (AccountDistributionLine l) = nameCurrency(accountDistribution(l));
+note 'Note' (AccountDistributionLine l) = note(accountDistribution(l));
+
+in = DATA BOOLEAN (BillProject, AccountDistributionLine);
+in (BillProject bp, AccountDistribution a) = TRUE IF GROUP MIN in(bp, AccountDistributionLine l) AND a == accountDistribution(l);
+
+FORM accountDistribution 'Распределение затрат'
+    OBJECTS  a = AccountDistribution PANEL
+    PROPERTIES(a) READONLYIF readonly(a) dateTime, number,
+        nameVendor, nameCompany, nameCurrency,
+        nameRepresentative, vendorReference, note,
+        details
+
+    EDIT AccountDistribution OBJECT a
+
+    OBJECTS apt = Tax
+
+    OBJECTS ap = AccountDistributionLine
+    PROPERTIES(ap) nameProject, numberMonthAccount, yearAccount, base, untaxedAmount
+    PROPERTIES taxAmount(apt, ap) COLUMNS (apt) HEADER name(apt)
+    PROPERTIES(ap) amount READONLY
+    PROPERTIES(ap) NEW, DELETE
+    FILTERS accountDistribution(ap) = a
+
+    OBJECTS bpt = Tax
+    OBJECTS bp = BillProject
+    PROPERTIES(bp) READONLY nameAccountObject, nameSalesAccount, numberMonthAccount, yearAccount, base, untaxedAmount
+    PROPERTIES READONLY taxAmount(bpt, bp) COLUMNS (bpt) HEADER name(bpt)
+    PROPERTIES(bp) amount READONLY
+    FILTERS in(bp, a) 
+;
+
+DESIGN accountDistribution {
+    caption = badged('Распреденление затрат', number(a) + '(' + dateTime(a) + ')');
+    OBJECTS {
+        NEW header {
+            alignment = STRETCH;
+            horizontal = TRUE;
+            NEW headerLeft {
+                MOVE PROPERTY(dateTime(a));
+                MOVE PROPERTY(number(a));
+            }
+            NEW headerRight {
+                MOVE PROPERTY(nameVendor(a));
+                MOVE PROPERTY(nameCompany(a)) { notNull = TRUE; }
+                MOVE PROPERTY(nameCurrency(a));
+            }
+            NEW relatedDoc {
+                fill = 1;
+                tabbed = TRUE;
+            }
+        }
+        NEW details {
+            fill = 5;
+            tabbed = TRUE;
+            
+            NEW accountDistributionLines FIRST {
+                caption = 'Строки распределения затрат';
+                MOVE BOX(ap) {caption = ''; }
+            }
+            
+            NEW billProjects {
+                caption = 'Projects';
+                MOVE BOX(bp) {caption = ''; }
+            }
+            
+            NEW otherInformation {
+                caption = 'Other information';
+                lines = 2;
+                
+                NEW accountDistributionInformat {
+                    caption = 'Others';
+                    alignment = STRETCH;
+                    MOVE PROPERTY(nameRepresentative(a));
+                    MOVE PROPERTY(vendorReference(a));
+                    MOVE PROPERTY(note(a));
+                }
+            }
+            NEW detailsInformation {
+                caption = 'Details';
+                MOVE PROPERTY(details(a)) {
+                    caption = '';
+                    fill = 1;
+                    height = 300;
+                }
+            }
+        }
+    }
+    TOOLBARBOX {
+        NEW footer FIRST {
+            horizontal = TRUE;
+        }
+    }
+}
+
+background = ABSTRACT CASE COLOR (AccountDistribution);
+FORM accountDistributions 'Распределения затрат'
+    OBJECTS a = AccountDistribution BACKGROUND background(a)
+    PROPERTIES(a) READONLYIF isReadonly()
+        number, dateTime, nameVendor, nameCompany, nameCurrency,
+        vendorReference, note
+    PROPERTIES(a) NEWSESSION NEW, EDIT, DELETE
+
+    LIST AccountDistribution OBJECT a
+;
+
+@extendFormEditable(accountDistributions);
+
+@defineDocObjectsForm(accountDistributions, a, 'Распределения затрат');
+
+EXTEND FORM accountDistributions
+    PROPERTIES(a) READONLY imagedNameStatus BACKGROUND colorStatus(a)
+    FILTERGROUP status
+        FILTER 'Draft' status(a) = AccountDistributionStatus.draft
+;
+
+DESIGN accountDistributions {
+    filters {
+        MOVE FILTERGROUP(status) { alignment = STRETCH; }
+    }
+}
+
+EXTEND FORM accountDistribution
+    PROPERTIES(a) READONLY imagedNameStatus BACKGROUND colorStatus(a)
+;
+
+DESIGN accountDistribution {
+    NEW statusPane FIRST {
+        horizontal = TRUE;
+        alignment = STRETCH;                          
+        NEW statusActions {
+            horizontal = TRUE;                    
+            flex = 1; 
+            NEW primaryActions {
+                horizontal = TRUE;
+            }
+            NEW secondaryActions {
+                horizontal = TRUE;
+            }           
+        }
+        NEW status {
+            horizontal = TRUE;
+            MOVE PROPERTY(imagedNameStatus(a));
+            NEW statusGroup {
+                custom = '';
+                class = 'btn-group';
+            }
+        }
+    }    
+}
+@defineSelection(AccountDistribution);
+
+@defineSelectionForm(accountDistributions, AccountDistribution, a);
+
+NAVIGATOR {
+    operations {
+        NEW accountDistributions FIRST;
+    }
+}
+
+@defineDateAggregation(AccountDistributionLine, , );
+
+customGenerate = ABSTRACT VALUE BOOLEAN (AccountDistribution);
+generateProject 'Generate' ABSTRACT LIST (AccountDistribution);
+
+amount 'Total amount' (AccountDistribution a) = GROUP SUM amount(AccountDistributionLine p) IF accountDistribution(p) = a;
+
+untaxedAmount (AccountDistribution a) = GROUP SUM untaxedAmount(BillProject bp) IF in(bp, a);
+taxAmount (Tax t, AccountDistribution a) = GROUP SUM taxAmount(t, BillProject bp) IF in(bp, a);
+taxAmount 'Tax' (AccountDistribution a) = GROUP SUM taxAmount(Tax t, a);
+
+calcUntaxedAmount (AccountDistributionLine p) =
+    PARTITION UNGROUP untaxedAmount
+        PROPORTION STRICT ROUND(2) base(p)
+        ORDER p BY accountDistribution(p);
+
+calcTaxAmount (Tax t, AccountDistributionLine p) =
+    PARTITION UNGROUP taxAmount
+        PROPORTION STRICT ROUND(2) base(p)
+        ORDER p BY t, accountDistribution(p);
+
+generateProject(AccountDistribution b) + {
+    IF NOT customGenerate(b) THEN {
+        untaxedAmount(AccountDistributionLine p) <- calcUntaxedAmount(p) WHERE accountDistribution(p) = b;
+        taxAmount(Tax t, AccountDistributionLine p) <- calcTaxAmount(t, p) WHERE accountDistribution(p) = b;
+    }
+}
+
+WHEN LOCAL FORMS accountDistribution CHANGED(untaxedAmount(AccountDistribution a)) OR (GROUP SUM 1 IF CHANGED(taxAmount(Tax t, a))) OR
+    (GROUP SUM 1 IF CHANGED(base(AccountDistributionLine ap)) AND accountDistribution(ap) = a) DO
+    generateProject(a);
+
+WHEN LOCAL FORMS accountDistribution SET(AccountDistribution a IS AccountDistribution) AND NOT countAccountDistributionLine(a) DO {
+    NEW ap = AccountDistributionLine {
+        accountDistribution(ap) <- a;
+        base(ap) <- 100;
+    }
+}
+
+createAccountDistribution(Month month, INTEGER year) {
+    LOCAL locIn = BOOLEAN (BillProject, Partner);
+    locIn(BillProject bp, Partner p) <- TRUE WHERE monthAccount(bp) == month AND yearAccount(bp) = year AND
+        (accountObject(bp) IS ExtraAccountObject OR inner(project(bp))) AND
+        NOT (GROUP MIN in(bp, AccountDistributionLine dp) IF dp IS AccountDistributionLine) AND
+        vendor(bp) = p;
+
+    LOCAL locHours = NUMERIC[8,2] (Project);
+    LOCAL locTotalHours = NUMERIC[8,2] ();
+    locHours (Project p) <- hours(p, firstDayOfMonth(DATE('01.' + number(month)+ '.' + year)), lastDayOfMonth(DATE('01.' + number(month)+ '.' + year)));
+    locTotalHours() <- GROUP SUM locHours (Project p) IF p IS Project; // TODO удалить
+
+    FOR Partner partner IS Partner AND (GROUP MIN locIn(BillProject bp, partner)) DO {
+        NEW ad = AccountDistribution {
+            dateTime(ad) <- currentDateTime();
+            monthAccount(ad) <- month;
+            yearAccount(ad) <- year;
+            company(ad) <- defaultCompany();
+            vendor(ad) <- partner;
+
+            FOR locHours (Project p)  DO NEW dp = AccountDistributionLine {
+                accountDistribution(dp) <- ad;
+                in(BillProject bp,dp) <- TRUE WHERE locIn(bp, partner);
+                project(dp) <- p;
+                base(dp) <- locHours(p);                
+            }
+            
+            generateProject(ad);
+        }
+    } ELSE {
+        MESSAGE 'Нет данных за месяц' NOWAIT;
+    }
+    
+    APPLY;
+}
