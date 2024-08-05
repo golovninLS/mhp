@@ -5,10 +5,12 @@ REQUIRE Employee;
 NAMESPACE MasterData;
 
 background = ABSTRACT CASE COLOR (Employee);
+comment 'Comment' = DATA STRING (Employee);
 
 FORM employeesCustom 'Employees'
     OBJECTS e = Employee BACKGROUND background(e)
-    PROPERTIES(e) READONLY  name, login, namePosition, nameLegalEntity
+    PROPERTIES(e) READONLY  firstName, lastName, name, login, namePosition, nameLegalEntity
+    PROPERTIES (e) comment
     PROPERTIES(e) NEWSESSION NEW, EDIT, DELETE
 
     LIST Employee OBJECT e
