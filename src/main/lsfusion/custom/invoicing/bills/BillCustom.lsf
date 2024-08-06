@@ -126,3 +126,29 @@ DESIGN bill {
         MOVE PROPERTY(note(b)) AFTER header { alignment = STRETCH; }
     }
 }
+
+uniqueNumbers 'Контроль уникальности номера фактуры в рамках организации' = DATA BOOLEAN ();
+
+EXTEND FORM options
+    PROPERTIES() uniqueNumbers
+;
+
+DESIGN options {
+    commons {
+        MOVE PROPERTY(uniqueNumbers());
+    }
+}
+
+CONSTRAINT (SETCHANGED(number(Bill b)) OR SETCHANGED(vendor(b))) AND uniqueNumbers() AND (GROUP SUM 1 IF number(b) == number(Bill bb) AND vendor(b) == vendor(bb) AND NOT b == bb)
+    MESSAGE 'Совпадение номера фактур в рамках одной организации';
+
+EXTEND FORM bills
+    PROPERTIES(b) READONLYIF isReadonly() date AFTER number(b), 'Pay before' = dueDate AFTER namePaymentTerms(b)
+
+    PROPERTIES GRID openFile1(b) DISABLEIF NOT file1(b), openFile2(b) DISABLEIF NOT file2(b), openFile3(b) DISABLEIF NOT file3(b)
+;
+
+DESIGN bills {
+    PROPERTY (dateTime(b)) {hide = TRUE;};
+    PROPERTY (dueDateTime(b)) {hide = TRUE;};
+}
