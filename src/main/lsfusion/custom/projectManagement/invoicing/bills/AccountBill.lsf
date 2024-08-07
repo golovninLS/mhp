@@ -12,7 +12,7 @@ EXTEND CLASS Project : AccountObject;
 name(Project p) += ProjectManagement.name(p);
 type(Project p) += 'Project';
 
-CLASS ExtraAccountObject  'Extra account object' : AccountObject;
+CLASS ExtraAccountObject 'Extra account object' : AccountObject;
 name 'Name' = DATA STRING (ExtraAccountObject);
 name(ExtraAccountObject o) += name(o);
 type(ExtraAccountObject o) += 'Extra account object';
@@ -20,7 +20,7 @@ type(ExtraAccountObject o) += 'Extra account object';
 EXTEND FORM Invoicing.options
     OBJECTS ao = ExtraAccountObject
     PROPERTIES (ao) name, type
-    PROPERTIES (ao) NEW, DELETE 
+    PROPERTIES (ao) NEW, DELETE
 ;
 DESIGN Invoicing.options{
     tabbedPane{
@@ -34,7 +34,7 @@ DESIGN Invoicing.options{
 FORM accountObjects 'Account objects'
     OBJECTS o = AccountObject
     PROPERTIES(o) READONLY name ORDER, type
-    
+
     LIST AccountObject OBJECT o
 ;
 
@@ -88,5 +88,29 @@ DESIGN project{
     }
 }
 
+in (Bill b, BillProject bp) = GROUP SUM 1 IF bill(bp) = b AND accountObject(bp) IS Project MATERIALIZED;
 
+nameProjectConcat '{Projects}' (Bill b) = GROUP CONCAT nameProject(BillProject bp) IF in(b, bp), ', ' ORDER bp;
 
+EXTEND FORM bills
+    PROPERTIES (b) nameProjectConcat FIRST;
+;
+
+DESIGN bills {
+    PROPERTY (nameProject(b)) {hide = TRUE; };
+}
+
+deleteBill '{Delete}' (BillProject bp) {
+    ASK 'Вы действительно хотите удалить фактуру?' DO {
+        IF countBillProject(bill(bp)) > 1 THEN {
+            DELETE BillProject b WHERE b = bp;
+        } ELSE {
+            DELETE Bill b WHERE b IS Bill AND bill(bp) = b;
+            DELETE BillProject b WHERE b = bp;
+        }
+    } ELSE MESSAGE 'Удаление отменено';
+}
+
+EXTEND FORM project
+    PROPERTIES (bp) deleteBill TOOLBAR DRAW bp
+;

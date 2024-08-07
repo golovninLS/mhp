@@ -132,3 +132,5 @@ NAVIGATOR {
         NEW projects;
     }
 }
+
+uniqueProject = GROUP AGGR Project p BY name(p), number(p); 
