@@ -127,8 +127,7 @@ backgroundHoursTimesheet 'Hours' (DATE d, Employee e, Project p)=
 
 hours 'Hours' (DATE d) = GROUP SUM hours(TimeEntry t) IF date(t) = d;
 
-timeEntryTypeVacation (TimeEntryHours th) = GROUP MAX TimeEntryType tt IF name(tt) = 'Выходной' AND type(th) = tt;
-timesheetHours = GROUP MAX TimeEntryHours th IF vacation(th) = TRUE;
+timesheetHours = GROUP MAX TimeEntryHours th IF vacation(th);
 
 startVacation 'Начать отпуск' (Employee ep, Project p, INTERVAL[DATE] dates, DATE d) {
     NEWSESSION {
@@ -138,16 +137,16 @@ startVacation 'Начать отпуск' (Employee ep, Project p, INTERVAL[DATE
 
         IF d > from(dates) THEN {
             FOR iterate(DATE dd, from(dates), subtract(d, 1)) DO {
-                DELETE TimeEntry te WHERE date(te) = dd AND project(te) = p AND employee(te) = ep AND type(te) = timeEntryTypeVacation(timesheetHours());
+                DELETE TimeEntry te WHERE date(te) = dd AND project(te) = p AND employee(te) = ep AND type(te) = type(timesheetHours());
             }
         }
 
         FOR iterate(DATE dd, fromDate(), to(dates)) DO {
             endDate() <- to(dates);
-            IF NOT [GROUP SUM 1 BY project(TimeEntry te), type(te), employee(te), date(te), hours(te), timeEntryHours(te)](p, timeEntryTypeVacation(timesheetHours()), ep, dd, hours(timesheetHours()), timesheetHours()) = 1 THEN {
+            IF NOT [GROUP SUM 1 BY project(TimeEntry te), type(te), employee(te), date(te), hours(te), timeEntryHours(te)](p, type(timesheetHours()), ep, dd, hours(timesheetHours()), timesheetHours()) = 1 THEN {
                 NEW t = TimeEntry {
                     project(t) <- p;
-                    type(t) <- timeEntryTypeVacation(timesheetHours());
+                    type(t) <- type(timesheetHours());
                     employee(t) <- ep;
                     date(t) <- dd;
                     hours(t) <- hours(timesheetHours());
@@ -155,7 +154,6 @@ startVacation 'Начать отпуск' (Employee ep, Project p, INTERVAL[DATE
                 }
             }
         }
-
         APPLY;
     }
 }
@@ -169,7 +167,7 @@ endVaction 'Закончить отпуск' (Employee ep, Project p, INTERVAL[D
         } ELSE fromDate() <- from(dates);
 
         FOR iterate(DATE dd, fromDate(), to(dates)) DO {
-            DELETE TimeEntry te WHERE date(te) = dd AND project(te) = p AND employee(te) = ep AND type(te) = timeEntryTypeVacation(timesheetHours());
+            DELETE TimeEntry te WHERE date(te) = dd AND project(te) = p AND employee(te) = ep AND type(te) = type(timesheetHours());
         }
         APPLY;
     }
@@ -177,7 +175,7 @@ endVaction 'Закончить отпуск' (Employee ep, Project p, INTERVAL[D
 
 delete 'Delete' (Employee ep, Project p, DATE d) {
     NEWSESSION {
-        DELETE TimeEntry te WHERE date(te) = d AND project(te) = p AND employee(te) = ep AND type(te) = timeEntryTypeVacation(timesheetHours());
+        DELETE TimeEntry te WHERE date(te) = d AND project(te) = p AND employee(te) = ep AND type(te) = type(timesheetHours());
         APPLY;
     }
 }
