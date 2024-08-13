@@ -57,3 +57,11 @@ DESIGN timeEntry {
         MOVE PROPERTY(nameTimeEntryHours(t));
     }
 }
+
+vacation 'Отпуск' = DATA BOOLEAN (TimeEntryHours);
+
+uniqueOption = GROUP AGGR TimeEntryHours h BY vacation(h);
+
+EXTEND FORM timeEntryType
+    PROPERTIES vacation(h)
+;
