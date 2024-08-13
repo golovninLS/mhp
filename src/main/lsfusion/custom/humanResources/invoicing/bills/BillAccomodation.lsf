@@ -14,25 +14,25 @@ period 'Period' = DATA INTERVAL[DATE] (Bill);
 in = DATA BOOLEAN (Bill, Accomodation);
 accomodations 'Accomodations' (Bill b) = GROUP CONCAT name(Accomodation a) IF in (b, a), ',' ORDER a CHARWIDTH 40;
 
-amountAccomodation 'Total' (Bill b) = GROUP SUM amount(Accomodation a, DATE d) IF iterate(d, from(period(b)), to(period(b))) AND in(b, a);   
+amountAccomodation 'Total' (Bill b) = GROUP SUM amount(Accomodation a, DATE d) IF iterate(d, from(period(b)), to(period(b))) AND in(b, a);
 
 EXTEND FORM bill
     PROPERTIES(b) period, accomodations
-    
-    PROPERTIES(b) amountAccomodation, adua = untaxedAmount
-    
+
+    PROPERTIES(b) amountAccomodation
+
     OBJECTS da = (d = DATE, a = Accomodation)
     PROPERTIES READONLY BACKGROUND rgbColor(a) 'Date' = VALUE(d), name(a), countEmployees(a, d), amount(a, d)
     FILTERS iterate(d, from(period(b)), to(period(b))),
-            in(b, a),
-            countEmployees(a, d)
+        in(b, a),
+        countEmployees(a, d)
 
     OBJECTS o = Order
     PROPERTIES(o) READONLY BACKGROUND rgbColorAccomodation(o)
-                startDate, endDate, nameEmployee, nameAccomodation
+    startDate, endDate, nameEmployee, nameAccomodation
     FILTERS NOT startDate(o) > to(period(b)),
-            NOT endDate(o) < from(period(b)),
-            in(b, accomodation(o))
+        NOT endDate(o) < from(period(b)),
+        in(b, accomodation(o))
 ;
 
 DESIGN bill {
@@ -40,24 +40,24 @@ DESIGN bill {
         NEW accommodation {
             showIf = accomodation(type(b));
             caption = 'Accomodation order';
+            horizontal = TRUE;
             NEW accomodationHeader {
-                horizontal = TRUE;
+                horizontal = FALSE;
                 alignment = STRETCH;
-                MOVE PROPERTY(period(b));
-                MOVE PROPERTY(accomodations(b));
-            }
-            NEW accomodationSum {
-                horizontal = TRUE;
-                MOVE PROPERTY(amountAccomodation(b));
-                MOVE PROPERTY(adua);
+                MOVE PROPERTY (period(b));
+                MOVE PROPERTY (accomodations(b)) { width = 200; };
+                NEW totals {
+                    horizontal = FALSE;
+                    caption = 'Total';
+                    MOVE PROPERTY (amountAccomodation(b)) {caption = 'Total brutto'; };
+                }
             }
             NEW accomodationDetails {
                 fill = 1;
                 horizontal = TRUE;
-                MOVE BOX(da);
-                MOVE BOX(o);
+                MOVE BOX (da);
+                MOVE BOX (o);
             }
         }
     }
 }
-
