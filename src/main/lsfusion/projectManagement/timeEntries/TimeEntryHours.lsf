@@ -58,9 +58,9 @@ DESIGN timeEntry {
     }
 }
 
-vacation 'Отпуск' = DATA BOOLEAN (TimeEntryHours);
+vacation 'Vacation' = DATA BOOLEAN (TimeEntryHours);
 
-uniqueOption = GROUP AGGR TimeEntryHours h BY vacation(h);
+uniqueVacation = GROUP AGGR TimeEntryHours h BY vacation(h);
 
 EXTEND FORM timeEntryType
     PROPERTIES vacation(h)
