@@ -55,9 +55,6 @@ DESIGN bill{
     PROPERTY (nameProject(bp)) {hide = TRUE; }
 }
 
-onStarted()+{
-    FOR Project pr = project(BillProject p) AND NOT accountObject(p) DO accountObject(p) <- pr;
-}
 
 newBill 'Add' (Project p){
     NEW b = Bill{

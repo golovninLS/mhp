@@ -20,8 +20,12 @@ longitude 'Longitude' (Project a) = longitude(city(a));
 
 inner 'Внутренний' = DATA BOOLEAN (Project);
 
-CONSTRAINT (SETCHANGED(date(TimeEntry te)) OR SETCHANGED(project(te)) OR SETCHANGED(hours(te)) OR SETCHANGED(employee(te)) OR SETCHANGED(type(te)) OR SETCHANGED(description(te)) OR DROPPED(te IS TimeEntry)) AND 
-    managerTimesheetCloseDate(project(te)) AND (NOT managerTimesheetCloseDate(project(te)) < date(te) OR NOT managerTimesheetCloseDate(project(te)) < PREV(date(te)))
+//CONSTRAINT (SETCHANGED(date(TimeEntry te)) OR SETCHANGED(project(te)) OR SETCHANGED(hours(te)) OR SETCHANGED(employee(te)) OR SETCHANGED(type(te)) OR SETCHANGED(description(te)) OR DROPPED(te IS TimeEntry)) AND 
+//    managerTimesheetCloseDate(project(te)) AND (NOT managerTimesheetCloseDate(project(te)) < date(te) OR NOT managerTimesheetCloseDate(project(te)) < PREV(date(te)))
+//    MESSAGE 'Нельзя изменять отметку времени в табеле на дату меньшую даты закрытия табеля(менеджер) проекта';
+
+CONSTRAINT (SETCHANGED(date(TimeEntry te)) OR SETCHANGED(project(te)) OR SETCHANGED(hours(te)) OR SETCHANGED(employee(te)) OR SETCHANGED(type(te)) OR SETCHANGED(description(te)) OR DROPPED(te IS TimeEntry)) AND
+    managerTimesheetCloseDate(project(te)) AND (managerTimesheetCloseDate(project(te)) > date(te) OR managerTimesheetCloseDate(project(te)) > PREV(date(te)))
     MESSAGE 'Нельзя изменять отметку времени в табеле на дату меньшую даты закрытия табеля(менеджер) проекта';
 
 CONSTRAINT DROPPED(TimeEntry te IS TimeEntry) AND

@@ -126,6 +126,9 @@ backgroundHoursTimesheet 'Hours' (DATE d, Employee e, Project p)=
             RGB(255, 224, 224) IF extractDOWNumber(d) = 0 OR extractDOWNumber(d) = 6;
 
 hours 'Hours' (DATE d) = GROUP SUM hours(TimeEntry t) IF date(t) = d;
+timeEntry 'Time Entry' (Employee e, Project p, INTERVAL[DATE] int) =
+    GROUP SUM 1 IF hours(TimeEntry t) AND employee(t) = e AND project(t) = p AND date(t) >= from(int) AND date(t) <= to(int)
+;
 
 timesheetHours = GROUP MAX TimeEntryHours th IF vacation(th);
 
@@ -198,7 +201,7 @@ EXTEND FORM timesheetSupervisor
     } ON CONTEXTMENU copyHours(d, p) ON CONTEXTMENU clearHours(d, p) ON CONTEXTMENU startVacation(ep, p, dates, d) ON CONTEXTMENU endVaction(ep, p, dates, d)
     ON CONTEXTMENU delete(ep, p, d)
     FOOTER (IF timesheetProject() THEN hoursTimesheet(d, timesheetProject()) ELSE hoursTimesheet(d))
-    FILTERS assigned(p, ep, dates) OR hours(ep, p, dates) OR (NOT countAssignments(p) AND NOT countAssignments(currentUser()))
+    FILTERS assigned(p, ep, dates) OR timeEntry(ep, p, dates) OR (NOT countAssignments(p) AND NOT countAssignments(currentUser()))
     FILTERS p == timesheetProject() OR NOT timesheetProject()
 
     FILTERGROUP onlyFilledTimeEntry
@@ -213,7 +216,7 @@ DESIGN timesheetSupervisor {
                 MOVE BOX(pe) {
                     caption = '';
                     PROPERTY(descriptionTimesheet(d, ep, p)) {
-                        charWidth = 4;
+                        charWidth = 3;
                     }
                 }
             }
