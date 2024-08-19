@@ -12,6 +12,7 @@ TABLE payslipCategory (PayslipCategory);
 name '{master.data.name}' = DATA ISTRING[100] (PayslipCategory) CHARWIDTH 15;
 deduction 'Deduction' = DATA BOOLEAN (PayslipCategory);
 skip 'Skip' = DATA BOOLEAN (PayslipCategory);
+hide 'Hide' = DATA BOOLEAN (PayslipCategory);
 skipLedger 'Skip ledger' = DATA BOOLEAN (PayslipCategory);
 index '{Index}' = DATA INTEGER (PayslipCategory);
 
@@ -20,14 +21,14 @@ readonly (PayslipCategory p) = p IS PayslipCategory AND NOT editable(p);
 
 FORM payslipCategory 'Payslip category'
     OBJECTS c = PayslipCategory PANEL
-    PROPERTIES(c) name, deduction, skip, editable, index, skipLedger
+    PROPERTIES(c) name, deduction, skip, editable, index, skipLedger, hide
     
     EDIT PayslipCategory OBJECT c
 ;
 
 FORM categories 'Payslip categories'
     OBJECTS c = PayslipCategory
-    PROPERTIES(c) READONLY name, deduction, skip, skipLedger
+    PROPERTIES(c) READONLY name, deduction, skip, skipLedger, hide
 
     LIST PayslipCategory OBJECT c
 ;

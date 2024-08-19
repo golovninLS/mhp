@@ -111,26 +111,106 @@ trunc = FORMULA INTEGER 'trunc($1)';
 stringHours(NUMERIC[8,2] hours) = CONCAT '', IF hours - trunc(hours) < 0.001 THEN trunc(hours) ELSE hours, '';
 
 descriptionTimesheet 'Hours' (DATE d, Employee e, Project p) =
-    GROUP CONCAT 
-        (CONCAT '',
-            stringHours(hours(TimeEntry t)) IF NOT showName(type(t)),
-            (stringHours(hours(t)) + '(' + nameTimeEntryHours(t) + ')') IF showName(type(t)) AND hours(t) >= 0.001,
-            nameTimeEntryHours(t) IF showName(type(t)) AND hours(t) < 0.001)
+    GROUP CONCAT
+    (CONCAT '',
+        stringHours(hours(TimeEntry t)) IF NOT showName(type(t)),
+        (stringHours(hours(t)) + '(' + nameTimeEntryHours(t) + ')') IF showName(type(t)) AND hours(t) >= 0.001,
+        nameTimeEntryHours(t) IF showName(type(t)) AND hours(t) < 0.001)
         IF date(t) = d AND employee(t) = e AND project(t) = p, '+' ORDER t;
 
 backgroundHoursTimesheet 'Hours' (DATE d, Employee e, Project p)=
-    IF countTimeEntryType(d, e, p) > 1 THEN RGB(255,192,0) ELSE
+    IF countTimeEntryType(d, e, p) > 1 THEN RGB(255, 192, 0) ELSE
         OVERRIDE
             IF timesheetProject() THEN rgbColorHoursTimeEntry(timeEntry(d, e, p))
             ELSE rgbColorHoursTimeEntry(timeEntry(d, e, p)),
-            RGB(255,224,224) IF extractDOWNumber(d) = 0 OR extractDOWNumber(d) = 6;
+            RGB(255, 224, 224) IF extractDOWNumber(d) = 0 OR extractDOWNumber(d) = 6;
 
 hours 'Hours' (DATE d) = GROUP SUM hours(TimeEntry t) IF date(t) = d;
+timeEntry 'Time Entry' (Employee e, Project p, INTERVAL[DATE] int) =
+    GROUP SUM 1 IF hours(TimeEntry t) AND employee(t) = e AND project(t) = p AND date(t) >= from(int) AND date(t) <= to(int)
+;
+
+timesheetHours = GROUP MAX TimeEntryHours th IF vacation(th);
+
+vacation (DATE dd, Project p, Employee ep) = GROUP MAX TimeEntry te IF date(te) = dd AND project(te) = p AND employee(te) = ep AND type(te) = type(timesheetHours());
+lastVacation (Project p, Employee ep) = GROUP LAST TimeEntry te ORDER date(te) WHERE project(te) = p AND employee(te) = ep AND type(te) = type(timesheetHours());
+
+newVacation (DATE dd, Project p, Employee ep) {
+    IF NOT (vacation(dd, p, ep)) THEN
+        NEW t = TimeEntry {
+            project(t) <- p;
+            type(t) <- type(timesheetHours());
+            employee(t) <- ep;
+            date(t) <- dd;
+            hours(t) <- hours(timesheetHours());
+            timeEntryHours(t) <- timesheetHours();
+        }
+}
+
+startVacation 'Start vacation' (Employee ep, Project p, INTERVAL[DATE] dates, DATE d) {
+    NEWSESSION {
+        IF vacation(d, p, ep) THEN {
+            FOR iterate(DATE dd, from(dates), subtract(d, 1)) DO {
+                DELETE TimeEntry te WHERE date(te) = dd AND project(te) = p AND employee(te) = ep AND type(te) = type(timesheetHours());
+            }
+        } ELSE {
+            IF (vacation(subtract(d, 1), p, ep)) THEN {
+                FOR iterate(DATE dd, d, to(dates)) DO {
+                    IF vacation(dd, p, ep) THEN BREAK;
+                    newVacation(dd, p, ep);
+                }
+            } ELSE {
+                IF (vacation(subtract(d, -1), p, ep)) THEN {
+                    newVacation(d, p, ep);
+                } ELSE {
+                    FOR iterate(DATE dd, d, to(dates)) DO {
+                        IF vacation(dd, p, ep) THEN BREAK;
+                        newVacation(dd, p, ep);
+                    }
+                }
+            }
+        }
+        APPLY;
+    }
+}
+
+iterateDown(DATE dt, DATE from, DATE to) = RECURSION dt==from AND from IS DATE AND to IS DATE STEP dt==sum($dt, -1) AND dt>=to CYCLES IMPOSSIBLE;
+
+endVaction 'End vacation' (Employee ep, Project p, INTERVAL[DATE] dates, DATE d) {
+    NEWSESSION {
+        IF vacation(d, p, ep) THEN {
+            FOR iterate(DATE dd, subtract(d, -1), to(dates)) DO {
+                DELETE TimeEntry te WHERE date(te) = dd AND project(te) = p AND employee(te) = ep AND type(te) = type(timesheetHours());
+            }
+        } ELSE {
+            IF lastVacation(p, ep) THEN {
+                IF (d > date(lastVacation(p, ep))) THEN {
+                    FOR iterate(DATE dd, subtract(date(lastVacation(p, ep)), -1), d) DO {
+                        newVacation(dd, p, ep);
+                    }
+                } ELSE {
+                    FOR iterateDown(DATE dd, d, from(dates)) DO {
+                        IF vacation(dd, p, ep) THEN BREAK;
+                        newVacation(dd, p, ep);
+                    }
+                }
+            }
+        }
+        APPLY;
+    }
+}
+
+delete 'Delete' (Employee ep, Project p, DATE d) {
+    NEWSESSION {
+        DELETE TimeEntry te WHERE date(te) = d AND project(te) = p AND employee(te) = ep AND type(te) = type(timesheetHours());
+        APPLY;
+    }
+}
 
 EXTEND FORM timesheetSupervisor
     OBJECTS pe = (p = Project, ep = Employee)
     PROPERTIES READONLY name 'Project' = name(p)
-    PROPERTIES(ep) READONLY ON CONTEXTMENU clearTimeEntry(p, ep, dates)  firstName, lastName, namePosition, rolesTimesheet
+    PROPERTIES(ep) READONLY ON CONTEXTMENU clearTimeEntry(p, ep, dates) firstName, lastName, namePosition, rolesTimesheet
     PROPERTIES descriptionTimesheet(d, ep, p) WAIT COLUMNS (d) HEADER extractDay(d) BACKGROUND backgroundHoursTimesheet(d, ep, p)
     ON CHANGE {
         FOR TimeEntryType et = timesheetTimeEntryType() AND (p OR NOT project(timeEntry(d, ep, timesheetTimeEntryType()))) DO {
@@ -142,23 +222,25 @@ EXTEND FORM timesheetSupervisor
                 changeSaveTimesheetHours(d, ep, p, et, hours(timesheetTimeEntryHours()), timesheetTimeEntryHours(), autoSaveTimesheetHours());
         } ELSE
         SHOW timesheetSupervisorDateEmployee OBJECTS i = interval(d, d), e = ep FLOAT;
-    } ON CONTEXTMENU copyHours(d, p) ON CONTEXTMENU clearHours(d, p) FOOTER (IF timesheetProject() THEN hoursTimesheet(d, timesheetProject()) ELSE hoursTimesheet(d))
-    FILTERS assigned(p, ep, dates) OR hours(ep, p, dates) OR (NOT countAssignments(p) AND NOT countAssignments(currentUser()))
+    } ON CONTEXTMENU copyHours(d, p) ON CONTEXTMENU clearHours(d, p) ON CONTEXTMENU startVacation(ep, p, dates, d) ON CONTEXTMENU endVaction(ep, p, dates, d)
+    ON CONTEXTMENU delete(ep, p, d)
+    FOOTER (IF timesheetProject() THEN hoursTimesheet(d, timesheetProject()) ELSE hoursTimesheet(d))
+    FILTERS assigned(p, ep, dates) OR timeEntry(ep, p, dates) OR (NOT countAssignments(p) AND NOT countAssignments(currentUser()))
     FILTERS p == timesheetProject() OR NOT timesheetProject()
-    
+
     FILTERGROUP onlyFilledTimeEntry
         FILTER 'Только заполненные' countTimeEntryType(p, ep, dates)
 ;
 
 DESIGN timesheetSupervisor {
-    OBJECTS {        
+    OBJECTS {
         tabbedPane {
             timesheet {
                 REMOVE BOX(e);
                 MOVE BOX(pe) {
                     caption = '';
                     PROPERTY(descriptionTimesheet(d, ep, p)) {
-                        charWidth = 4;
+                        charWidth = 3;
                     }
                 }
             }

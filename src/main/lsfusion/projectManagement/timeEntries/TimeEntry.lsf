@@ -34,7 +34,7 @@ hours 'Hours' (DATE d, Employee e, TimeEntryType et) =
 countTimeEntry (DATE d, Employee e, TimeEntryType et) = GROUP SUM 1 IF date(TimeEntry t) = d AND employee(t) = e AND type(t) = et;
 countTimeEntryType (DATE d, Employee e) = GROUP SUM 1 IF countTimeEntry(d, e, TimeEntryType et); 
 
-timeEntry (DATE d, Employee e) = GROUP MIN TimeEntry t IF date(t) = d AND employee(t) = e;
+timeEntry (DATE d, Employee e) = GROUP MIN TimeEntry t IF date(t) = d AND employee(t) = e AND hours(t) > 0; 
 hours 'Hours' (DATE d, Employee e) =
     GROUP SUM hours(TimeEntry t) IF date(t) = d AND employee(t) = e;
 hours 'Hours' (Employee e, DATE from, DATE to) =

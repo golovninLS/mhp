@@ -1,0 +1,83 @@
+MODULE BillLunch;
+
+REQUIRE Bill, BillType, Product, Project, LunchProjectPayslip;
+
+PRIORITY Lunch;
+
+NAMESPACE Invoicing;
+
+lunch 'Обед' = DATA BOOLEAN (BillType);
+
+product = DATA LOCAL NESTED Product ();
+nameLunchType 'Тип обеда' = name(product());
+
+nameVendorProduct 'Контрагент' = name(vendor(product()));
+
+project = DATA LOCAL NESTED Project ();
+nameProjectProduct 'Project' = name(project());
+
+EXTEND FORM billType
+    PROPERTIES(o) lunch
+;
+
+EXTEND FORM bill
+    OBJECTS dates = INTERVAL[DATE] PANEL NULL
+    PROPERTIES dates 'Период' = VALUE (dates)
+
+    OBJECTS bt = BillType
+
+    OBJECTS o1 = Order
+    PROPERTIES (o1) READONLY date, nameEmployee, nameProduct, price, nameVendor, nameProject
+    PROPERTIES () nameProjectProduct PANEL, nameVendorProduct PANEL, nameLunchType PANEL
+    FILTERS nameProject(o1) = nameProjectProduct() OR NOT nameProjectProduct()
+    FILTERS nameVendor(o1) = nameVendorProduct() OR NOT nameVendorProduct()
+    FILTERS nameProduct(o1) = nameLunchType() OR NOT nameLunchType()
+
+    FILTERS NOT date(o1) < from(dates), NOT date(o1) > to(dates)
+;
+
+DESIGN bill {
+    details {
+        NEW lunches {
+            showIf = lunch(type(b));
+            caption = 'Lunches';
+            horizontal = TRUE;
+            align = STRETCH;
+            NEW filterBox {
+                horizontal = FALSE;
+                MOVE BOX (dates) {caption = ''; };
+                MOVE PROPERTY (nameProjectProduct());
+                MOVE PROPERTY (nameVendorProduct());
+                MOVE PROPERTY (nameLunchType());
+            }
+            NEW data {
+                align = STRETCH;
+                fill = 1;
+                MOVE BOX (o1) {caption = ''; }
+            }
+        }
+    }
+}
+
+filteredLunches (Order o1) = FILTER bill.o1;
+
+amountLunches 'Кол-во обедов' = GROUP SUM 1 IF filteredLunches(Order o);
+sumLunches 'Сумма обедов' = GROUP SUM price(product(Order o), date(o)) IF filteredLunches(o);
+
+EXTEND FORM bill
+    PROPERTIES () sumLunches PANEL, amountLunches PANEL;
+;
+
+DESIGN bill {
+    details {
+        lunches {
+            filterBox {
+                NEW filtered {
+                    caption = 'Итоги';
+                    MOVE PROPERTY (amountLunches());
+                    MOVE PROPERTY (sumLunches());
+                }
+            }
+        }
+    }
+}

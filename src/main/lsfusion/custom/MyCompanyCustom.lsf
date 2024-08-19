@@ -90,4 +90,7 @@ REQUIRE Eval, ProcessMonitor, Backup,
 
         TimeEntryTypeCustom,
 
-        AccountDistribution, AccountDistributionLineLedger, AccountDistributionCanceled;
+        AccountDistribution, AccountDistributionLineLedger, AccountDistributionCanceled,
+
+        BillLunch
+;
