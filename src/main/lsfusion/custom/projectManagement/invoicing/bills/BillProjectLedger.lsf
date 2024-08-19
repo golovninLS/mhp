@@ -7,7 +7,7 @@ NAMESPACE ProjectManagement;
 EXTEND CLASS BillProject : ProjectLedger;
 
 inactive = ABSTRACT BOOLEAN (BillProject);
-active (BillProject l) += active(bill(l)) AND accountObject(l) IS Project AND inactive(l);
+active (BillProject l) += active(bill(l)) AND accountObject(l) IS Project AND NOT inactive(l);
 
 project (BillProject l) += project(l);
 
