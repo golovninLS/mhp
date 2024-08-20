@@ -200,7 +200,7 @@ META docTypeSimplePropertyAdd(prop, caption, type)
     }
 
     EXTEND FORM employeesCustom
-        PROPERTIES prop(t, e) COLUMNS (t) HEADER (name(t) + ' (' + caption + ')') SHOWIF (prop##Docs(t) AND use###prop(t))
+        PROPERTIES prop(t, e) COLUMNS (t) HEADER (name(t)) SHOWIF (prop##Docs(t) AND use###prop(t))
     ;
 
     DESIGN employeesCustom {
