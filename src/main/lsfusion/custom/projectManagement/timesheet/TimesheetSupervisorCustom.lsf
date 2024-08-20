@@ -258,3 +258,6 @@ DESIGN employee{
     }
 }
 skipCheckAssigned(CustomUser c) += WHEN showAllProjects(c) THEN TRUE;
+
+CONSTRAINT SETCHANGED(TimeEntry t IS TimeEntry) AND NOT hours(t) MESSAGE 'В отметке времени обязательно указание часов';
+CONSTRAINT DROPPED(hours(TimeEntry t)) AND employee(t) MESSAGE 'В отметке времени обязательно указание часов';

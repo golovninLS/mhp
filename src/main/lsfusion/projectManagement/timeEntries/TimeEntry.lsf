@@ -9,13 +9,13 @@ NAMESPACE ProjectManagement;
 CLASS TimeEntry 'Time entry';
 TABLE timeEntry (TimeEntry);
 
-date 'Date' = DATA DATE (TimeEntry);
+date 'Date' = DATA DATE (TimeEntry) IN id;
 date(TimeEntry e) <- currentDate() WHEN SET(e IS TimeEntry);
 
 hours 'Hours' = DATA NUMERIC[8,2] (TimeEntry);
 
 employee 'Employee' = DATA Employee (TimeEntry) NONULL;
-nameEmployee 'Employee' (TimeEntry t) = name(employee(t));
+nameEmployee 'Employee' (TimeEntry t) = name(employee(t)) IN id;
 WHEN SET(TimeEntry t IS TimeEntry) AND NOT employee(t) AND currentUser() IS Employee DO employee(t) <- currentUser();
 
 type 'Type' = DATA TimeEntryType (TimeEntry);

@@ -85,9 +85,9 @@ DESIGN project{
     }
 }
 
-in (Bill b, BillProject bp) = GROUP SUM 1 IF bill(bp) = b AND accountObject(bp) IS Project MATERIALIZED;
+in (Bill b, BillProject bp) = GROUP SUM 1 IF bill(bp) = b AND accountObject(bp)  MATERIALIZED;
 
-nameProjectConcat '{Projects}' (Bill b) = GROUP CONCAT nameProject(BillProject bp) IF in(b, bp), ', ' ORDER bp;
+nameProjectConcat '{Projects}' (Bill b) = GROUP CONCAT nameAccountObject(BillProject bp) IF in(b, bp), ', ' ORDER bp;
 
 EXTEND FORM bills
     PROPERTIES (b) nameProjectConcat FIRST;

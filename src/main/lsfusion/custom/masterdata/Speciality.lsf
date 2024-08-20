@@ -61,5 +61,5 @@ NAVIGATOR {
 }
 
 EXTEND FORM employeesCustom
-    PROPERTIES (e) nameAddSpecialties AFTER namePosition(e), nameMainSpeciality AFTER namePosition(e) 
+    PROPERTIES (e) READONLY nameAddSpecialties AFTER namePosition(e), nameMainSpeciality AFTER namePosition(e) 
 ;

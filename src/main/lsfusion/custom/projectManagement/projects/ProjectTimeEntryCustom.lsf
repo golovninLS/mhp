@@ -8,7 +8,7 @@ countTimeEntryCustom 'Time entries' (Project p) = GROUP SUM 1 IF project(TimeEnt
 hoursTimeEntryCustom 'Hours' (Project p) = GROUP SUM hours(TimeEntry t) IF project(t) = p AND hours(t) > 0;
 
 countTimeEntryCustom 'Time entries' (Project p, INTERVAL[DATE] i) = GROUP SUM 1 IF project(TimeEntry t) = p
-    AND date(t) >= from(i) AND date(t) <= to(i);
+    AND date(t) >= from(i) AND date(t) <= to(i) AND hours(t) > 0;
 hoursTimeEntryCustom 'Hours' (Project p, INTERVAL[DATE] i) = GROUP SUM hours(TimeEntry t) IF project(t) = p
     AND date(t) >= from(i) AND date(t) <= to(i);
 
