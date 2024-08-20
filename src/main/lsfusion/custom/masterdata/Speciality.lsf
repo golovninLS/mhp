@@ -59,3 +59,7 @@ NAVIGATOR {
         NEW specialities;
     }
 }
+
+EXTEND FORM employeesCustom
+    PROPERTIES (e) nameAddSpecialties AFTER namePosition(e), nameMainSpeciality AFTER namePosition(e) 
+;

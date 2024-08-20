@@ -13,10 +13,28 @@ index (DocType t) = PARTITION SUM 1 IF t IS DocType AND active(t) ORDER t;
 FORM docTypes 'Типы документов'
     OBJECTS t = DocType
     PROPERTIES (t) index, name, inactive
-    PROPERTIES (t) NEW, DELETE 
-    
+    PROPERTIES (t) NEW, DELETE
+
     LIST DocType OBJECT t
 ;
+
+DESIGN docTypes {
+    OBJECTS {
+        NEW types {
+            horizontal = FALSE;
+            align = STRETCH;
+            NEW docs {
+                align = STRETCH;
+                MOVE BOX(t);
+            }
+            NEW options {
+                caption = 'Отображать на форме отображения сотрудников';
+                align = STRETCH;
+                horizontal = TRUE;
+            }
+        }
+    }
+}
 
 DESIGN employee{
     details{
@@ -30,31 +48,35 @@ DESIGN employee{
     }
 }
 
+EXTEND FORM employeesCustom
+    OBJECTS t = DocType
+;
+
 background = ABSTRACT CASE COLOR (DocType, Employee);
 
 META docType(int)
-EXTEND FORM employee 
-    OBJECTS t##int = DocType PANEL
-    FILTERS index(t##int) = int
-;
+    EXTEND FORM employee
+        OBJECTS t##int = DocType PANEL
+        FILTERS index(t##int) = int
+    ;
 
-DESIGN employee{
-    infoDetails{
-        MOVE BOX (t##int){
-            caption = name(t##int);
-            NEW infoFiles##int {
-                horizontal = TRUE;
+    DESIGN employee{
+        infoDetails{
+            MOVE BOX (t##int){
+                caption = name(t##int);
+                NEW infoFiles##int {
+                    horizontal = TRUE;
+                }
             }
         }
     }
-}
     EXTEND FORM employeesCustom
         OBJECTS t##int = DocType
         FILTERS index(t##int) = int
     ;
 END
 
-META docTypePanel(capt)
+META docTypePanel(caption)
     @docType(1);
     @docType(2);
     @docType(3);
@@ -84,7 +106,7 @@ END
 META docTypePropertyAdd(prop, caption, type)
     use###prop caption = DATA BOOLEAN (DocType);
     prop caption = DATA type (DocType, Employee);
-    
+
     EXTEND FORM docTypes
         PROPERTIES (t) use###prop
     ;
@@ -104,15 +126,37 @@ META docTypePropertyAdd(prop, caption, type)
     @docTypePropertyAddInt(prop, caption, type, 14);
     @docTypePropertyAddInt(prop, caption, type, 15);
     @docTypePropertyAddInt(prop, caption, type, 16);
-END;
 
-META docTypeSimplePropertyAddInt(prop, type, capt, int)
-    EXTEND FORM employee
-        PROPERTIES (t##int, e) prop SHOWIF use###prop(t##int) HEADER name(t##int) FIRST BACKGROUND background(t##int, e)
+    prop##Docs caption = DATA BOOLEAN (DocType);
+
+    EXTEND FORM docTypes
+        PROPERTIES (t) prop##Docs PANEL
     ;
 
-    EXTEND FORM employeesCustom 
-        PROPERTIES prop(t##int, e) SHOWIF use###prop(t##int) COLUMNS (t##int) HEADER name(t##int) 
+    DESIGN docTypes {
+        OBJECTS {
+            types {
+                options {
+                    MOVE PROPERTY (prop##Docs(t));
+                }
+            }
+        }
+    }
+
+    EXTEND FORM employeesCustom
+        PROPERTIES prop(t, e) COLUMNS (t) HEADER (name(t) + ' (' + caption + ')') SHOWIF (prop##Docs(t) AND use###prop(t))
+    ;
+
+    DESIGN employeesCustom {
+        PROPERTY (prop(t, e)) {
+            charWidth = 15;
+        }
+    }
+END;
+
+META docTypeSimplePropertyAddInt(prop, type, caption, int)
+    EXTEND FORM employee
+        PROPERTIES (t##int, e) prop SHOWIF use###prop(t##int) HEADER name(t##int) FIRST BACKGROUND background(t##int, e)
     ;
 END
 
@@ -123,71 +167,122 @@ META docTypeSimplePropertyAdd(prop, caption, type)
     EXTEND FORM docTypes
         PROPERTIES (t) use###prop
     ;
-    @docTypeSimplePropertyAddInt(prop, capt, type, 1);
-    @docTypeSimplePropertyAddInt(prop, capt, type, 2);
-    @docTypeSimplePropertyAddInt(prop, capt, type, 3);
-    @docTypeSimplePropertyAddInt(prop, capt, type, 4);
-    @docTypeSimplePropertyAddInt(prop, capt, type, 5);
-    @docTypeSimplePropertyAddInt(prop, capt, type, 6);
-    @docTypeSimplePropertyAddInt(prop, capt, type, 7);
-    @docTypeSimplePropertyAddInt(prop, capt, type, 8);
-    @docTypeSimplePropertyAddInt(prop, capt, type, 9);
-    @docTypeSimplePropertyAddInt(prop, capt, type, 10);
-    @docTypeSimplePropertyAddInt(prop, capt, type, 11);
-    @docTypeSimplePropertyAddInt(prop, capt, type, 12);
-    @docTypeSimplePropertyAddInt(prop, capt, type, 13);
-    @docTypeSimplePropertyAddInt(prop, capt, type, 14);
-    @docTypeSimplePropertyAddInt(prop, capt, type, 15);
-    @docTypeSimplePropertyAddInt(prop, capt, type, 16);
-END;
+    @docTypeSimplePropertyAddInt(prop, caption, type, 1);
+    @docTypeSimplePropertyAddInt(prop, caption, type, 2);
+    @docTypeSimplePropertyAddInt(prop, caption, type, 3);
+    @docTypeSimplePropertyAddInt(prop, caption, type, 4);
+    @docTypeSimplePropertyAddInt(prop, caption, type, 5);
+    @docTypeSimplePropertyAddInt(prop, caption, type, 6);
+    @docTypeSimplePropertyAddInt(prop, caption, type, 7);
+    @docTypeSimplePropertyAddInt(prop, caption, type, 8);
+    @docTypeSimplePropertyAddInt(prop, caption, type, 9);
+    @docTypeSimplePropertyAddInt(prop, caption, type, 10);
+    @docTypeSimplePropertyAddInt(prop, caption, type, 11);
+    @docTypeSimplePropertyAddInt(prop, caption, type, 12);
+    @docTypeSimplePropertyAddInt(prop, caption, type, 13);
+    @docTypeSimplePropertyAddInt(prop, caption, type, 14);
+    @docTypeSimplePropertyAddInt(prop, caption, type, 15);
+    @docTypeSimplePropertyAddInt(prop, caption, type, 16);
+    prop##Docs caption = DATA BOOLEAN (DocType);
 
-//files
-META docTypeFilePropertyAddInt(prop, capt, type, int)
-EXTEND FORM employee
-    PROPERTIES (t##int, e) upload##prop SHOWIF use###prop(t##int) HEADER ('Upload ' + capt)
-    PROPERTIES (t##int, e) open##prop SHOWIF use###prop(t##int) AND prop(t##int, e) HEADER ('Open ' + capt)
-;
-DESIGN employee{
-    BOX (t##int){
-        infoFiles##int {
-            NEW infoFile##prop##int {
-                MOVE PROPERTY (upload##prop(t##int, e));
-                MOVE PROPERTY (open##prop(t##int, e));
+    EXTEND FORM docTypes
+        PROPERTIES (t) prop##Docs PANEL
+    ;
+
+    DESIGN docTypes {
+        OBJECTS {
+            types {
+                options {
+                    MOVE PROPERTY (prop##Docs(t));
+                }
             }
         }
     }
-}
+
+    EXTEND FORM employeesCustom
+        PROPERTIES prop(t, e) COLUMNS (t) HEADER (name(t) + ' (' + caption + ')') SHOWIF (prop##Docs(t) AND use###prop(t))
+    ;
+
+    DESIGN employeesCustom {
+        PROPERTY (prop(t, e)) {
+            charWidth = 15;
+        }
+    }
+END;
+
+//files
+META docTypeFilePropertyAddInt(prop, caption, type, int)
+    EXTEND FORM employee
+        PROPERTIES (t##int, e) upload##prop SHOWIF use###prop(t##int) HEADER ('Upload ' + caption)
+        PROPERTIES (t##int, e) open##prop SHOWIF use###prop(t##int) AND prop(t##int, e) HEADER ('Open ' + caption)
+    ;
+    DESIGN employee{
+        BOX (t##int){
+            infoFiles##int {
+                NEW infoFile##prop##int {
+                    MOVE PROPERTY (upload##prop(t##int, e));
+                    MOVE PROPERTY (open##prop(t##int, e));
+                }
+            }
+        }
+    }
 END
 
-META docTypeFilePropertyAdd(prop, capt);
-use###prop capt = DATA BOOLEAN (DocType);
-prop capt = DATA FILE (DocType, Employee);
+META docTypeFilePropertyAdd(prop, caption);
+use###prop caption = DATA BOOLEAN (DocType);
+prop caption = DATA FILE (DocType, Employee);
 open##prop (DocType t, Employee e){
     open(prop(t, e), CONCAT '_', name(e), name(t));
 }
 upload##prop (DocType t, Employee e){
-    INPUT = prop(t,e) CHANGE;
+    INPUT = prop(t, e) CHANGE;
 }
 
 EXTEND FORM docTypes
     PROPERTIES (t) use###prop
 ;
-@docTypeFilePropertyAddInt(prop, capt, FILE, 1);
-@docTypeFilePropertyAddInt(prop, capt, FILE, 2);
-@docTypeFilePropertyAddInt(prop, capt, FILE, 3);
-@docTypeFilePropertyAddInt(prop, capt, FILE, 4);
-@docTypeFilePropertyAddInt(prop, capt, FILE, 5);
-@docTypeFilePropertyAddInt(prop, capt, FILE, 6);
-@docTypeFilePropertyAddInt(prop, capt, FILE, 7);
-@docTypeFilePropertyAddInt(prop, capt, FILE, 8);
-@docTypeFilePropertyAddInt(prop, capt, FILE, 9);
-@docTypeFilePropertyAddInt(prop, capt, FILE, 10);
-@docTypeFilePropertyAddInt(prop, capt, FILE, 11);
-@docTypeFilePropertyAddInt(prop, capt, FILE, 12);
-@docTypeFilePropertyAddInt(prop, capt, FILE, 13);
-@docTypeFilePropertyAddInt(prop, capt, FILE, 14);
-@docTypeFilePropertyAddInt(prop, capt, FILE, 15);
-@docTypeFilePropertyAddInt(prop, capt, FILE, 16);
+@docTypeFilePropertyAddInt(prop, caption, FILE, 1);
+@docTypeFilePropertyAddInt(prop, caption, FILE, 2);
+@docTypeFilePropertyAddInt(prop, caption, FILE, 3);
+@docTypeFilePropertyAddInt(prop, caption, FILE, 4);
+@docTypeFilePropertyAddInt(prop, caption, FILE, 5);
+@docTypeFilePropertyAddInt(prop, caption, FILE, 6);
+@docTypeFilePropertyAddInt(prop, caption, FILE, 7);
+@docTypeFilePropertyAddInt(prop, caption, FILE, 8);
+@docTypeFilePropertyAddInt(prop, caption, FILE, 9);
+@docTypeFilePropertyAddInt(prop, caption, FILE, 10);
+@docTypeFilePropertyAddInt(prop, caption, FILE, 11);
+@docTypeFilePropertyAddInt(prop, caption, FILE, 12);
+@docTypeFilePropertyAddInt(prop, caption, FILE, 13);
+@docTypeFilePropertyAddInt(prop, caption, FILE, 14);
+@docTypeFilePropertyAddInt(prop, caption, FILE, 15);
+@docTypeFilePropertyAddInt(prop, caption, FILE, 16);
+
+prop##Docs caption = DATA BOOLEAN (DocType);
+
+EXTEND FORM docTypes
+    PROPERTIES (t) prop##Docs PANEL
+;
+
+DESIGN docTypes {
+    OBJECTS {
+        types {
+            options {
+                MOVE PROPERTY (prop##Docs(t));
+            }
+        }
+    }
+}
+
+EXTEND FORM employeesCustom
+    PROPERTIES prop(t, e) COLUMNS (t) HEADER (name(t) + ' (' + caption + ')') SHOWIF (prop##Docs(t) AND use###prop(t))
+;
+
+DESIGN employeesCustom {
+    PROPERTY (prop(t, e)) {
+        charWidth = 15;
+    }
+}
 END;
 
 @docTypePropertyAdd(dateFrom, 'Дата от', DATE);
@@ -205,11 +300,11 @@ EXTEND FORM docTypes
     PROPERTIES (t) trackDays
 ;
 
-background(DocType dt, Employee e) += WHEN dateTo(dt, e) AND trackDays(dt) AND dateTo(dt, e) < sum(currentDate(), trackDays(dt)) THEN RGB(250,150,157);
-background(Employee e) += WHEN (GROUP MAX TRUE IF dateTo(DocType dt, e) AND trackDays(dt) AND dateTo(dt, e) < sum(currentDate(), trackDays(dt))) THEN RGB(250,150,157);
+background(DocType dt, Employee e) += WHEN dateTo(dt, e) AND trackDays(dt) AND dateTo(dt, e) < sum(currentDate(), trackDays(dt)) THEN RGB(250, 150, 157);
+background(Employee e) += WHEN (GROUP MAX TRUE IF dateTo(DocType dt, e) AND trackDays(dt) AND dateTo(dt, e) < sum(currentDate(), trackDays(dt))) THEN RGB(250, 150, 157);
 
 NAVIGATOR {
-    masterData{
+    masterData {
         NEW docTypes;
     }
 }
