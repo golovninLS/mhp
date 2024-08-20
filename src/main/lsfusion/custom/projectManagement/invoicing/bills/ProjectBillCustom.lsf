@@ -1,0 +1,49 @@
+MODULE ProjectBillCustom;
+
+REQUIRE AccountBillProject, Color;
+
+NAMESPACE ProjectManagement;
+
+fileInvoice (BillProject bp) = GROUP MAX BillFile bf IF bill(bp) = bill(bf);
+
+openFile 'Open' (BillProject bp){
+    IF fileInvoice(bp) THEN open(fileInvoice(bp)); ELSE MESSAGE 'У данной фактуры нет прикреплённых файлов.';
+}
+
+EXTEND FORM project
+    PROPERTIES openFile(bp) GRID CHANGEABLE
+;
+
+draftS = DATA Color ();
+readyS = DATA Color ();
+doneS = DATA Color ();
+canceledS = DATA Color ();
+
+draftColor 'Черновик' = rgb(draftS());
+readyColor 'К оплате' =rgb(readyS());
+doneColor 'Оплачено' = rgb(doneS());
+canceledColor 'Отменен' = rgb(canceledS());
+
+background (Bill b) += WHEN status(b) = BillStatus.draft THEN draftColor();
+background (Bill b) += WHEN status(b) = BillStatus.done THEN doneColor();
+background (Bill b) += WHEN status(b) = BillStatus.canceled THEN canceledColor();
+background (Bill b) += WHEN status(b) = BillStatus.ready THEN readyColor();
+
+EXTEND FORM Invoicing.options
+    OBJECTS bs = BillStatus
+    PROPERTIES () draftColor PANEL, readyColor PANEL, doneColor PANEL, canceledColor PANEL
+
+    LIST BillStatus OBJECT bs
+;
+
+DESIGN Invoicing.options{
+    tabbedPane {
+        NEW billColor LAST {
+            caption = 'Цвета статусов фактур';
+            MOVE PROPERTY (draftColor());
+            MOVE PROPERTY (readyColor());
+            MOVE PROPERTY (doneColor());
+            MOVE PROPERTY (canceledColor());
+        }
+    }
+}

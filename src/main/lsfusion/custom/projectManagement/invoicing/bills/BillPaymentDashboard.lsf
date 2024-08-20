@@ -59,3 +59,16 @@ NAVIGATOR {
         NEW billPaymentDashboard;
     }
 }
+
+DESIGN billPaymentDashboard {
+    OBJECTS {
+        pane {
+            tabbedPane {
+                PROPERTY (dueDate(b)) {
+                    hide = FALSE;
+                    caption = 'Оплатить до';
+                }
+            }
+        }
+    }
+}
