@@ -1,0 +1,29 @@
+MODULE EmployeeTimesheet;
+
+REQUIRE EmployeeCustom, TimesheetSupervisorCustom;
+
+NAMESPACE MasterData;
+
+onVacation (Employee e) = GROUP SUM 1 IF (date(TimeEntry te) = currentDate() AND employee(te) = e AND timeEntryHours(te) = timesheetHours());
+onWork (Employee e) = GROUP SUM 1 IF (date(TimeEntry te) = currentDate() AND employee(te) = e AND hours(currentDate(), e) > 0);
+onWeekend (Employee e) = GROUP SUM 1 IF (date(TimeEntry te) = currentDate() AND employee(te) = e AND id(type(te)) = 'weekend' AND NOT onVacation(e));
+
+filteredEmployees = FILTER employeesCustom.e;
+amountFiltered 'Count filtered' = GROUP SUM 1 IF filteredEmployees(Employee e);
+
+EXTEND FORM employeesCustom
+    PROPERTIES () amountFiltered DRAW e TOOLBAR
+
+    FILTERGROUP filtersTimesheet
+        FILTER '{On_vacation}' onVacation(e)
+        FILTER '{On_work}' onWork(e)
+        FILTER '{On_weekend}' onWeekend(e)
+;
+
+DESIGN employeesCustom {
+    TOOLBARLEFT (e) {
+        MOVE PROPERTY (amountFiltered());
+        MOVE FILTERGROUP (filters);
+        MOVE FILTERGROUP (filtersTimesheet);
+    }
+}
