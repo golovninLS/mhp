@@ -26,3 +26,8 @@ EXTEND FORM employeesCustom
     FILTERGROUP filters
         FILTER '{Active}' NOT archived(e) DEFAULT
 ;
+
+EXTEND FORM employeesCustom
+    EXTEND FILTERGROUP filters
+        FILTER '{Inactive}' archived(e)
+;
