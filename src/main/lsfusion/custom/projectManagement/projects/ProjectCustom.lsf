@@ -73,8 +73,9 @@ NAVIGATOR {
     }
 }
 
+lastTimeEntry (Project p) = GROUP LAST TimeEntry t ORDER date(t) IF project(t) = p AND date(t) >= subtract(currentDate(), 3);
 timeEntries (Employee e) = GROUP MAX TimeEntry t IF date(t) = DATE d AND employee(t) = e AND iterate(d, subtract(currentDate(), 3), currentDate());
-work (Employee e, Project p) = [GROUP MAX TimeEntry t IF t = timeEntries(Employee ee) AND hours(t) > 0 BY employee(t), project(t)](e, p);
+work (Employee e, Project p) = [GROUP MAX TimeEntry t IF date(t) = date(lastTimeEntry(p)) AND hours(t) > 0 BY employee(t), project(t)](e, p);
 qtyEmployee 'Amount employees' (Project p) = GROUP SUM 1 IF work(Employee e, p);
 
 qtyEmployeeFiltered 'Total qty employees' = GROUP SUM qtyEmployee(Project p) IF filtered(p);
