@@ -5,8 +5,10 @@ REQUIRE EmployeeCustom, TimesheetSupervisorCustom;
 NAMESPACE MasterData;
 
 onVacation (Employee e) = GROUP SUM 1 IF (date(TimeEntry te) = currentDate() AND employee(te) = e AND timeEntryHours(te) = timesheetHours());
-onWork (Employee e) = GROUP SUM 1 IF (date(TimeEntry te) = currentDate() AND employee(te) = e AND hours(currentDate(), e) > 0);
 onWeekend (Employee e) = GROUP SUM 1 IF (date(TimeEntry te) = currentDate() AND employee(te) = e AND id(type(te)) = 'weekend' AND NOT onVacation(e));
+
+lastTimeEntry (Project p) = GROUP LAST TimeEntry t ORDER date(t) IF project(t) = p AND date(t) >= subtract(currentDate(), 3);
+onWork (Employee e) = GROUP SUM 1 IF (date(TimeEntry te) = date(lastTimeEntry(Project p)) AND employee(te) = e AND hours(currentDate(), e) > 0);
 
 filteredEmployees = FILTER employeesCustom.e;
 amountFiltered 'Count filtered' = GROUP SUM 1 IF filteredEmployees(Employee e);
