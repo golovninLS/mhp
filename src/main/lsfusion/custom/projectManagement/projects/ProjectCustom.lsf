@@ -69,6 +69,24 @@ EXTEND FORM projects
 
 NAVIGATOR {
     operations {
-        projects HEADER badged('Проекты', countActiveTimesheetProjects());;
+        projects HEADER badged('Проекты', countActiveTimesheetProjects());
+    }
+}
+
+timeEntries (Employee e) = GROUP MAX TimeEntry t IF date(t) = DATE d AND employee(t) = e AND iterate(d, subtract(currentDate(), 3), currentDate());
+work (Employee e, Project p) = [GROUP MAX TimeEntry t IF t = timeEntries(Employee ee) AND hours(t) > 0 BY employee(t), project(t)](e, p);
+qtyEmployee 'Amount employees' (Project p) = GROUP SUM 1 IF work(Employee e, p);
+
+qtyEmployeeFiltered 'Total qty employees' = GROUP SUM qtyEmployee(Project p) IF filtered(p);
+
+EXTEND FORM projects
+    PROPERTIES (p) qtyEmployee
+    PROPERTIES () qtyEmployeeFiltered TOOLBAR DRAW p
+;
+
+DESIGN projects {
+    PROPERTY (qtyEmployee(p)) { charWidth = 10; }
+    TOOLBARLEFT (p) {
+        MOVE PROPERTY (qtyEmployeeFiltered());
     }
 }
