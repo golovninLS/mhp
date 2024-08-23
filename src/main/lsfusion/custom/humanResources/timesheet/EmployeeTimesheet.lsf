@@ -7,13 +7,18 @@ NAMESPACE MasterData;
 onVacation (Employee e) = GROUP SUM 1 IF (date(TimeEntry te) = currentDate() AND employee(te) = e AND timeEntryHours(te) = timesheetHours());
 onWeekend (Employee e) = GROUP SUM 1 IF (date(TimeEntry te) = currentDate() AND employee(te) = e AND id(type(te)) = 'weekend' AND NOT onVacation(e));
 
-lastTimeEntry (Project p) = GROUP LAST TimeEntry t ORDER date(t) IF project(t) = p AND date(t) >= subtract(currentDate(), 3);
-onWork (Employee e) = GROUP SUM 1 IF (date(TimeEntry te) = date(lastTimeEntry(Project p)) AND employee(te) = e AND hours(currentDate(), e) > 0);
+lastTimeEntry (Employee e) = GROUP LAST TimeEntry t ORDER date(t) IF hours(t) > 0 AND date(t) >= subtract(currentDate(), 3) AND date(t) <= currentDate() AND employee(t) = e;
+dateLastTimeEntry 'Дата(посл)' (Employee e) = date(lastTimeEntry(e));
+nameProjectLastTimeEntry 'Проект(посл)' (Employee e) = nameProject(lastTimeEntry(e));
+
+lastTimeEntry (Project p) = GROUP LAST TimeEntry t ORDER date(t) IF project(t) = p AND hours(t) > 0 AND date(t) >= subtract(currentDate(), 3) AND date(t) <= currentDate();
+onWork (Employee e) = GROUP SUM 1 IF (date(TimeEntry te) = date(lastTimeEntry(Project p)) AND employee(te) = e AND hours(te) > 0 AND project(te) = p);
 
 filteredEmployees = FILTER employeesCustom.e;
 amountFiltered 'Count filtered' = GROUP SUM 1 IF filteredEmployees(Employee e);
 
 EXTEND FORM employeesCustom
+    PROPERTIES (e) READONLY dateLastTimeEntry, nameProjectLastTimeEntry
     PROPERTIES () amountFiltered DRAW e TOOLBAR
 
     FILTERGROUP filtersTimesheet
