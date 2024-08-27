@@ -1,0 +1,141 @@
+MODULE ProjectFileFolder;
+
+REQUIRE Hierarchy, Project;
+
+NAMESPACE MasterData;
+
+CLASS ProjectFileFolder 'Папка' {
+    defaultProjectFileFolder 'Без папки'
+};
+
+dataName '{Name}' = DATA ISTRING[50] (ProjectFileFolder);
+name '{Name}' (ProjectFileFolder f) = OVERRIDE dataName(f), staticCaption(f) IN id NONULL;
+
+// hierarchy
+parent = DATA ProjectFileFolder (ProjectFileFolder) INDEXED;
+nameParent 'Parent' (ProjectFileFolder f) = name(parent(f));
+
+rootProjectFileFolder() = GROUP MIN ProjectFileFolder f AS ProjectFileFolder IF NOT parent(f);
+
+CONSTRAINT DROPPED(ProjectFileFolder f IS ProjectFileFolder) AND PREV(parent(ProjectFileFolder child) = f)
+    MESSAGE 'Запрещено удалять папки, на которые ссылаются другие папки.';
+
+level 'Level' (ProjectFileFolder child, ProjectFileFolder parent) =
+    RECURSION 1l IF child IS ProjectFileFolder AND parent = child
+        STEP 2l IF parent = parent($parent) MATERIALIZED;
+
+canonicalName 'Canonical name' (ProjectFileFolder f) =
+    GROUP CONCAT name(ProjectFileFolder parent), ' / ' ORDER DESC level(f, parent) CHARWIDTH 50 IN id;
+canonicalNameParent 'Parent' (ProjectFileFolder c) = canonicalName(parent(c));
+
+levelRoot '{hierarchy.level}' (ProjectFileFolder child, ProjectFileFolder parent) = PARTITION SUM 1 IF level(child, parent)
+    ORDER DESC level(child, parent)
+    BY child MATERIALIZED;
+categoryRoot (ProjectFileFolder child, level) = GROUP NAGGR ProjectFileFolder parent BY levelRoot(child, parent);
+
+projectFileFolder 'Папка' = DATA ProjectFileFolder (ProjectFile);
+countFilesWithoutFolder 'Files without folder' (Project p) = GROUP SUM 1 IF project(ProjectFile f) = p AND NOT projectFileFolder(f);
+
+project 'Проект' = DATA Project (ProjectFileFolder) IN id;
+nameProject 'Проект' (ProjectFileFolder f) = name(project(f));
+
+nameProjectFileFolder 'Папка' (ProjectFile f) = name(projectFileFolder(f));
+canonicalNameCategory 'Папка (полная)' (ProjectFile f) = canonicalName(projectFileFolder(f));
+
+FORM projectFileFolder 'Папка'
+    OBJECTS f = ProjectFileFolder PANEL
+    PROPERTIES(f) name, canonicalNameParent, nameProject
+
+    EDIT ProjectFileFolder OBJECT f
+;
+
+DESIGN projectFileFolder {
+    OBJECTS {
+        NEW pane {
+            NEW id {
+                horizontal = TRUE;
+                alignment = STRETCH;
+                MOVE PROPERTY(name(f));
+                MOVE PROPERTY(canonicalNameParent(f)) { alignment = STRETCH; };
+                MOVE PROPERTY(nameProject(f));
+            }
+        }
+    }
+}
+
+newProjectFileFolder 'Папка' (ProjectFileFolder f, Project p) {
+    NEWSESSION {
+        NEW newFolder = ProjectFileFolder {
+            parent(newFolder) <- f;
+            project(newFolder) <- p;
+            DIALOG projectFileFolder OBJECTS f = newFolder DOCKED DO seek(newFolder);
+        }
+    }
+} IMAGE 'add.png' CHANGEKEY 'INSERT' HIDE;
+
+newProjectFileFolder 'Папка' ( Project p) {
+    NEWSESSION {
+        NEW newFolder = ProjectFileFolder {
+            project(newFolder) <- p;
+            DIALOG projectFileFolder OBJECTS f = newFolder DOCKED DO seek(newFolder);
+        }
+    }
+} IMAGE 'add.png' CHANGEKEY 'INSERT' HIDE;
+
+newFile 'File' (ProjectFileFolder f) {
+    INPUT uf = NAMEDFILE DO NEW uof = ProjectFile {
+        project(uof) <- project(f);
+        projectFileFolder(uof) <- f;
+        file(uof) <- RAWFILE(uf);
+        name(uof) <- name(uf);
+        extension(uof) <- extension(uf);
+    }
+} IMAGE 'add.png' CHANGEKEY 'INSERT' HIDE;
+
+EXTEND FORM project
+    TREE projectFileFolders f = ProjectFileFolder PARENT parent(f) BEFORE of 
+    PROPERTIES READONLY name(f)
+    ORDERS name(f)
+    PROPERTIES(f, p) newProjectFileFolder DRAW f TOOLBAR
+    PROPERTIES(p) newProjectFileFolder DRAW f TOOLBAR SHOWIF NOT f IS ProjectFileFolder
+    PROPERTIES(f) NEWSESSION EDIT, DELETE
+    ORDERS name(f)
+    FILTERS project(f) == p OR (f == ProjectFileFolder.defaultProjectFileFolder AND countFilesWithoutFolder(p))
+    FILTERS level(projectFileFolder(of), f) OR (f == ProjectFileFolder.defaultProjectFileFolder AND NOT projectFileFolder(of) IS ProjectFileFolder)
+
+    PROPERTIES(f) newFile DRAW of TOOLBAR READONLYIF readonly(p)
+    PROPERTIES inputFileInFolder = '' CUSTOM 'inputFile' ON CHANGE {
+        INPUT file = JSON DO
+            IMPORT JSON FROM file FIELDS() STRING name, STRING extension, STRING data DO
+                IF NOT readonly(p) THEN NEW uof = ProjectFile {
+                    project(uof) <- p;
+                    projectFileFolder(uof) <- f;
+                    file(uof) <- decode(data, 'base64');
+                    name(uof) <- name;
+                    extension(uof) <- extension;
+                }
+    }
+;
+
+DESIGN project {
+    details {
+        NEW files {
+            caption = badged('Files', countFiles(p));
+            horizontal = TRUE;
+            
+            MOVE BOX(TREE projectFileFolders){
+                fill = 0.3;
+            }
+            MOVE BOX(of) {
+                fill = 0.7;
+                
+                MOVE PROPERTY(inputFileInFolder);
+
+                REMOVE PROPERTY(newFile(p));
+                REMOVE PROPERTY(inputFile);
+            }
+        }
+    }
+}
+
+

@@ -92,5 +92,7 @@ REQUIRE Eval, ProcessMonitor, Backup,
 
         AccountDistribution, AccountDistributionLineLedger, AccountDistributionCanceled,
 
-        BillLunch, ProjectBillCustom, EmployeeTimesheet
+        BillLunch, ProjectBillCustom, EmployeeTimesheet,
+
+        ProjectFileFolder
 ;
