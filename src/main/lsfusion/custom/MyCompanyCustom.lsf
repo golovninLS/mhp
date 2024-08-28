@@ -94,5 +94,7 @@ REQUIRE Eval, ProcessMonitor, Backup,
 
         BillLunch, ProjectBillCustom, EmployeeTimesheet,
 
-        ProjectFileFolder
+        ProjectFileFolder,
+        
+        TelegramCustom, TelegramBillNotification
 ;

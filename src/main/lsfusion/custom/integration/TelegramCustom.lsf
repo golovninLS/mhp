@@ -1,0 +1,52 @@
+MODULE TelegramCustom;
+
+REQUIRE Telegram;
+
+NAMESPACE Telegram;
+
+GROUP message;
+GROUP chat : message;
+
+date = DATA LOCAL NUMERIC(INTEGER);
+last_name = DATA LOCAL STRING(INTEGER);
+id = DATA LOCAL STRING(INTEGER);
+type = DATA LOCAL STRING(INTEGER);
+first_name = DATA LOCAL STRING(INTEGER);
+username = DATA LOCAL STRING(INTEGER);
+title = DATA LOCAL STRING(INTEGER);
+is_bot = DATA LOCAL STRING(INTEGER);
+
+FORM getUpdates FORMEXTID 'null'
+    OBJECTS result = INTEGER
+    PROPERTIES(result) IN message date
+    PROPERTIES(result) IN chat last_name, id, type, first_name, username, title
+    FILTERS imported(result)
+;
+
+getUpdates 'Получить чаты' (Messenger.Account a){
+    IF isTelegram(a) THEN {
+        LOCAL response = FILE();
+        EXTERNAL HTTP GET 'https://api.telegram.org/bot' + token(a) + '/getUpdates?offset=-10' TO response;
+        IMPORT getUpdates FROM response();
+
+        FOR INTEGER i = [GROUP MAX INTEGER j BY id(j)](STRING id) AND NOT chatIdAccount(a, id) NEW c = Chat DO{
+            id(c) <- id;
+            account(c) <- a;
+        }
+        FOR INTEGER i = [GROUP MAX INTEGER j BY id(j)](STRING id) AND Chat c = chatIdAccount(a, id) DO{
+            name(c) <- ISTRING[100](IF type(i) = 'private' THEN CONCAT ' ', last_name(i), first_name(i) ELSE title(i));
+            chatType(c) <- CASE
+                WHEN type(i) = 'private' THEN ChatType.private
+                WHEN type(i) = 'channel' THEN ChatType.channel
+                WHEN type(i) = 'group' THEN ChatType.group
+                ELSE ChatType.group;
+        }
+    }
+}
+
+EXTEND FORM messengers
+    PROPERTIES (a) getUpdates TOOLBAR SHOWIF isTelegram(a)
+;
+getUpdates 'Получить все чаты '(){
+    FOR isTelegram(Messenger.Account a) DO getUpdates(a);
+}

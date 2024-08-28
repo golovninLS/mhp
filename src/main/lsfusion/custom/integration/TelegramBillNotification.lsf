@@ -1,0 +1,57 @@
+MODULE TelegramBillNotification;
+
+REQUIRE TelegramCustom, Bill, Employee;
+
+CLASS Notifications 'Уведомления';
+
+employee = DATA Employee (Notifications);
+notify 'Вкл' = DATA BOOLEAN (Notifications) CHARWIDTH 3;
+messenger = DATA Messenger (Notifications) MATERIALIZED INDEXED NONULL;
+name (Messenger m) = staticCaption(m) IF m IS Messenger;
+nameMessenger 'Мессенджер' (Notifications n) = name(messenger(n)) CHARWIDTH 10;
+
+CLASS NotificationTypes {
+    bill 'Изменение фактуры'
+}
+
+type = DATA NotificationTypes (Notifications) MATERIALIZED INDEXED NONULL;
+name (NotificationTypes m) = staticCaption(m) IF m IS NotificationTypes;
+nameNotificationType 'Событие' (Notifications n) = name(type(n)) CHARWIDTH 10;
+
+chat = DATA Chat (Notifications) MATERIALIZED INDEXED;
+nameChat 'Чат' (Notifications n) = name(chat(n));
+
+in 'Вкл.' = DATA BOOLEAN (Chat, Notifications);
+
+EXTEND FORM employee
+    OBJECTS n = Notifications
+    PROPERTIES (n) notify, nameChat, nameMessenger, nameNotificationType
+    PROPERTIES (n) NEW, EDIT, DELETE
+    FILTERS employee(n) = e
+;
+
+DESIGN employee {
+    details {
+        NEW notifications {
+            caption = 'Notifications';
+            alignment = STRETCH;
+            MOVE BOX (n);
+            PROPERTY (nameChat(n)){align = CENTER; }
+        }
+    }
+}
+
+notifyUser (NotificationTypes type, STRING message) {
+    in(Chat c, Notifications n) <- TRUE IF notify(n) AND chat(n) = c AND messenger(n) = Messenger.telegram AND type(n) = type;
+    timeoutHttp() <- 20000;
+    FOR in(Chat c, Notifications n) DO TRY sendMessage(c, message);
+}
+
+WHEN CHANGED(status(Bill b)) DO {
+    TRY {
+        LOCAL message = STRING ();
+        message() <- 'Изменение статуса фактуры\n\nСтатус фактуры № ' + number(b) + ' изменился с "' + PREV(nameStatus(b)) + '" на "' + nameStatus(b) + '"';
+
+        notifyUser(NotificationTypes.bill, message());
+    }
+}
