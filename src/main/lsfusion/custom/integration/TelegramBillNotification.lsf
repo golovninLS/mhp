@@ -1,50 +1,71 @@
 MODULE TelegramBillNotification;
 
-REQUIRE TelegramCustom, Bill, Employee;
+REQUIRE TelegramCustom, Bill, EmployeeCustom;
 
 CLASS Notifications 'Уведомления';
 
-employee = DATA Employee (Notifications);
-notify 'Вкл' = DATA BOOLEAN (Notifications) CHARWIDTH 3;
-messenger = DATA Messenger (Notifications) MATERIALIZED INDEXED NONULL;
-name (Messenger m) = staticCaption(m) IF m IS Messenger;
-nameMessenger 'Мессенджер' (Notifications n) = name(messenger(n)) CHARWIDTH 10;
+employee = DATA Employee (Chat);
+nameEmployee 'Сотрудник' (Chat c) = name[Partner](employee(c));
+chat = GROUP AGGR Chat c BY employee(c);
+nameChat 'Чат' (Employee e) = name(chat(e));
+EXTEND FORM employeesCustom
+    PROPERTIES (e) READONLY nameChat
+    FILTERGROUP telegram
+        FILTER 'Telegram' chat(e)
+;
 
-CLASS NotificationTypes {
+
+EXTEND FORM messengers
+    PROPERTIES nameEmployee(c)
+;
+
+CLASS NotificationTypes 'Тип уведомления' {
     bill 'Изменение фактуры'
 }
 
-type = DATA NotificationTypes (Notifications) MATERIALIZED INDEXED NONULL;
-name (NotificationTypes m) = staticCaption(m) IF m IS NotificationTypes;
-nameNotificationType 'Событие' (Notifications n) = name(type(n)) CHARWIDTH 10;
+type = DATA NotificationTypes (Notifications) MATERIALIZED NONULL;
+name 'Тип уведомления' (NotificationTypes m) = staticCaption(m) IF m IS NotificationTypes;
 
-chat = DATA Chat (Notifications) MATERIALIZED INDEXED;
-nameChat 'Чат' (Notifications n) = name(chat(n));
+in 'Вкл.' = DATA BOOLEAN (Chat, NotificationTypes);
 
-in 'Вкл.' = DATA BOOLEAN (Chat, Notifications);
+captionAttachment (Chat c) = IF newAttachment(c) THEN name(newAttachment(c)) ELSE  'Прикрепить файл';
+
+attachment 'Прикрепить'(Chat c){
+    INPUT f = NAMEDFILE DO newAttachment(c) <- f;
+}
 
 EXTEND FORM employee
-    OBJECTS n = Notifications
-    PROPERTIES (n) notify, nameChat, nameMessenger, nameNotificationType
-    PROPERTIES (n) NEW, EDIT, DELETE
-    FILTERS employee(n) = e
+    OBJECTS c = Chat PANEL, nt = NotificationTypes
+    PROPERTIES in(c, nt), name(nt)
+    PROPERTIES(c) PANEL newMessage, sendMessage, attachment HEADER captionAttachment(c)
+    FILTERS c = chat(e)
 ;
 
 DESIGN employee {
     details {
         NEW notifications {
+            showIf = chat(e);
             caption = 'Notifications';
             alignment = STRETCH;
-            MOVE BOX (n);
-            PROPERTY (nameChat(n)){align = CENTER; }
+            MOVE BOX (nt);
+            NEW message{
+                caption = 'Message';
+                horizontal = TRUE;
+                alignment = STRETCH;
+                MOVE PROPERTY (newMessage(c));
+                NEW action{
+                    MOVE PROPERTY (attachment(c));
+                    MOVE PROPERTY (sendMessage(c));
+                }
+                
+            }
         }
     }
 }
 
 notifyUser (NotificationTypes type, STRING message) {
-    in(Chat c, Notifications n) <- TRUE IF notify(n) AND chat(n) = c AND messenger(n) = Messenger.telegram AND type(n) = type;
     timeoutHttp() <- 20000;
-    FOR in(Chat c, Notifications n) DO TRY sendMessage(c, message);
+    FOR in(Chat c, type) DO TRY sendMessage(c, message);
 }
 
 WHEN CHANGED(status(Bill b)) DO {
@@ -53,5 +74,11 @@ WHEN CHANGED(status(Bill b)) DO {
         message() <- 'Изменение статуса фактуры\n\nСтатус фактуры № ' + number(b) + ' изменился с "' + PREV(nameStatus(b)) + '" на "' + nameStatus(b) + '"';
 
         notifyUser(NotificationTypes.bill, message());
+    }
+}
+
+NAVIGATOR {
+    masterData{
+        MOVE messengers;
     }
 }

@@ -27,8 +27,7 @@ getUpdates 'Получить чаты' (Messenger.Account a){
     IF isTelegram(a) THEN {
         LOCAL response = FILE();
         EXTERNAL HTTP GET 'https://api.telegram.org/bot' + token(a) + '/getUpdates?offset=-10' TO response;
-        IMPORT getUpdates FROM response();
-
+        IMPORT getUpdates FROM response()
         FOR INTEGER i = [GROUP MAX INTEGER j BY id(j)](STRING id) AND NOT chatIdAccount(a, id) NEW c = Chat DO{
             id(c) <- id;
             account(c) <- a;

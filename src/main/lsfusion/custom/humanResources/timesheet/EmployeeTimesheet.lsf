@@ -7,7 +7,7 @@ NAMESPACE MasterData;
 onVacation (Employee e) = GROUP SUM 1 IF (date(TimeEntry te) = currentDate() AND employee(te) = e AND timeEntryHours(te) = timesheetHours());
 onWeekend (Employee e) = GROUP SUM 1 IF (date(TimeEntry te) = currentDate() AND employee(te) = e AND id(type(te)) = 'weekend' AND NOT onVacation(e));
 
-lastTimeEntry (Employee e) = GROUP LAST TimeEntry t ORDER date(t) IF hours(t) > 0 AND date(t) >= subtract(currentDate(), 3) AND date(t) <= currentDate() AND employee(t) = e;
+lastTimeEntry (Employee e) = GROUP LAST TimeEntry t ORDER date(t) IF hours(t) > 0 AND date(t) <= currentDate() AND employee(t) = e;
 dateLastTimeEntry 'Дата(посл)' (Employee e) = date(lastTimeEntry(e));
 nameProjectLastTimeEntry 'Проект(посл)' (Employee e) = nameProject(lastTimeEntry(e));
 

@@ -90,3 +90,11 @@ DESIGN projects {
         MOVE PROPERTY (qtyEmployeeFiltered());
     }
 }
+
+//files
+
+dateDoc 'Date document' = DATA DATE (ProjectFile);
+
+EXTEND FORM project
+    PROPERTIES (of) dateDoc
+;
