@@ -12,3 +12,20 @@ DESIGN project {
     }
 }
 
+DESIGN project {
+    PROPERTY (amount(psl)) { pattern = '#,##0.00##'; }
+    PROPERTY (total(psl)) { pattern = '#,##0.00##'; }
+    
+    PROPERTY (income(prl)) { pattern = '#,##0.00##'; }
+    PROPERTY (expense(prl)) { pattern = '#,##0.00##'; }
+    PROPERTY (profit(prl)) { pattern = '#,##0.00##'; }
+    
+    PROPERTY (sumExpense(p)) { pattern = '#,##0.00##'; }
+    PROPERTY (sumProfit(p)) { pattern = '#,##0.00##'; }
+}
+
+DESIGN projects {
+    PROPERTY (balance(p, dates)) { pattern = '#,##0.00##'; }
+    PROPERTY (sumExpense(p, dates)) { pattern = '#,##0.00##'; }
+    PROPERTY (sumProfit(p, dates)) { pattern = '#,##0.00##'; }
+}

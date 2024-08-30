@@ -29,7 +29,7 @@ changeItems (Bill b) {
             }
         ELSE
             item(BillLine l) <- i WHERE bill(l) = b AND NOT item(l) IS Product;
-            in(BillLine l, defaultTax()) <- TRUE WHERE bill(l) = b;
+        in(BillLine l, defaultTax()) <- TRUE WHERE bill(l) = b;
     }
 }
 changeAmount(Bill b){
@@ -39,12 +39,12 @@ changeAmount(Bill b){
                 bill(l) <- b;
                 item(l) <- defaultBillItem();
                 in(l, defaultTax()) <- TRUE;
-                taxAmount(defaultTax(), l) <- round2([((X/(1+Y/100)) - X) * -1](a, value(defaultTax())));
+                taxAmount(defaultTax(), l) <- round2([((X / (1 + Y / 100)) - X) * -1](a, value(defaultTax())));
                 untaxedAmount(l) <- a (-) taxAmount(defaultTax(), l);
             }
         ELSE{
             in(BillLine l, defaultTax()) <- TRUE WHERE bill(l) = b;
-            taxAmount(defaultTax(), BillLine l) <- round2([((X/(1+Y/100)) - X) * -1](a, value(defaultTax()))) WHERE bill(l) = b;;
+            taxAmount(defaultTax(), BillLine l) <- round2([((X / (1 + Y / 100)) - X) * -1](a, value(defaultTax()))) WHERE bill(l) = b;;
             untaxedAmount(BillLine l) <- a (-) taxAmount(defaultTax(), l) WHERE bill(l) = b;
         }
     }
@@ -63,7 +63,7 @@ changeUntaxedAmount (Bill b) {
             }
         ELSE
             taxAmount(defaultTax(), BillLine l) <- (amount(b) (-) sum()) WHERE bill(l) = b;
-            untaxedAmount(BillLine l) <- sum() WHERE bill(l) = b;
+        untaxedAmount(BillLine l) <- sum() WHERE bill(l) = b;
     }
 }
 
@@ -91,10 +91,10 @@ changeDate(Bill b){
 
 EXTEND FORM bill
     OBJECTS bt = Tax
-    
+
     PROPERTIES uta 'Netto' = untaxedAmount(b) ON CHANGE changeUntaxedAmount(b),
-               utt = taxAmount(bt, b) COLUMNS (bt) HEADER name(bt) READONLY ,
-               amn 'Brutto' = amount(b) ON CHANGE changeAmount(b)
+        utt = taxAmount(bt, b) COLUMNS (bt) HEADER name(bt) READONLY,
+        amn 'Brutto' = amount(b) ON CHANGE changeAmount(b)
     PROPERTIES (b) 'Pay before' = dueDate ON CHANGE changeDueDate(b), date ON CHANGE changeDate(b)
 ;
 
@@ -151,4 +151,26 @@ EXTEND FORM bills
 DESIGN bills {
     PROPERTY (dateTime(b)) {hide = TRUE;};
     PROPERTY (dueDateTime(b)) {hide = TRUE;};
+}
+
+DESIGN bills {
+    PROPERTY (untaxedAmount(b)) { pattern = '#,##0.00##'; }
+    PROPERTY (taxAmount(b)) { pattern = '#,##0.00##'; }
+    PROPERTY (amount(b)) { pattern = '#,##0.00##'; }
+}
+
+DESIGN bill {
+    PROPERTY (untaxedAmount(b)) { pattern = '#,##0.00##'; }
+    PROPERTY (taxAmount(b)) { pattern = '#,##0.00##'; }
+    PROPERTY (amount(b)) { pattern = '#,##0.00##'; }
+
+    PROPERTY (untaxedAmount(bp)) { pattern = '#,##0.00##'; }
+    PROPERTY (taxAmount(bpt, bp)) { pattern = '#,##0.00##'; }
+    PROPERTY (amount(bp)) { pattern = '#,##0.00##'; }
+
+    PROPERTY (price(l)) { pattern = '#,##0.00##'; }
+    PROPERTY (taxes(l)) { pattern = '#,##0.00##'; }
+    PROPERTY (amount(l)) { pattern = '#,##0.00##'; }
+    PROPERTY (taxAmount(l)) { pattern = '#,##0.00##'; }
+    PROPERTY (untaxedAmount(l)) { pattern = '#,##0.00##'; }
 }
