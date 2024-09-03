@@ -15,31 +15,49 @@ first_name = DATA LOCAL STRING(INTEGER);
 username = DATA LOCAL STRING(INTEGER);
 title = DATA LOCAL STRING(INTEGER);
 is_bot = DATA LOCAL STRING(INTEGER);
+text = DATA LOCAL STRING(INTEGER);
+message_id = DATA LOCAL NUMERIC(INTEGER);
 
 FORM getUpdates FORMEXTID 'null'
     OBJECTS result = INTEGER
-    PROPERTIES(result) IN message date
+    PROPERTIES(result) IN message date, message_id, text
     PROPERTIES(result) IN chat last_name, id, type, first_name, username, title
     FILTERS imported(result)
 ;
+
+id = DATA NUMERIC (Message);
+message (Chat c, NUMERIC n) = GROUP MAX Message m IF chat(m) = c AND id(m) = n;
 
 getUpdates 'Получить чаты' (Messenger.Account a){
     IF isTelegram(a) THEN {
         LOCAL response = FILE();
         EXTERNAL HTTP GET 'https://api.telegram.org/bot' + token(a) + '/getUpdates?offset=-10' TO response;
         IMPORT getUpdates FROM response();
-        FOR INTEGER i = [GROUP MAX INTEGER j BY id(j)](STRING id) AND NOT chatIdAccount(a, id) NEW c = Chat DO{
+
+        FOR INTEGER i = [GROUP MAX INTEGER j BY id(j)](STRING id) AND NOT chatIdAccount(a, id) NEW c = Chat DO {
             id(c) <- id;
             account(c) <- a;
         }
-        FOR INTEGER i = [GROUP MAX INTEGER j BY id(j)](STRING id) AND Chat c = chatIdAccount(a, id) DO{
+
+        FOR INTEGER i = [GROUP MAX INTEGER j BY id(j)](STRING id) AND Chat c = chatIdAccount(a, id) DO {
             name(c) <- ISTRING[100](IF type(i) = 'private' THEN CONCAT ' ', last_name(i), first_name(i) ELSE title(i));
             chatType(c) <- CASE
                 WHEN type(i) = 'private' THEN ChatType.private
                 WHEN type(i) = 'channel' THEN ChatType.channel
                 WHEN type(i) = 'group' THEN ChatType.group
                 ELSE ChatType.group;
+
+            FOR NOT message(c, message_id(INTEGER ii)) AND id(ii) == id(c) DO {
+                NEW m = Message {
+                    id(m) <- message_id(ii);
+                    from(m) <- first_name(ii);
+                    dateTime(m) <- currentDateTime();
+                    message(m) <- text(ii);
+                    chat(m) <- c;
+                }
+            }
         }
+        APPLY;
     }
 }
 
