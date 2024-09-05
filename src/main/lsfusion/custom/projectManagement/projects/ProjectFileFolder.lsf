@@ -92,9 +92,20 @@ newFile 'File' (ProjectFileFolder f) {
     }
 } IMAGE 'add.png' CHANGEKEY 'INSERT' HIDE;
 
+in 'Отм.' = DATA LOCAL BOOLEAN (ProjectFile);
+moveSelectedFilesTo 'Переместить в выделенную папку' (ProjectFileFolder folder) {
+    FOR in(ProjectFile pf) AND folder IS ProjectFileFolder DO
+        projectFileFolder(pf) <- folder;
+    
+    in(ProjectFile pf) <- NULL;
+}
+
 EXTEND FORM project
+    PROPERTIES in(of) FIRST
+    
     TREE projectFileFolders f = ProjectFileFolder PARENT parent(f) BEFORE of 
     PROPERTIES READONLY name(f)
+    PROPERTIES moveSelectedFilesTo(f) DRAW of TOOLBAR
     ORDERS name(f)
     PROPERTIES(f, p) newProjectFileFolder DRAW f TOOLBAR
     PROPERTIES(p) newProjectFileFolder DRAW f TOOLBAR SHOWIF NOT f IS ProjectFileFolder
