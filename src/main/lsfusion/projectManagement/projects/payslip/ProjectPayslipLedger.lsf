@@ -7,7 +7,7 @@ NAMESPACE ProjectManagement;
 project = ABSTRACT Project (PayslipLedger) MATERIALIZED;
 nameProject 'Project' (PayslipLedger l) = name(project(l));
 
-total 'Total' (Payslip p, PayslipCategory c, Project pr) = GROUP SUM total(PayslipLedger l) IF payslip(l) = p AND category(l) = c AND project(l) = pr;
+total 'Total' (Payslip p, PayslipCategory c, Project pr) = GROUP SUM total(PayslipLedger l) IF payslip(l) = p AND category(l) = c AND project(l) = pr MATERIALIZED;
 
 EXTEND FORM payslip
     PROPERTIES(pl) BACKGROUND RGB(255,212,212) IF deduction(pl)

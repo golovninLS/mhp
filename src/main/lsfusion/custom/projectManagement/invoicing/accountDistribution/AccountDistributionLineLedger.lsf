@@ -4,7 +4,7 @@ REQUIRE AccountDistributionCanceled, ProjectLedger, BillProjectLedger;
 
 NAMESPACE ProjectManagement;
 
-inactive (BillProject l) += (inner(project(l)) OR accountObject(l) IS ExtraAccountObject) AND l IS BillProject;
+inactive (BillProject l) += (inner(project(l)) OR Bill.accountObject(l) IS ExtraAccountObject) AND l IS BillProject;
 
 EXTEND CLASS AccountDistributionLine: ProjectLedger;
 
@@ -19,11 +19,12 @@ partner (AccountDistributionLine l) += vendor(l);
 
 category (AccountDistributionLine l) += 'Распределение затрат' IF l IS AccountDistributionLine;
 
-description (AccountDistributionLine l) += note(l);
+description (AccountDistributionLine l) += basis(l);
 
-income(AccountDistributionLine l) += -untaxedAmount(l);
 expense(AccountDistributionLine l) += untaxedAmount(l);
 
+account(AccountDistributionLine l) += salesAccount(l);
+accountObject(AccountDistributionLine l) += nameAccountObject(l);
 
 
 
