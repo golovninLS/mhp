@@ -1,6 +1,6 @@
 MODULE AccountDistribution;
 
-REQUIRE SalesAccount, ProjectCustom, AccountBillProject;
+REQUIRE SalesAccount, ProjectCustom, AccountBillProject, PayslipProjectLedger;
 
 NAMESPACE Invoicing;
 
@@ -102,11 +102,11 @@ nameAccountObject 'Account object' (AccountDistribution d) = name(accountObject(
 accountObject (AccountDistributionLine l) = accountObject(accountDistribution(l));
 nameAccountObject 'Account object' (AccountDistributionLine l) = name(accountObject(l));
 
-in = DATA BOOLEAN (BillProject, AccountDistributionLine);
-in (BillProject bp, AccountDistribution a) = TRUE IF GROUP MIN in(bp, AccountDistributionLine l) AND a == accountDistribution(l);
+in = DATA BOOLEAN (ProjectLedger, AccountDistributionLine);
+in (ProjectLedger bp, AccountDistribution a) = TRUE IF GROUP MIN in(bp, AccountDistributionLine l) AND a == accountDistribution(l);
 
 basis 'Basis' (AccountDistributionLine l) = GROUP CONCAT name(AccountObject a), ', ' ORDER a WHERE (
-    GROUP SUM 1 IF in(BillProject bp, l) AND accountObject(bp) = a);
+    GROUP SUM 1 IF in(ProjectLedger bp, l) AND accountObject[BillProject](bp) = a);
 
 FORM accountDistribution 'Распределение затрат'
     OBJECTS  a = AccountDistribution PANEL
@@ -127,8 +127,8 @@ FORM accountDistribution 'Распределение затрат'
     FILTERS accountDistribution(ap) = a
 
     OBJECTS bpt = Tax
-    OBJECTS bp = BillProject
-    PROPERTIES(bp) READONLY nameAccountObject, nameSalesAccount, numberMonthAccount, yearAccount, base, untaxedAmount
+    OBJECTS bp = ProjectLedger
+    PROPERTIES(bp) READONLY nameAccountObject[BillProject], number, nameAccount, numberMonthAccount[BillProject], yearAccount[BillProject], base[BillProject], expense 
     PROPERTIES READONLY taxAmount(bpt, bp) COLUMNS (bpt) HEADER name(bpt)
     PROPERTIES(bp) amount READONLY
     FILTERS in(bp, a) 
@@ -271,8 +271,8 @@ generateProject 'Generate' ABSTRACT LIST (AccountDistribution);
 
 amount 'Total amount' (AccountDistribution a) = GROUP SUM amount(AccountDistributionLine p) IF accountDistribution(p) = a;
 
-untaxedAmount (AccountDistribution a) = GROUP SUM untaxedAmount(BillProject bp) IF in(bp, a);
-taxAmount (Tax t, AccountDistribution a) = GROUP SUM taxAmount(t, BillProject bp) IF in(bp, a);
+untaxedAmount (AccountDistribution a) = GROUP SUM expense(ProjectLedger bp) IF in(bp, a);
+taxAmount (Tax t, AccountDistribution a) = GROUP SUM taxAmount(t, ProjectLedger bp) IF in(bp, a);
 taxAmount 'Tax' (AccountDistribution a) = GROUP SUM taxAmount(Tax t, a);
 
 calcUntaxedAmount (AccountDistributionLine p) =
@@ -488,3 +488,45 @@ WHEN DROPPED(monthAccount(BillProject bp)) OR DROPPED(yearAccount(bp)) OR DROPPE
     DROPPED(untaxedAmount(bp)) OR DROPPED(taxAmount(bp)) OR DROPPED(amount(bp)) OR DROPPED(accountObject(bp)) DO {
     updateAccountDistributionSalesAccountAccountObject(bp);
 }
+
+
+createPayRollDistribution(Month m, INTEGER year){
+    LOCAL locIn = BOOLEAN (PayslipLedger, Partner, SalesAccount, AccountObject);
+    locIn(PayslipLedger l, Partner p, SalesAccount s, AccountObject o) <- TRUE WHERE 
+        extractMonth(date(l)) = m AND extractYear(date(l)) = year AND l IS PayslipLedger AND inner(project(l)) AND s = SystemSalesAccount.salary AND project(l) = o
+        AND partner(l) = p;
+    ;
+    LOCAL locHours = NUMERIC[8,2] (Project);
+    locHours (Project p) <-
+        hours(p, firstDayOfMonth(DATE('01.' + number(m)+ '.' + year)), lastDayOfMonth(DATE('01.' + number(m)+ '.' + year)))
+        WHERE p IS Project AND NOT inner(p);
+
+    FOR Partner partner IS Partner AND SalesAccount a IS SalesAccount AND AccountObject ao IS AccountObject AND (GROUP MIN locIn(PayslipLedger bp, partner, a, ao)) 
+        AND (GROUP SUM expense(ProjectLedger pl) IF locIn(pl, partner, a, ao))DO {
+        NEW ad = AccountDistribution {
+            dateTime(ad) <- currentDateTime();
+            monthAccount(ad) <- m;
+            yearAccount(ad) <- year;
+            company(ad) <- defaultCompany();
+            vendor(ad) <- partner;
+            salesAccount(ad) <- a;
+            accountObject(ad) <- ao;
+
+            FOR locHours (Project p)  DO NEW dp = AccountDistributionLine {
+                accountDistribution(dp) <- ad;
+                in(PayslipLedger bp,dp) <- TRUE WHERE locIn(bp, partner, a, ao);
+                project(dp) <- p;
+                base(dp) <- locHours(p);
+            }
+
+            generateProject(ad);
+        }
+    } ELSE {
+        MESSAGE 'Нет данных за месяц' NOWAIT;
+    }
+    APPLY;
+}
+
+EXTEND FORM accountDistributions
+    PROPERTIES (a) untaxedAmount
+;
