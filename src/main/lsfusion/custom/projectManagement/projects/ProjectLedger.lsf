@@ -1,6 +1,6 @@
 MODULE ProjectLedger;
 
-REQUIRE Project, DateUtils;
+REQUIRE Project, DateUtils, SalesAccount;
 
 NAMESPACE ProjectManagement;
 
@@ -71,6 +71,10 @@ sumProfit 'Сума затрат' (INTERVAL[DATE] i) = IF i IS INTERVAL[DATE] TH
     GROUP SUM sumProfit(Project p, i) IF filtered(p) ELSE
     GROUP SUM sumProfit(Project p) IF filtered(p)
 ;
+account = ABSTRACT SalesAccount (ProjectLedger) MATERIALIZED;
+nameAccount 'Sales account' (ProjectLedger l) = name(account(l));
+
+accountObject 'Account object' = ABSTRACT STRING (ProjectLedger) MATERIALIZED;
 
 EXTEND FORM project
     OBJECTS i = INTERVAL[DATE] PANEL NULL
@@ -79,7 +83,7 @@ EXTEND FORM project
     PROPERTIES (p) SHOWIF NOT i IS INTERVAL[DATE] sumExpense FOOTER sumExpense(i), sumProfit FOOTER sumProfit(i)
     
     OBJECTS prl = ProjectLedger
-    PROPERTIES(prl) READONLY class, date, number, nameProject, namePartner, category, description, income, expense, profit
+    PROPERTIES(prl) READONLY class, date, number, nameProject, namePartner, category, description, nameAccount, income, expense, profit, accountObject
     PROPERTIES(prl) EDIT
     FILTERS project(prl) = p,
             active(prl),

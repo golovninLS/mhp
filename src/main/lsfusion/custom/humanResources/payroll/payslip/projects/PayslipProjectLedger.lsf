@@ -19,4 +19,11 @@ category[ProjectLedger] (PayslipLedger l) += nameCategory(l);
 
 description[ProjectLedger] (PayslipLedger l) += description(l);
 
+accountObject(PayslipLedger l) += IF active(l) THEN nameProject(l);
+
 expense(PayslipLedger l) += signedTotal(l) IF NOT deduction(l);
+EXTEND CLASS SystemSalesAccount{
+    salary 'Salary employees'
+}
+
+account(PayslipLedger l) += SystemSalesAccount.salary;

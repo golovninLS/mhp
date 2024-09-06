@@ -37,7 +37,7 @@ EXTEND FORM payslipCategory
 totalTimesheet (Payslip p, PayslipCategory c) = total(p, c, timesheetProject());
 
 payslipTimesheet (Employee e, INTERVAL[DATE] dates) = GROUP MAX Payslip ps IF employee(ps) = e AND startDate(ps) >= from(dates) AND startDate(ps) <= to(dates) AND
-    (company(ps) = timesheetCompany() OR NOT timesheetCompany());
+    (company(ps) = timesheetCompany() OR NOT timesheetCompany()) ;
 totalTimesheet (Employee e, PayslipCategory c, INTERVAL[DATE] dates) = total(payslipTimesheet(e, dates), c, timesheetProject());
 totalTimesheet (PayslipCategory c, INTERVAL[DATE] dates) = GROUP SUM total(payslipTimesheet(Employee e, dates), c, timesheetProject());
 
@@ -79,7 +79,7 @@ EXTEND FORM timesheetSupervisor
             company(ps) = timesheetCompany() OR NOT timesheetCompany()
     
     OBJECTS pcT = PayslipCategory
-    PROPERTIES (et, pcT, dates) totalTimesheet COLUMNS 'totalSection' (pcT) GRID DRAW te
+    PROPERTIES (et, pcT, dates) totalTimesheet COLUMNS 'totalSection' (pcT) GRID
         HEADER name(pcT) + '(' + name(timesheetProject()) + ')' READONLYIF readonly(pcT) 
         SHOWIF timesheetProject() AND splitByProject(pcT) FOOTER totalTimesheet(pcT, dates)
         ON CHANGE {

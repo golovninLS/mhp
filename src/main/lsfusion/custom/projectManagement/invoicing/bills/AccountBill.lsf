@@ -42,7 +42,7 @@ FORM accountObjects 'Account objects'
 accountObject = DATA AccountObject (BillProject);
 nameAccountObject 'Account object' (BillProject p) = name(accountObject(p));
 typeAccountObject 'Type' (BillProject p) = type(accountObject(p));
-project(BillProject p) <- accountObject(p) WHEN accountObject(p) IS Project;
+project(BillProject p) <- accountObject(p) WHEN SETCHANGED(accountObject(p)) AND accountObject(p) IS Project;
 WHEN LOCAL FORMS bill CHANGED(accountObject(BillProject bp)) AND (NOT monthAccount(bp) OR NOT yearAccount(bp)) DO {
     monthAccount(bp) <- extractMonth(currentDate());
     yearAccount(bp) <- extractYear(currentDate());

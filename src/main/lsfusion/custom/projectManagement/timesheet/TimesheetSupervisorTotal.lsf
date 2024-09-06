@@ -7,8 +7,6 @@ PRIORITY MasterData;
 
 NAMESPACE ProjectManagement;
 
-toPay 'To pay' (Employee e, INTERVAL[DATE] i) = salary(e, i) (-) lunches(e, i) (-) accomodation(e, i) (+) lunchCompensation(e, i); 
-
 timesheetHoursProject 'Hours (project)' (Employee e, Project p, INTERVAL[DATE] i) = hours(e, p, i);
 timesheetSalaryProject 'Salary (project)' (Employee e, Project p, INTERVAL[DATE] i) = salary(e, p, i);
 
@@ -64,10 +62,11 @@ EXTEND FORM timesheetSupervisor
     PROPERTIES(et) READONLY firstName, lastName, namePosition, rolesTimesheet
     
     PROPERTIES timesheetHoursProject(et, tp, dates) SHOWIF timesheetProject(), rateSalary(et, tp, dates) SHOWIF timesheetProject() ON CHANGE {changeRateSalary(et, tp, dates, autoSaveTimesheetHours());},
-               hours(et, tp, dates) SHOWIF NOT timesheetProject(), countLunches(et, tp, dates) SHOWIF NOT timesheetProject(), countAccomodation(et, tp, dates) SHOWIF NOT timesheetProject(), 
-               timesheetSalaryProject(et, tp, dates) SHOWIF timesheetProject() ON CHANGE {
-                   SHOW timesheetSupervisorDateEmployee OBJECTS i = dates, e = et FLOAT;
-               }, salary(et, tp, dates) ON CHANGE {
+    timesheetSalaryProject(et, tp, dates) SHOWIF timesheetProject() ON CHANGE {
+        SHOW timesheetSupervisorDateEmployee OBJECTS i = dates, e = et FLOAT;
+    }
+    PROPERTIES SHOWIF NOT timesheetProject() hours(et, tp, dates), countLunches(et, tp, dates), countAccomodation(et, tp, dates) SHOWIF NOT timesheetProject()
+    PROPERTIES salary(et, tp, dates) ON CHANGE {
                    SHOW timesheetSupervisorDateEmployee OBJECTS i = dates, e = et FLOAT;
                }, lunches(et, tp, dates) ON CHANGE {
                    SHOW Lunch.ordersDateEmployee OBJECTS i = dates, e = et FLOAT;

@@ -19,5 +19,7 @@ category (InvoiceLine l) += nameType(l);
 
 description (InvoiceLine l) += nameItem(l);
 
+accountObject(InvoiceLine l) += IF active(l) THEN nameProject(l);
+
 income(InvoiceLine l) += untaxedAmount(l) IF NOT isRefund(invoice(l));
 expense(InvoiceLine l) += -untaxedAmount(l) IF isRefund(invoice(l));
