@@ -21,7 +21,8 @@ message_id = DATA LOCAL NUMERIC(INTEGER);
 FORM getUpdates FORMEXTID 'null'
     OBJECTS result = INTEGER
     PROPERTIES(result) IN message date, message_id, text
-    PROPERTIES(result) IN chat last_name, id, type, first_name, username, title
+    PROPERTIES(result) IN chat id, type, title
+    PROPERTIES(result) IN from first_name, last_name, username
     FILTERS imported(result)
 ;
 
@@ -33,7 +34,7 @@ getUpdates 'Получить чаты' (Messenger.Account a){
         LOCAL response = FILE();
         EXTERNAL HTTP GET 'https://api.telegram.org/bot' + token(a) + '/getUpdates?offset=-10' TO response;
         IMPORT getUpdates FROM response();
-
+        
         FOR INTEGER i = [GROUP MAX INTEGER j BY id(j)](STRING id) AND NOT chatIdAccount(a, id) NEW c = Chat DO {
             id(c) <- id;
             account(c) <- a;
