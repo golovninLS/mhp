@@ -1,0 +1,161 @@
+MODULE Mailing;
+
+REQUIRE EmployeeCustom, TelegramBillNotification;
+
+NAMESPACE MasterData;
+
+CLASS ABSTRACT NodePosition '';
+name 'Position' = ABSTRACT STRING (NodePosition);
+parent = ABSTRACT NodePosition (NodePosition);
+
+CLASS StaticPosition {
+    all 'All'
+    } : NodePosition;
+
+EXTEND CLASS Position : NodePosition;
+name(StaticPosition p) += STRING(staticCaption(p));
+name(Position p) += STRING(name(p));
+parent(Position p) += StaticPosition.all;
+
+CLASS Mailing 'Mailing';
+
+dateTimeSent 'Datetime sent' = DATA DATETIME (Mailing);
+message 'Message' = DATA TEXT (Mailing) NONULL;
+
+dataIn = DATA BOOLEAN (NodePosition, Mailing);
+in 'Incl.' (NodePosition p, Mailing m) = OVERRIDE dataIn(p, m), dataIn(parent(p), m);
+
+dataIn = DATA BOOLEAN (Employee, Mailing);
+in 'Incl.' (Employee e, Mailing m) = OVERRIDE dataIn(e, m), in(position(e), m);
+
+statusMessage 'Status' = DATA STRING (Employee, Mailing) CHARWIDTH 30;
+isSent 'Sent' = DATA BOOLEAN (Employee, Mailing) CHARWIDTH 10;
+
+countSentMessages (Mailing m) = GROUP SUM 1 IF isSent(Employee e, m);
+countEmployeeMailing (Mailing m) = GROUP SUM 1 IF in(Employee e, m);
+
+isSent 'Sent' (Mailing m) = TRUE IF countSentMessages(m) = countEmployeeMailing(m) CHARWIDTH 10;
+
+setStatus (Employee e, Mailing m) {
+    statusMessage(e, m) <-
+    CASE
+        WHEN statusHttp() = 400 THEN 'Bad request'
+        WHEN statusHttp() = 401 THEN 'Invalid API token'
+        WHEN statusHttp() = 403 THEN 'The bot does not have permission to send messages to this chat'
+        WHEN statusHttp() = 404 THEN 'Incorrect chat ID is specified'
+        WHEN statusHttp() = 409 THEN 'The bot is already processing another request for the same chat, or the actions are conflicting'
+        WHEN statusHttp() = 429 THEN 'Too many requests'
+        WHEN statusHttp() = 500 THEN 'Internal server error'
+        WHEN statusHttp() = 502 THEN 'Problem with connection between Telegram servers'
+        WHEN statusHttp() = 503 THEN 'Service unavailable'
+        WHEN statusHttp() = 504 THEN 'The waiting time has expired'
+        ELSE 'Unexpected error';
+}
+
+resendMessage 'Send'(Employee e, Mailing m) {
+    timeoutHttp() <- 20000;
+    TRY {
+        sendMessage(chat(e), message(m));
+        statusMessage(e, m) <- 'Successfully sent';
+        dateTimeSent(m) <- currentDateTime();
+        isSent(e, m) <- TRUE;
+    } CATCH {
+        setStatus(e, m);
+    }
+    APPLY;
+} CHARWIDTH 9;
+
+sendMessage 'Send' (Mailing m) {
+    timeoutHttp() <- 20000;
+    FOR in(Employee e, m) AND NOT isSent(e, m) AND chat(e) DO TRY {
+        sendMessage(chat(e), message(m));
+        statusMessage(e, m) <- 'Successfully sent';
+        isSent(e, m) <- TRUE;
+        dateTimeSent(m) <- currentDateTime();
+    } CATCH {
+        setStatus(e, m);
+    }
+    APPLY;
+}
+
+background(Mailing m) = IF isSent(m) THEN RGB(187, 242, 210) ELSE RGB(242, 187, 190);
+
+FORM mailing 'Mailing'
+    OBJECTS m = Mailing
+    PROPERTIES (m) READONLY BACKGROUND background(m) isSent, dateTimeSent, message
+    PROPERTIES (m) sendMessage TOOLBAR SHOWIF NOT isSent(m)
+    PROPERTIES (m) NEWSESSION NEW, EDIT, DELETE
+
+    OBJECTS e = Employee
+    PROPERTIES (e) READONLY name, namePosition, nameLegalEntity, nameChat
+    PROPERTIES (e, m) isSent FIRST DRAW e
+    PROPERTIES (e, m) READONLY statusMessage BACKGROUND RGB(242, 187, 190) IF NOT isSent(e, m) AND statusMessage(e, m)
+    PROPERTIES (e, m) resendMessage READONLYIF isSent(e, m) GRID DRAW e
+    FILTERS in(e, m)
+;
+
+FORM mailingDetails 'Mailing details'
+    OBJECTS c = Chat
+
+    OBJECTS m = Mailing
+    PROPERTIES (m) message PANEL
+
+    TREE pos p = NodePosition PARENT parent(p)
+    PROPERTIES READONLY name(p)
+    PROPERTIES (p, m) in
+
+    OBJECTS e = Employee
+    PROPERTIES (e, m) in DRAW e
+    PROPERTIES (e) READONLY name, namePosition, nameLegalEntity, nameChat
+    FILTERS position(e) = p OR NOT p IS Position
+    FILTERS chat(e)
+
+    OBJECTS ee = Employee
+    PROPERTIES (ee) READONLY name, namePosition, nameLegalEntity, nameChat
+    FILTERS in(ee, m)
+
+    EDIT Mailing OBJECT m
+
+    FILTERGROUP filters
+        FILTER 'Marked' in(e, m)
+;
+
+DESIGN mailing {
+    NEW mailings {
+        fill = 1;
+        MOVE BOX (m) { caption = ''; };
+        PROPERTY (message(m)){valueHeight = 20;}
+    }
+    NEW details {
+        fill = 1;
+        MOVE BOX (e) { panelCaptionVertical = TRUE; };
+    }
+    MOVE TOOLBARBOX;
+}
+
+DESIGN mailingDetails {
+    MOVE PROPERTY(message(m)) {
+        panelCaptionVertical = TRUE;
+    }
+    NEW details {
+        fill = 3;
+        tabbed = TRUE;
+        NEW manually {
+            caption = 'Employees on the mailing list';
+            MOVE BOX (ee) { caption = ''; };
+        }
+        NEW selection {
+            caption = 'Selection';
+            horizontal = TRUE;
+            MOVE BOX (TREE pos) { caption = ''; };
+            MOVE BOX (e) { caption = ''; };
+        }
+    }
+    MOVE TOOLBARBOX;
+}
+
+NAVIGATOR {
+    masterData {
+        NEW mailing;
+    }
+}

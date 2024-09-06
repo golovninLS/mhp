@@ -96,5 +96,5 @@ REQUIRE Eval, ProcessMonitor, Backup,
 
         ProjectFileFolder,
         
-        TelegramCustom, TelegramBillNotification
+        TelegramCustom, TelegramBillNotification, Mailing
 ;
