@@ -8,7 +8,7 @@ managerTimesheetCloseDate 'Дата закрытия табеля (менедж�
 activeTimesheet(Project p) = (manager(p) = currentUser() AND startDate(p) AND NOT endDate(p) AND NOT managerTimesheetCloseDate(p) == supervisorTimesheetClosingDate()
     OR NOT supervisorTimesheetClosingDate()) AND p IS Project;
 
-background(Project p) += WHEN activeTimesheet(p) AND supervisorTimesheetClosingDate() THEN RGB(224,224,255);
+background(Project p) += WHEN activeTimesheet(p) AND supervisorTimesheetClosingDate() THEN RGB(224, 224, 255);
 
 countActiveTimesheetProjects () = GROUP SUM 1 IF Project p IS Project AND activeTimesheet(p) AND supervisorTimesheetClosingDate();
 
@@ -48,16 +48,16 @@ DESIGN project {
             MOVE PROPERTY(inner(p));
         }
         headerRight {
-            MOVE PROPERTY(managerTimesheetCloseDate(p));            
+            MOVE PROPERTY(managerTimesheetCloseDate(p));
         }
     }
     details {
         NEW staff {
             tabbed = TRUE;
             fill = 1;
-            caption = 'Staff';            
+            caption = 'Staff';
         }
-        
+
         MOVE BOX(pp) { caption = 'Map'; }
     }
 }
@@ -73,8 +73,8 @@ NAVIGATOR {
     }
 }
 
-lastTimeEntry (Project p) = GROUP LAST TimeEntry t ORDER date(t) IF project(t) = p AND hours(t) > 0 AND date(t) >= subtract(currentDate(), 3) AND date(t) <= currentDate();
-work (Employee e, Project p) = [GROUP MAX TimeEntry t IF date(t) = date(lastTimeEntry(p)) AND hours(t) > 0 BY employee(t), project(t)](e, p);
+lastTimeEntry (Employee e) = GROUP LAST TimeEntry t ORDER date(t) IF employee(t) = e AND hours(t) > 0 AND date(t) >= subtract(currentDate(), 3) AND date(t) <= currentDate();
+work (Employee e, Project p) = [GROUP MAX TimeEntry t IF date(t) = date(lastTimeEntry(e)) AND hours(t) > 0 BY employee(t), project(t)](e, p);
 qtyEmployee 'Amount employees' (Project p) = GROUP SUM 1 IF work(Employee e, p);
 
 qtyEmployeeFiltered 'Total qty employees' = GROUP SUM qtyEmployee(Project p) IF filtered(p);
