@@ -23,8 +23,9 @@ EXTEND FORM employeesCustom
 
     FILTERGROUP filtersTimesheet
         FILTER '{On_vacation}' onVacation(e)
-        FILTER '{On_work}' onWork(e)
+        FILTER '{At_work}' onWork(e)
         FILTER '{On_weekend}' onWeekend(e)
+        FILTER '{Not_at_work}' NOT onVacation(e) AND NOT onWork(e) AND NOT onWeekend(e)
 ;
 
 DESIGN employeesCustom {
