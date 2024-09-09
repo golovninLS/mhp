@@ -58,7 +58,7 @@ DESIGN timeEntry {
     }
 }
 
-vacation 'Vacation' = DATA BOOLEAN (TimeEntryHours);
+vacation 'Vacation' = DATA BOOLEAN (TimeEntryHours) CHARWIDTH 8;
 
 uniqueVacation = GROUP AGGR TimeEntryHours h BY vacation(h);
 

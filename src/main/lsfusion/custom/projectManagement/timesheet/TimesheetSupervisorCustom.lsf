@@ -148,6 +148,8 @@ newVacation (DATE dd, Project p, Employee ep) {
 }
 
 startVacation 'Start vacation' (Employee ep, Project p, INTERVAL[DATE] dates, DATE d) {
+    IF NOT timesheetHours() THEN { MESSAGE 'Please create time entry hour with "vacation" mark. For this go to Projects/Settings/Time entry type.'; BREAK; }
+
     NEWSESSION {
         IF vacation(d, p, ep) THEN {
             FOR iterate(DATE dd, from(dates), subtract(d, 1)) DO {
@@ -174,9 +176,11 @@ startVacation 'Start vacation' (Employee ep, Project p, INTERVAL[DATE] dates, DA
     }
 }
 
-iterateDown(DATE dt, DATE from, DATE to) = RECURSION dt==from AND from IS DATE AND to IS DATE STEP dt==sum($dt, -1) AND dt>=to CYCLES IMPOSSIBLE;
+iterateDown(DATE dt, DATE from, DATE to) = RECURSION dt == from AND from IS DATE AND to IS DATE STEP dt == sum($dt, -1) AND dt >= to CYCLES IMPOSSIBLE;
 
 endVaction 'End vacation' (Employee ep, Project p, INTERVAL[DATE] dates, DATE d) {
+    IF NOT timesheetHours() THEN { MESSAGE 'Please create time entry hour with "vacation" mark. For this go to Projects/Settings/Time entry type.'; BREAK; }
+
     NEWSESSION {
         IF vacation(d, p, ep) THEN {
             FOR iterate(DATE dd, subtract(d, -1), to(dates)) DO {
