@@ -116,3 +116,17 @@ NAVIGATOR {
         NEW orders;
     }
 }
+
+count (DATE d, Employee e, Order o) = GROUP SUM 1 IF startDate(Order o1) <= d AND NOT d > endDate(o1) AND employee(o1) = e AND o != o1;
+
+maxDate(Employee e) = GROUP MAX (MAX endDate(Order o), startDate(o)) BY employee(o);
+
+CONSTRAINT (SETCHANGED (startDate(Order o)) OR SETCHANGED(endDate(o)) OR SETCHANGED(employee(o)))
+    AND (GROUP SUM 1 IF count(DATE d, employee(o), o)
+        AND iterate(d, startDate(o), endDate(o))) MESSAGE 'There is already a placement for this employee in this time frame';
+
+CONSTRAINT (SETCHANGED (startDate(Order o)) OR SETCHANGED(endDate(o)) OR SETCHANGED(employee(o)))
+    AND count(DATE d, employee(o), o)
+    AND iterate(d, startDate(o), maxDate(employee(o))) AND NOT endDate(o) MESSAGE 'There is already a placement for this employee in this time frame';
+
+CONSTRAINT SETCHANGED ((startDate(Order o)) OR SETCHANGED(endDate(o)) OR SETCHANGED(employee(o))) AND startDate(o) > endDate(o) MESSAGE 'The placement start date cannot be greater than the end date';
