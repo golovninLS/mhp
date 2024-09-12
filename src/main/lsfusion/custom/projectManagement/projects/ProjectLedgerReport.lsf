@@ -38,12 +38,17 @@ external 'Внешние' = DATA LOCAL BOOLEAN ();
 in 'Вкл' = DATA LOCAL BOOLEAN (ProjectType);
 countInSelectType = GROUP MAX ProjectType t IF in(t);
 typeIn 'Типы проектов' = GROUP CONCAT name(ProjectType t) IF in(t), ', ' ORDER t;
+
+in 'Вкл.' = DATA BOOLEAN (Project);
+countInSelectProjects = GROUP MAX Project p IF in(p);
+projectsIn 'Проекты' = GROUP CONCAT name(Project p) IF in(p), ', ' ORDER p;
+
 EXTEND FORM projectTypes
     PROPERTIES (o) in FIRST 
 ;
 
-filter(ProjectLedger l) = ((date(l) >= from(interval()) AND date(l) <= to(interval())) OR NOT interval()) AND (external() AND NOT inner(project(l)) OR NOT external()) 
-    AND (in(type(project(l))) OR NOT countInSelectType())
+filter(ProjectLedger l) = ((date(l) >= from(interval()) AND date(l) <= to(interval())) OR NOT interval()) AND NOT inner(project(l))
+    AND (in(type(project(l))) OR NOT countInSelectType()) AND (in(project(l)) OR NOT countInSelectProjects())
 ;
 
 CLASS ABSTRACT MetricAccount;
@@ -182,20 +187,53 @@ profit 'Revenue' (Project p, STRING s, Partner partner) =
 profit 'Revenue' (Project p, STRING s, MetricAccount a, Partner partner) = IF a = StaticMetricAccount.invoice THEN profit(p, s, partner);
 total 'Profit' (Project p, STRING s, MetricAccount a, Partner partner) = profit(p, s, a, partner) (-) expense(p, s, a, partner);
 
+intToColor = FORMULA '(256*256*($1)+256*($2)+($3))::integer';
+greyColor (INTEGER i, INTEGER x)= COLOR(intToColor(240-(i*x), 240-(i*x), 240-(i*x)));
+background (INTEGER i) = greyColor(i, 10);
+
+FORM projectSelect
+    OBJECTS p = Project
+    PROPERTIES in(p), name(p) READONLY
+;
 
 FORM reportProjectsV2 'Отчет по проводкам v2'
-    PROPERTIES interval 'Период' = interval(), typeIn(), external()
+    PROPERTIES interval 'Период' = interval(), typeIn(), projectsIn() 
 
-    TREE report t = ProjectType, p = Project, object = STRING, a = MetricAccount, partner = Partner
-    PROPERTIES READONLY name(t), nameProject 'Наименование' = '  ' + name(p), nameObject 'Наименование' = (CONCAT'', '\t', object) ORDER, 'Наименование' = '\t\t' + name(a), namePartner = '\t\t\t' + name(partner)
-    PROPERTIES expense(t), expense(p), expense(p, object), expense(p, object, a), expense(p, object, a, partner)
-    PROPERTIES profit(t), profit(p), profit(p, object), profit(p, object, a), profit(p, object, a, partner)
-    PROPERTIES total(t), total(p), total(p, object), total(p, object, a), total(p, object, a, partner)
+    TREE report t = ProjectType, p = Project, object = STRING , a = MetricAccount, partner = Partner 
+    PROPERTIES READONLY name(t), nameProject 'Наименование' = '  ' + name(p) BACKGROUND background(0), 
+        nameObject 'Наименование' = VALUE (object) BACKGROUND background(1) , 'Наименование' = '\t' + name(a) BACKGROUND background(2), 
+        namePartner = '\t\t' + name(partner) BACKGROUND background(3)
+    PROPERTIES expense(t), expense(p) BACKGROUND background(0), expense(p, object) BACKGROUND background(1), expense(p, object, a) BACKGROUND background(2), 
+            expense(p, object, a, partner) BACKGROUND background(3)
+    PROPERTIES profit(t), profit(p) BACKGROUND background(0),  profit(p, object) BACKGROUND background(1), profit(p, object, a) BACKGROUND background(2),
+        profit(p, object, a, partner) BACKGROUND background(3)
+    PROPERTIES total(t), total(p) BACKGROUND background(0), total(p, object) BACKGROUND background(1), total(p, object, a) BACKGROUND background(2), 
+        total(p, object, a, partner) BACKGROUND background(3)
     
     FILTERS in(t, p), in(p, object), in(p, object, a), expense(p, object, a, partner) OR profit(p, object, a, partner)
     FILTERS profit(t) OR expense(t)
-    FILTERS profit(p) OR expense(p) 
+    FILTERS profit(p) OR expense(p), NOT inner(p)
+    
 ;
+//service project
+filterService(ProjectLedger l) = ((date(l) >= from(interval()) AND date(l) <= to(interval())) OR NOT interval()) AND inner(project(l))
+    AND (in(type(project(l))) OR NOT countInSelectType()) AND (in(project(l)) OR NOT countInSelectProjects())
+;
+expenseService (Project p) = GROUP SUM expense(ProjectLedger l) IF filterService(l) BY project(l);
+expenseService (Project p, MetricAccount as) = GROUP SUM expense(ProjectLedger l) IF filterService(l) BY project(l), account(l);
+expenseService 'Expense' (Project p, MetricAccount as, Partner ps) = GROUP SUM expense(ProjectLedger l) IF filterService(l) BY project(l), account(l), partner(l);
+
+EXTEND FORM reportProjectsV2
+    TREE reportService ps = Project, as = MetricAccount, partners = Partner
+    PROPERTIES name(ps), = '\t' + name(as) BACKGROUND background(0), = '\t\t' + name(partners) BACKGROUND background(1)
+    PROPERTIES expenseService(ps), expenseService(ps, as) BACKGROUND background(0), expenseService(ps, as, partners) BACKGROUND background(1)
+    FILTERS inner(ps), expenseService(ps), expenseService(ps, as), expenseService(ps, as, partners)
+;
+
+filterService(Project p) = FILTER reportProjectsV2.ps;
+
+expenseService 'Expense' = GROUP SUM expenseService(Project p) IF filterService(p) CHARWIDTH 25;
+
 
 filteredV2 (ProjectType t) = FILTER reportProjectsV2.t;
 
@@ -206,6 +244,7 @@ profitV2 'Profit' = GROUP SUM total(ProjectType t) IF filteredV2(t) CHARWIDTH 25
 
 EXTEND FORM reportProjectsV2
     PROPERTIES () TOOLBAR DRAW t expenseV2, revenueV2, profitV2
+    PROPERTIES expenseService() TOOLBAR DRAW ps
 ;
 
 
@@ -216,13 +255,14 @@ DESIGN reportProjectsV2 {
             horizontal = TRUE;
             MOVE PROPERTY (interval);
             MOVE PROPERTY (typeIn());
-            MOVE PROPERTY (external());
+            MOVE PROPERTY (projectsIn());
         }
         PROPERTY (namePartner) {charWidth = 30;}
         NEW pane {
+            tabbed = TRUE;
             fill = 1;
-            caption = 'Отчет';
-            MOVE BOX( TREE report) {caption = ''; }
+            MOVE BOX( TREE report) {caption = 'Проекты';}
+            MOVE BOX( TREE reportService) {caption = 'Сервисные';}
         }
     }
 }
