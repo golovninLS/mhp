@@ -1,6 +1,6 @@
 MODULE TimesheetSupervisorLunch;
 
-REQUIRE TimesheetSupervisor, TimesheetLunch, LunchOrder, ProjectLunchProduct, TimesheetSupervisorCustom;
+REQUIRE TimesheetSupervisor, TimesheetLunch, LunchOrder, ProjectLunchProduct, TimesheetSupervisorCustom, LunchProjectPayslip;
 
 PRIORITY Lunch, MasterData;
 
@@ -125,6 +125,13 @@ nameProduct '{master.data.name}' (Order o) = name(product(o));
 productOrder (DATE d, Employee e, Project p) = product(order(d, e)) IF in(p, product(order(d, e)));
 symbolProductOrder 'Lunch order' (DATE d, Employee e, Project p) = symbol(productOrder(d, e, p));
 
+lunches 'Lunches' (DATE d, Employee e) =
+    GROUP SUM 1 IF productOrder(d, e);
+lunches 'Lunches' (DATE d, Employee e, Project p) = GROUP SUM 1 IF order(d, e) AND project(order(d, e)) = p;
+
+lunchesT 'Lunches' (DATE d) = GROUP SUM lunches(d, Employee e);
+lunchesT 'Lunches' (DATE d, Project p) = GROUP SUM 1 IF productOrder(d, Employee e, p);
+
 FORM timesheetSupervisorDateEmployeeLuncheOrders 'Lunches'
     OBJECTS i = INTERVAL[DATE] PANEL
     OBJECTS e = Employee PANEL
@@ -139,29 +146,31 @@ FORM timesheetSupervisorDateEmployeeLuncheOrders 'Lunches'
 
 EXTEND FORM timesheetSupervisor
     PROPERTIES symbolProductOrder(d, el, pl) WAIT COLUMNS (d) HEADER extractDay(d) BACKGROUND backgroundHoursTimesheet(d, el)
-               ON CHANGE {
-                   FOR Product lp = timesheetLunchProduct() DO
-                       NEWSESSION {
-                           FOR Order o = order(d, el) DO {
-                               IF product(o) = lp THEN
-                                   DELETE o;
-                               ELSE
-                                   product(o) <- lp;
-                           } ELSE {
-                               NEW o = Order {
-                                   date(o) <- d;
-                                   employee(o) <- el;
-                                   project(o) <- timesheetProject();
-                                   product(o) <- lp;
-                               }
-                           }
-                        APPLY;
-                       }
-                   ELSE
-                       SHOW timesheetSupervisorDateEmployeeLuncheOrders OBJECTS i = interval(d, d), e = el FLOAT;
-               } ON CONTEXTMENU clearLunch(d) ON CONTEXTMENU fillLunch(d)
-                 ON CONTEXTMENU clearLunch(pl, el) ON CONTEXTMENU fillLunch(pl, el)
-                 ON CONTEXTMENU copyLunch(d)
+    ON CHANGE {
+        FOR Product lp = timesheetLunchProduct() DO
+            NEWSESSION {
+                FOR Order o = order(d, el) DO {
+                    IF product(o) = lp THEN
+                        DELETE o;
+                    ELSE
+                        product(o) <- lp;
+                } ELSE {
+                    NEW o = Order {
+                        date(o) <- d;
+                        employee(o) <- el;
+                        project(o) <- timesheetProject();
+                        product(o) <- lp;
+                    }
+                }
+                APPLY;
+            }
+            ELSE
+        SHOW timesheetSupervisorDateEmployeeLuncheOrders OBJECTS i = interval(d, d), e = el FLOAT;
+    } ON CONTEXTMENU clearLunch(d) ON CONTEXTMENU fillLunch(d)
+    ON CONTEXTMENU clearLunch(pl, el) ON CONTEXTMENU fillLunch(pl, el)
+    ON CONTEXTMENU copyLunch(d)
+    FOOTER (IF timesheetProject() THEN lunchesT(d, timesheetProject()) ELSE lunchesT(d))
+
     FILTERS assigned(pl, el, dates) OR hours(el, pl, dates) OR (NOT countAssignments(pl) AND NOT countAssignments(currentUser()))
     FILTERS pl == timesheetProject() OR NOT timesheetProject()
     FILTERS in(pl, timesheetLunchProduct()) OR NOT timesheetLunchProduct()
@@ -182,3 +191,7 @@ DESIGN timesheetSupervisor {
         }
     }
 }
+
+EXTEND FORM timesheetSupervisor
+    PROPERTIES countLunches(el, pl, dates) BEFORE symbolProductOrder(d, el, pl)
+;
