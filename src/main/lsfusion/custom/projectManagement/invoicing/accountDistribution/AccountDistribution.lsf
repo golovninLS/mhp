@@ -1,6 +1,6 @@
 MODULE AccountDistribution;
 
-REQUIRE SalesAccount, ProjectCustom, AccountBillProject, PayslipProjectLedger;
+REQUIRE SalesAccount, ProjectCustom, AccountBillProject, PayslipProjectLedger, ScrapProjectLedger;
 
 NAMESPACE Invoicing;
 
@@ -75,7 +75,7 @@ nameProject 'Project' (AccountDistributionLine b) = name(project(b));
 
 base 'Distribution base' = DATA NUMERIC[10,2] (AccountDistributionLine);
 
-untaxedAmount '{Amount}'  = DATA NUMERIC[14,2] (AccountDistributionLine);
+untaxedAmount '{Amount}' = DATA NUMERIC[14,2] (AccountDistributionLine);
 
 taxAmount 'Taxes' (Tax t, AccountDistributionLine p) = DATA NUMERIC[14,2] (Tax, AccountDistributionLine);
 taxAmount 'Taxes' (AccountDistributionLine p) = GROUP SUM taxAmount(Tax t, p);
@@ -109,7 +109,7 @@ basis 'Basis' (AccountDistributionLine l) = GROUP CONCAT name(AccountObject a), 
     GROUP SUM 1 IF in(ProjectLedger bp, l) AND accountObject[BillProject](bp) = a);
 
 FORM accountDistribution 'Распределение затрат'
-    OBJECTS  a = AccountDistribution PANEL
+    OBJECTS a = AccountDistribution PANEL
     PROPERTIES(a) READONLYIF readonly(a) dateTime, number,
         nameVendor, nameCompany, nameCurrency,
         nameRepresentative, vendorReference, note, nameSalesAccount, nameAccountObject,
@@ -135,7 +135,7 @@ FORM accountDistribution 'Распределение затрат'
 ;
 
 DESIGN accountDistribution {
-    caption = badged('Распреденление затрат', number(a) + '(' + dateTime(a) + ')');
+    caption = badged('Распределение затрат', number(a) + '(' + dateTime(a) + ')');
     OBJECTS {
         NEW header {
             alignment = STRETCH;
@@ -271,7 +271,7 @@ generateProject 'Generate' ABSTRACT LIST (AccountDistribution);
 
 amount 'Total amount' (AccountDistribution a) = GROUP SUM amount(AccountDistributionLine p) IF accountDistribution(p) = a;
 
-untaxedAmount (AccountDistribution a) = GROUP SUM expense(ProjectLedger bp) IF in(bp, a);
+untaxedAmount '{Amount}' (AccountDistribution a) = GROUP SUM expense(ProjectLedger bp) IF in(bp, a);
 taxAmount (Tax t, AccountDistribution a) = GROUP SUM taxAmount(t, ProjectLedger bp) IF in(bp, a);
 taxAmount 'Tax' (AccountDistribution a) = GROUP SUM taxAmount(Tax t, a);
 
@@ -331,9 +331,9 @@ createAccountDistribution(Month month, INTEGER year) {
             company(ad) <- defaultCompany();
             vendor(ad) <- partner;
 
-            FOR locHours (Project p)  DO NEW dp = AccountDistributionLine {
+            FOR locHours (Project p) DO NEW dp = AccountDistributionLine {
                 accountDistribution(dp) <- ad;
-                in(BillProject bp,dp) <- TRUE WHERE locIn(bp, partner);
+                in(BillProject bp, dp) <- TRUE WHERE locIn(bp, partner);
                 project(dp) <- p;
                 base(dp) <- locHours(p);                
             }
@@ -357,7 +357,7 @@ updateAccountDistribution(BillProject bp){
     
     // Заново заполняем для новых значений    
     IF monthAccount(bp) AND yearAccount(bp) AND (GROUP MAX TRUE IF monthAccount(AccountDistribution ad) == monthAccount(bp) AND yearAccount(ad) == yearAccount(bp)) AND
-       (accountObject(bp) IS ExtraAccountObject OR inner(project(bp))) THEN {
+        (accountObject(bp) IS ExtraAccountObject OR inner(project(bp))) THEN {
 
         LOCAL locHours = NUMERIC[8,2] (Project);
         locHours (Project p) <-
@@ -402,10 +402,10 @@ createAccountDistributionSalesAccountAccountObject(Month month, INTEGER year) {
 
     LOCAL locHours = NUMERIC[8,2] (Project);
     locHours (Project p) <-
-        hours(p, firstDayOfMonth(DATE('01.' + number(month)+ '.' + year)), lastDayOfMonth(DATE('01.' + number(month)+ '.' + year)))
+        hours(p, firstDayOfMonth(DATE('01.' + number(month) + '.' + year)), lastDayOfMonth(DATE('01.' + number(month) + '.' + year)))
         WHERE p IS Project AND NOT inner(p);
 
-    FOR Partner partner IS Partner  AND SalesAccount a IS SalesAccount AND AccountObject ao IS AccountObject AND (GROUP MIN locIn(BillProject bp, partner, a, ao)) DO {
+    FOR Partner partner IS Partner AND SalesAccount a IS SalesAccount AND AccountObject ao IS AccountObject AND (GROUP MIN locIn(BillProject bp, partner, a, ao)) DO {
         NEW ad = AccountDistribution {
             dateTime(ad) <- currentDateTime();
             monthAccount(ad) <- month;
@@ -415,9 +415,9 @@ createAccountDistributionSalesAccountAccountObject(Month month, INTEGER year) {
             salesAccount(ad) <- a;
             accountObject(ad) <- ao;
 
-            FOR locHours (Project p)  DO NEW dp = AccountDistributionLine {
+            FOR locHours (Project p) DO NEW dp = AccountDistributionLine {
                 accountDistribution(dp) <- ad;
-                in(BillProject bp,dp) <- TRUE WHERE locIn(bp, partner, a, ao);
+                in(BillProject bp, dp) <- TRUE WHERE locIn(bp, partner, a, ao);
                 project(dp) <- p;
                 base(dp) <- locHours(p);
             }
@@ -464,7 +464,6 @@ updateAccountDistributionSalesAccountAccountObject(BillProject bp){
                     salesAccount(ad) <- salesAccount(bp);
                     accountObject(ad) <- accountObject(bp);
                     accountDistribution() <- ad;
-                    
 
                     FOR locHours (Project p) DO NEW dl = AccountDistributionLine {
                         accountDistribution(dl) <- ad;
@@ -489,16 +488,15 @@ WHEN DROPPED(monthAccount(BillProject bp)) OR DROPPED(yearAccount(bp)) OR DROPPE
     updateAccountDistributionSalesAccountAccountObject(bp);
 }
 
-
 createPayRollDistribution(Month m, INTEGER year){
     LOCAL locIn = BOOLEAN (PayslipLedger, Partner, SalesAccount, AccountObject);
     locIn(PayslipLedger l, Partner p, SalesAccount s, AccountObject o) <- TRUE WHERE 
         extractMonth(date(l)) = m AND extractYear(date(l)) = year AND l IS PayslipLedger AND inner(project(l)) AND s = SystemSalesAccount.salary AND project(l) = o
         AND partner(l) = p;
-    ;
+
     LOCAL locHours = NUMERIC[8,2] (Project);
     locHours (Project p) <-
-        hours(p, firstDayOfMonth(DATE('01.' + number(m)+ '.' + year)), lastDayOfMonth(DATE('01.' + number(m)+ '.' + year)))
+        hours(p, firstDayOfMonth(DATE('01.' + number(m) + '.' + year)), lastDayOfMonth(DATE('01.' + number(m) + '.' + year)))
         WHERE p IS Project AND NOT inner(p);
 
     FOR Partner partner IS Partner AND SalesAccount a IS SalesAccount AND AccountObject ao IS AccountObject AND (GROUP MIN locIn(PayslipLedger bp, partner, a, ao)) 
@@ -512,9 +510,9 @@ createPayRollDistribution(Month m, INTEGER year){
             salesAccount(ad) <- a;
             accountObject(ad) <- ao;
 
-            FOR locHours (Project p)  DO NEW dp = AccountDistributionLine {
+            FOR locHours (Project p) DO NEW dp = AccountDistributionLine {
                 accountDistribution(dp) <- ad;
-                in(PayslipLedger bp,dp) <- TRUE WHERE locIn(bp, partner, a, ao);
+                in(PayslipLedger bp, dp) <- TRUE WHERE locIn(bp, partner, a, ao);
                 project(dp) <- p;
                 base(dp) <- locHours(p);
             }
@@ -530,3 +528,112 @@ createPayRollDistribution(Month m, INTEGER year){
 EXTEND FORM accountDistributions
     PROPERTIES (a) untaxedAmount
 ;
+
+createScrapProjectDistribution(Month m, INTEGER year){
+    LOCAL locIn = BOOLEAN (ScrapProject, Company, SalesAccount, AccountObject);
+    locIn(ScrapProject l, Company c, SalesAccount s, AccountObject o) <-
+        TRUE WHERE extractMonth(date(l)) = m AND extractYear(date(l)) = year
+        AND l IS ScrapProject AND (accountObject(l) IS ExtraAccountObject OR inner(project(l)))
+        AND NOT (GROUP MIN in(l, AccountDistributionLine dp) IF dp IS AccountDistributionLine)
+        AND project(l) = o AND s = account(l) AND partner(l) = c;
+
+    LOCAL locHours = NUMERIC[8,2] (Project);
+    locHours (Project p) <-
+        hours(p, firstDayOfMonth(DATE('01.' + number(m) + '.' + year)), lastDayOfMonth(DATE('01.' + number(m) + '.' + year)))
+        WHERE p IS Project AND NOT inner(p);
+
+    FOR Company company IS Company AND SalesAccount a IS SalesAccount AND AccountObject ao IS AccountObject AND (GROUP MIN locIn(ScrapProject bp, company, a, ao))
+        AND (GROUP SUM expense(ProjectLedger pl) IF locIn(pl, company, a, ao)) DO {
+        NEW ad = AccountDistribution {
+            dateTime(ad) <- currentDateTime();
+            monthAccount(ad) <- m;
+            yearAccount(ad) <- year;
+            company(ad) <- defaultCompany();
+            vendor(ad) <- company;
+            salesAccount(ad) <- a;
+            accountObject(ad) <- ao;
+
+            FOR locHours (Project p) DO NEW dp = AccountDistributionLine {
+                accountDistribution(dp) <- ad;
+                in(ScrapProject bp, dp) <- TRUE WHERE locIn(bp, company, a, ao);
+                project(dp) <- p;
+                base(dp) <- locHours(p);
+            }
+
+            generateProject(ad);
+        }
+    } ELSE {
+        MESSAGE 'Нет данных за месяц' NOWAIT;
+    }
+    APPLY;
+}
+
+updateAccountDistributionScrapProject (ScrapProject sp) {
+    LOCAL accountDistribution = AccountDistribution();
+    in(sp, AccountDistributionLine dp) <- NULL WHERE in(sp, dp);
+
+    accountDistribution() <- GROUP MIN AccountDistribution ad IF monthAccount(ad) == PREV(monthAccount(sp))
+        AND yearAccount(ad) == PREV(yearAccount(sp)) AND vendor(ad) == PREV(partner(sp))
+        AND salesAccount(ad) = PREV(salesAccount(sp)) AND accountObject(ad) = PREV(accountObject(sp));
+    generateProject(accountDistribution());
+
+    IF sp IS ScrapProject AND inner(project(sp)) THEN {
+        LOCAL locHours = NUMERIC[8,2] (Project);
+        locHours (Project p) <-
+            hours(p, firstDayOfMonth(DATE('01.' + number(monthAccount(sp)) + '.' + yearAccount(sp))), lastDayOfMonth(DATE('01.' + number(monthAccount(sp)) + '.' + yearAccount(sp))))
+            WHERE p IS Project AND NOT inner(p);
+
+        accountDistribution() <- GROUP MIN AccountDistribution ad IF monthAccount(sp) == PREV(monthAccount(ad))
+            AND yearAccount(sp) == PREV(yearAccount(ad)) AND partner(sp) == PREV(vendor(ad))
+            AND salesAccount(ad) = PREV(salesAccount(sp)) AND accountObject(ad) = PREV(accountObject(ad));
+
+        IF accountDistribution() IS AccountDistribution THEN {
+            in(sp, AccountDistributionLine dl) <- TRUE WHERE accountDistribution(dl) == accountDistribution();
+            accountObject(accountDistribution()) <- accountObject(sp);
+            monthAccount(accountDistribution()) <- monthAccount(sp);
+            yearAccount(accountDistribution()) <- yearAccount(sp);
+            salesAccount(accountDistribution()) <- salesAccount(sp);
+            vendor(accountDistribution()) <- partner(sp);
+        } ELSE {
+            NEW ad = AccountDistribution {
+                dateTime(ad) <- currentDateTime();
+                monthAccount(ad) <- monthAccount(sp);
+                yearAccount(ad) <- yearAccount(sp);
+                company(ad) <- defaultCompany();
+                vendor(ad) <- partner(sp);
+                salesAccount(ad) <- salesAccount(sp);
+                accountObject(ad) <- accountObject(sp);
+                accountDistribution() <- ad;
+
+                FOR locHours (Project p) DO NEW dl = AccountDistributionLine {
+                    accountDistribution(dl) <- ad;
+                    in(sp, dl) <- TRUE;
+                    project(dl) <- p;
+                    base(dl) <- locHours(p);
+                }
+            }
+            APPLY;
+        }
+        generateProject(accountDistribution());
+
+    } ELSE {
+        DELETE AccountDistributionLine adl WHERE accountDistribution(adl) = accountDistribution();
+        DELETE AccountDistribution ad WHERE ad = accountDistribution();
+    }
+}
+
+//WHEN SETCHANGED(monthAccount(ScrapProject sp)) OR SETCHANGED(yearAccount(sp)) OR SETCHANGED(partner(sp)) OR
+//    SETCHANGED(untaxedAmount(sp)) OR SETCHANGED(taxAmount(sp)) OR SETCHANGED(amount(sp)) OR SETCHANGED(accountObject(sp)) OR SETCHANGED(salesAccount(sp)) DO {
+//    updateAccountDistributionScrapProject(sp);
+//}
+//
+//WHEN DROPPED(ScrapProject sp IS ScrapProject) OR DROPPED(monthAccount(sp)) OR DROPPED(yearAccount(sp)) OR DROPPED(partner(sp)) OR
+//    DROPPED(untaxedAmount(sp)) OR DROPPED(taxAmount(sp)) OR DROPPED(amount(sp)) OR DROPPED(accountObject(sp)) OR DROPPED(salesAccount(sp)) DO {
+//    updateAccountDistributionScrapProject(sp);
+//}
+//
+//WHEN CHANGED(inner(project(ScrapProject p))) AND NOT inner(project(p)) DO {
+//    DELETE AccountDistributionLine l WHERE accountObject(l) = accountObject(p);
+//    DELETE AccountDistribution ad WHERE accountObject(ad) = accountObject(p) AND (accountObject(p) = project(p) OR PREV(project(p)) = accountObject(p));
+//    generateProject(scrap(p));
+//};

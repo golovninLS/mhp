@@ -1,0 +1,28 @@
+MODULE ScrapProjectLedger;
+
+REQUIRE Scrap, ScrapProject, ProjectLedger;
+
+NAMESPACE Inventory;
+
+EXTEND CLASS ScrapProject : ProjectLedger;
+
+inactive = ABSTRACT BOOLEAN (ScrapProject);
+active (ScrapProject l) += active(l) AND accountObject(l) IS Project AND NOT inactive(l);
+
+project (ScrapProject l) += accountObject(l) AS Project IF accountObject(l) IS Project;
+
+number (ScrapProject l) += number(scrap(l));
+date (ScrapProject l) += dateAccount(l);
+
+partner (ScrapProject l) += company(location(scrap(l)));
+
+category (ScrapProject l) += nameType(scrap(l));
+
+description (ScrapProject l) += note(scrap(l));
+
+//income(ScrapProject l) += -untaxedAmount(l);
+expense(ScrapProject l) += untaxedAmount(l);
+
+account(ScrapProject l) += salesAccount(l);
+
+accountObject(ScrapProject l) += IF active(l) THEN nameProject(l);

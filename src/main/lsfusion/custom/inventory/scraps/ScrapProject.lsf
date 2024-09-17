@@ -1,0 +1,190 @@
+MODULE ScrapProject;
+
+REQUIRE Scrap, ScrapDone, SalesAccount, Project, AccountBillProject;
+
+NAMESPACE Inventory;
+
+CLASS ScrapProject 'Scrap';
+
+scrap 'Scrap' = DATA Scrap (ScrapProject) NONULL DELETE;
+
+active(ScrapProject p)= TRUE IF done(scrap(p));
+
+countScrapProject (Scrap s) = GROUP SUM 1 IF scrap(ScrapProject p) = s;
+minScrapProject (Scrap s) = GROUP MIN ScrapProject p IF scrap(p) = s;
+
+salesAccount 'Sales account' = DATA CustomSalesAccount (ScrapProject);
+nameSalesAccount 'Sales account' (ScrapProject sb) = name(salesAccount(sb));
+monthAccount = DATA Month (ScrapProject);
+numberMonthAccount 'Month' (ScrapProject sp) = number(monthAccount(sp));
+yearAccount 'Year' = DATA INTEGER (ScrapProject) PATTERN '0000';
+dateAccount (ScrapProject sp) = OVERRIDE lastDayOfMonth(DATE('01.' + numberMonthAccount(sp) + '.' + yearAccount(sp))), date(scrap(sp));
+
+base 'Distribution base' = DATA NUMERIC[10,2] (ScrapProject);
+
+taxAmount 'Taxes' (Tax t, ScrapProject sp) = DATA NUMERIC[14,2] (Tax, ScrapProject);
+taxAmount 'Taxes' (ScrapProject sp) = GROUP SUM taxAmount(Tax t, sp);
+
+// taxes
+untaxedAmount '{Amount}' = NUMERIC[14,2](quantity(ScrapLine l) * cost(product(l)));
+
+// taxes for line
+in 'On' = DATA BOOLEAN (ScrapLine, Tax);
+WHEN LOCAL CHANGED(product(ScrapLine l)) DO
+    in(l, Tax t) <- purchaseIn(product(l), t) WHERE purchaseCountIn(product(l), taxGroup(t));
+
+WHEN LOCAL SET(in(ScrapLine l, Tax t)) DO {
+    in(l, Tax tx) <- NULL WHERE taxGroup(t) = taxGroup(tx) AND NOT t = tx;
+}
+
+// amount    
+taxAmount 'Taxes' (Tax t, ScrapLine l) = DATA NUMERIC[14,2] (Tax, ScrapLine);
+
+taxIncluded = ABSTRACT BOOLEAN (ScrapLine);
+WHEN LOCAL CHANGED(untaxedAmount(ScrapLine l) IF in(l, Tax t)) AND value(t) AND NOT CHANGED(taxAmount(t, l)) DO
+    taxAmount (t, l) <- NUMERIC[14,2] (value(t) / (100 (+) (value(t) IF taxIncluded(l))) * untaxedAmount(l));
+
+CONSTRAINT (DROPPED(Tax t IS Tax) AND PREV(taxAmount(t, ScrapLine l)))
+    MESSAGE 'You cannot remove tax involved in calculations';
+
+taxAmount 'Taxes' (ScrapLine l) = GROUP SUM taxAmount(Tax t, l) IF in(l, t);
+taxPercent 'Taxes,%' (ScrapLine l) = GROUP SUM value(Tax t) IF in(l, t);
+countTaxes (ScrapLine l) = GROUP SUM 1 IF in(l, Tax t);
+taxes 'Taxes' (ScrapLine l) = GROUP CONCAT name(Tax t) IF in(l, t), ', ' ORDER t CHARWIDTH 8;
+
+amount 'Total amount' (ScrapLine l) = untaxedAmount(l) (+) (taxAmount(l) IF NOT taxIncluded(l));
+
+// taxes for document
+taxCount (Scrap b, Tax t) = GROUP SUM 1 IF in(ScrapLine l, t) AND scrap(l) = b;
+taxAmount 'Tax' (Tax t, Scrap b) =
+    GROUP SUM taxAmount(t, ScrapLine l) IF scrap(l) = b AND in(l, t);
+
+untaxedAmount '{Amount}' (Scrap b) = GROUP SUM untaxedAmount(ScrapLine l) IF scrap(l) = b;
+untaxedAmount '{Amount}' = DATA NUMERIC[14,2] (ScrapProject);
+
+taxAmount 'Tax' (Scrap b) = GROUP SUM taxAmount(Tax t, b);
+
+amount 'Total amount' (Scrap b) = GROUP SUM amount(ScrapLine l) IF scrap(l) = b;
+amount 'Total amount' (ScrapProject p) = untaxedAmount(p) (+) taxAmount(p);
+
+dueDateTime 'Pay before' = DATA DATETIME (Scrap);
+dueDate 'Date' (Scrap o) = DATE(dueDateTime(o));
+
+defaultTax = GROUP MAX Tax t IF name(t) == 'VAT' MATERIALIZED;
+
+changeDueDate(Scrap b) {
+    INPUT d = DATE DO dueDateTime(b) <- DATETIME(d);
+}
+
+changeDate(Scrap b) {
+    INPUT d = DATE DO dateTime(b) <- DATETIME(d);
+}
+
+generateProject 'Generate' ABSTRACT LIST (Scrap);
+
+calcUntaxedAmount (ScrapProject p) =
+    PARTITION UNGROUP untaxedAmount
+        PROPORTION STRICT ROUND(2) base(p)
+        ORDER p BY scrap(p);
+
+calcTaxAmount (Tax t, ScrapProject p) =
+    PARTITION UNGROUP taxAmount
+        PROPORTION STRICT ROUND(2) base(p)
+        ORDER p BY t, scrap(p);
+
+generateProject(Scrap s) + {
+    untaxedAmount(ScrapProject p) <- calcUntaxedAmount(p) WHERE scrap(p) = s;
+    taxAmount(Tax t, ScrapProject p) <- calcTaxAmount(t, p) WHERE scrap(p) = s;
+}
+
+WHEN LOCAL FORMS scrap CHANGED(untaxedAmount(Scrap s)) OR (GROUP SUM 1 IF CHANGED(taxAmount(Tax t, s))) OR
+    (GROUP SUM 1 IF CHANGED(base(ScrapProject p)) AND scrap(p) = s) DO
+    generateProject(s);
+
+WHEN LOCAL FORMS scrap SET(Scrap b IS Scrap) AND NOT countScrapProject(b) DO {
+    NEW bp = ScrapProject {
+        scrap(bp) <- b;
+        base(bp) <- 100;
+    }
+}
+
+accountObject = DATA AccountObject (ScrapProject);
+nameAccountObject 'Account object' (ScrapProject p) = name(accountObject(p));
+typeAccountObject 'Type' (ScrapProject p) = type(accountObject(p));
+
+WHEN LOCAL FORMS scrap CHANGED(accountObject(ScrapProject bp)) AND (NOT monthAccount(bp) OR NOT yearAccount(bp)) DO {
+    monthAccount(bp) <- extractMonth(currentDate());
+    yearAccount(bp) <- extractYear(currentDate());
+    base(bp) <- 100;
+}
+
+newScrapProject 'Add' (Scrap s) {
+    NEW p = ScrapProject {
+        scrap(p) <- s;
+        base(p) <- 100;
+    }
+} IMAGE 'add.png';
+
+EXTEND FORM scrap
+
+    OBJECTS t = Tax
+
+    OBJECTS sp = ScrapProject
+    PROPERTIES(sp) nameAccountObject, nameSalesAccount, numberMonthAccount, yearAccount, base, untaxedAmount
+    PROPERTIES taxAmount(t, sp) COLUMNS (t) HEADER name(t)
+    PROPERTIES(sp) amount READONLY
+    PROPERTIES(sp) DELETE
+    FILTERS scrap(sp) = s
+
+    PROPERTIES (s) newScrapProject FIRST TOOLBAR DRAW sp
+
+    PROPERTIES 'NETTO' = untaxedAmount(l),
+        'VAT' = taxAmount(l) ON CHANGE {
+            INPUT n = NUMERIC[14,2] DO {
+                in(l, defaultTax()) <- TRUE;
+                taxAmount(defaultTax(), l) <- n;
+            }
+        }, 'BRUTTO' = amount(l)
+
+    PROPERTIES uta 'Netto' = untaxedAmount(s) READONLY,
+        utt = taxAmount(t, s) COLUMNS (t) HEADER name(t) READONLY,
+        amn 'Brutto' = amount(s) READONLY
+    PROPERTIES (s) 'Pay before' = dueDate ON CHANGE changeDueDate(s), date ON CHANGE changeDate(s)
+
+    PROPERTIES(s) generateProject DRAW sp TOOLBAR
+
+    EVENTS ON APPLY {
+        generateProject(s);
+    }
+    
+;
+
+WHEN SET (ScrapLine l IS ScrapLine) DO in(l, defaultTax()) <- TRUE;
+
+DESIGN scrap {
+    OBJECTS {
+        NEW header FIRST {
+            alignment = STRETCH;
+            horizontal = TRUE;
+            NEW headerLeft {
+                MOVE BOX (s);
+            }
+            NEW headerRight {
+                MOVE PROPERTY (uta) { pattern = '#,##0.00##'; };
+                MOVE PROPERTY (utt) { pattern = '#,##0.00##'; };
+                MOVE PROPERTY (amn) { pattern = '#,##0.00##'; };
+            }
+        }
+        details {
+            NEW scrapproject FIRST {
+                caption = 'Scrap Projects';
+                horizontal = TRUE;
+                MOVE BOX(sp) {caption = ''; }
+                PROPERTY (untaxedAmount(sp)){ pattern = '#,##0.00##'; };
+                PROPERTY (taxAmount(t, sp)){ pattern = '#,##0.00##'; };
+                PROPERTY (amount(sp)){ pattern = '#,##0.00##'; };
+            }
+        }
+        PROPERTY (untaxedAmount(l)) { pattern = '#,##0.00##'; };
+    }
+}
