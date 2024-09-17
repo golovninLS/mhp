@@ -117,7 +117,7 @@ NAVIGATOR {
     }
 }
 
-count (DATE d, Employee e, Order o) = GROUP SUM 1 IF startDate(Order o1) <= d AND NOT d > endDate(o1) AND employee(o1) = e AND o != o1;
+count (DATE d, Employee e, Order o) = GROUP SUM 1 IF startDate(Order o1) < d AND NOT d >= endDate(o1) AND employee(o1) = e AND o != o1;
 
 maxDate(Employee e) = GROUP MAX (MAX endDate(Order o), startDate(o)) BY employee(o);
 
