@@ -26,7 +26,7 @@ dataIn = DATA BOOLEAN (NodePosition, Mailing);
 in 'Incl.' (NodePosition p, Mailing m) = OVERRIDE dataIn(p, m), dataIn(parent(p), m);
 
 dataIn = DATA BOOLEAN (Employee, Mailing);
-in 'Incl.' (Employee e, Mailing m) = OVERRIDE dataIn(e, m), in(position(e), m);
+in 'Incl.' (Employee e, Mailing m) = OVERRIDE dataIn(e, m) IF chat(e), in(position(e), m) IF chat(e);
 
 statusMessage 'Status' = DATA STRING (Employee, Mailing) CHARWIDTH 30;
 isSent 'Sent' = DATA BOOLEAN (Employee, Mailing) CHARWIDTH 10;
@@ -140,7 +140,7 @@ DESIGN mailingDetails {
     NEW details {
         fill = 3;
         tabbed = TRUE;
-        NEW manually {
+        NEW included {
             caption = 'Employees on the mailing list';
             MOVE BOX (ee) { caption = ''; };
         }
