@@ -440,7 +440,7 @@ updateAccountDistributionSalesAccountAccountObject(BillProject bp){
     generateProject(accountDistribution());
 
     // Заново заполняем для новых значений    
-    IF monthAccount(bp) AND yearAccount(bp) AND (GROUP MAX TRUE IF monthAccount(AccountDistribution ad) == monthAccount(bp) AND yearAccount(ad) == yearAccount(bp) AND salesAccount(ad) = salesAccount(bp) AND accountObject(ad) = accountObject(bp)) AND
+    IF monthAccount(bp) AND yearAccount(bp) AND (GROUP MAX TRUE IF monthAccount(AccountDistribution ad) == monthAccount(bp) AND yearAccount(ad) == yearAccount(bp)) AND
         (accountObject(bp) IS ExtraAccountObject OR inner(project(bp))) THEN {
 
         LOCAL locHours = NUMERIC[8,2] (Project);
