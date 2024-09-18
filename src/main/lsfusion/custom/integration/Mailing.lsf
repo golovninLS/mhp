@@ -36,9 +36,16 @@ countEmployeeMailing (Mailing m) = GROUP SUM 1 IF in(Employee e, m);
 
 isSent 'Sent' (Mailing m) = TRUE IF countSentMessages(m) = countEmployeeMailing(m) CHARWIDTH 10;
 
+CLASS MailingLogs 'Mailing logs';
+
+mailing = DATA Mailing (MailingLogs);
+dateLog 'Date' = DATA DATE (MailingLogs);
+infoLog 'Info' = DATA TEXT (MailingLogs);
+chatLog = DATA Chat (MailingLogs);
+nameChatLog 'Chat' (MailingLogs ml)= name(chatLog(ml)) CHARWIDTH 10;
+
 setStatus (Employee e, Mailing m) {
-    statusMessage(e, m) <-
-    CASE
+    statusMessage(e, m) <- CASE
         WHEN statusHttp() = 400 THEN 'Bad request'
         WHEN statusHttp() = 401 THEN 'Invalid API token'
         WHEN statusHttp() = 403 THEN 'The bot does not have permission to send messages to this chat'
@@ -61,6 +68,12 @@ resendMessage 'Send'(Employee e, Mailing m) {
         isSent(e, m) <- TRUE;
     } CATCH {
         setStatus(e, m);
+        NEW l = MailingLogs {
+            mailing(l) <- m;
+            dateLog(l) <- currentDate();
+            chatLog(l) <- chat(e);
+            infoLog(l) <- CONCAT '\n\n', messageCaughtException(), lsfStackTraceCaughtException();
+        }
     }
     APPLY;
 } CHARWIDTH 9;
@@ -74,6 +87,12 @@ sendMessage 'Send' (Mailing m) {
         dateTimeSent(m) <- currentDateTime();
     } CATCH {
         setStatus(e, m);
+        NEW l = MailingLogs {
+            mailing(l) <- m;
+            dateLog(l) <- currentDate();
+            chatLog(l) <- chat(e);
+            infoLog(l) <- CONCAT '\n\n', messageCaughtException(), lsfStackTraceCaughtException();
+        }
     }
     APPLY;
 }
@@ -92,6 +111,12 @@ FORM mailing 'Mailing'
     PROPERTIES (e, m) READONLY statusMessage BACKGROUND RGB(242, 187, 190) IF NOT isSent(e, m) AND statusMessage(e, m)
     PROPERTIES (e, m) resendMessage READONLYIF isSent(e, m) GRID DRAW e
     FILTERS in(e, m)
+    FILTERGROUP filters
+        FILTER 'Not_sent' NOT isSent(e, m)
+
+    OBJECTS l = MailingLogs
+    PROPERTIES (l) READONLY dateLog, nameChatLog, infoLog
+    FILTERS mailing(l) = m
 ;
 
 FORM mailingDetails 'Mailing details'
@@ -127,8 +152,16 @@ DESIGN mailing {
         PROPERTY (message(m)){valueHeight = 20;}
     }
     NEW details {
+        tabbed = TRUE;
         fill = 1;
-        MOVE BOX (e) { panelCaptionVertical = TRUE; };
+        NEW included {
+            caption = 'Mailing';
+            MOVE BOX (e) { caption = ''; };
+        }
+        NEW logs {
+            caption = 'Logs';
+            MOVE BOX (l) { caption = ''; };
+        }
     }
     MOVE TOOLBARBOX;
 }
