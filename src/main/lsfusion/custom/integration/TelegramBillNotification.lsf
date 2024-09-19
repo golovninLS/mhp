@@ -2,35 +2,34 @@ MODULE TelegramBillNotification;
 
 REQUIRE TelegramCustom, Bill, EmployeeCustom;
 
-CLASS Notifications 'Уведомления';
+CLASS Notifications 'Notifications';
 
 employee = DATA Employee (Chat);
-nameEmployee 'Сотрудник' (Chat c) = name[Partner](employee(c));
+nameEmployee 'Employee' (Chat c) = name[Partner](employee(c));
 chat = GROUP AGGR Chat c BY employee(c);
-nameChat 'Чат' (Employee e) = name(chat(e));
+nameChat 'Chat' (Employee e) = name(chat(e));
 EXTEND FORM employeesCustom
     PROPERTIES (e) READONLY nameChat
     FILTERGROUP telegram
         FILTER 'Telegram' chat(e)
 ;
 
-
 EXTEND FORM messengers
     PROPERTIES nameEmployee(c)
 ;
 
-CLASS NotificationTypes 'Тип уведомления' {
-    bill 'Изменение фактуры'
+CLASS NotificationTypes 'Notification type' {
+    bill 'Bill change'
 }
 
 type = DATA NotificationTypes (Notifications) MATERIALIZED NONULL;
-name 'Тип уведомления' (NotificationTypes m) = staticCaption(m) IF m IS NotificationTypes;
+name 'Notification type' (NotificationTypes m) = staticCaption(m) IF m IS NotificationTypes;
 
-in 'Вкл.' = DATA BOOLEAN (Chat, NotificationTypes);
+in 'Incl.' = DATA BOOLEAN (Chat, NotificationTypes);
 
-captionAttachment (Chat c) = IF newAttachment(c) THEN name(newAttachment(c)) ELSE  'Прикрепить файл';
+captionAttachment (Chat c) = IF newAttachment(c) THEN name(newAttachment(c)) ELSE 'Attach file';
 
-attachment 'Прикрепить'(Chat c){
+attachment 'Attach' (Chat c){
     INPUT f = NAMEDFILE DO newAttachment(c) <- f;
 }
 
@@ -57,7 +56,6 @@ DESIGN employee {
                     MOVE PROPERTY (attachment(c));
                     MOVE PROPERTY (sendMessage(c));
                 }
-                
             }
         }
     }
@@ -71,8 +69,7 @@ notifyUser (NotificationTypes type, STRING message) {
 WHEN CHANGED(status(Bill b)) DO {
     TRY {
         LOCAL message = STRING ();
-        message() <- 'Изменение статуса фактуры\n\nСтатус фактуры № ' + number(b) + ' изменился с "' + PREV(nameStatus(b)) + '" на "' + nameStatus(b) + '"';
-
+        message() <- 'Change of status of the bill' + '\n\n' + 'The status of the bill' + ' № ' + number(b) + ' ' + 'changed from' + ' "' + PREV(nameStatus(b)) + '" to "' + nameStatus(b) + '"';
         notifyUser(NotificationTypes.bill, message());
     }
 }
