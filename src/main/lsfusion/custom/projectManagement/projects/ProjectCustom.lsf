@@ -98,3 +98,40 @@ dateDoc 'Date document' = DATA DATE (ProjectFile);
 EXTEND FORM project
     PROPERTIES (of) dateDoc
 ;
+
+CLASS PlannedRevenue 'Planned revenue';
+
+project 'Project' = DATA Project (PlannedRevenue);
+plannedRevenue 'Planned revenue' = DATA NUMERIC[16,2] (PlannedRevenue);
+month 'Month' = DATA Month (PlannedRevenue);
+revenueMonth 'Month' (PlannedRevenue p) = number(month(p));
+revenueYear 'Year' = DATA INTEGER (PlannedRevenue);
+planned = GROUP MAX PlannedRevenue pr BY project(pr), INTERVAL[DATE] d
+    IF month(pr) = extractMonth(to(d)) AND revenueYear(pr) = extractYear(to(d));
+projectRevenue 'Planned revenue' (Project p, INTERVAL[DATE] d) = plannedRevenue(planned(p, d));
+
+uniqueByPeriod = GROUP AGGR PlannedRevenue pr BY project(pr), month(pr), revenueYear(pr);
+
+EXTEND FORM project
+    OBJECTS pr = PlannedRevenue
+    PROPERTIES (pr) plannedRevenue, revenueMonth, revenueYear
+    PROPERTIES (pr) NEW, DELETE
+    FILTERS project(pr) = p
+;
+
+DESIGN project {
+    details {
+        NEW revenue LAST {
+            caption = 'Planned revenue';
+            MOVE BOX (pr) {
+                caption = '';
+                fill = 1;
+                panelCaptionAlignment = START ;
+            };
+        }
+    }
+}
+
+EXTEND FORM projects
+    PROPERTIES (p, dates) projectRevenue
+;
