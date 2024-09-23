@@ -13,20 +13,26 @@ CONSTRAINT timesheetAccomodation() AND archived(timesheetAccomodation())
 checkIn 'Check in' (DATE d, Employee e) {
     IF timesheetAccomodation() THEN {
         NEWSESSION {
-            FOR Order o = order(d, e) DO {
-                startDate(o) <- d;
+            IF accomodation(order(d, e)) = timesheetAccomodation() THEN {
+                endDate(order(d, e)) <- d;
+            } ELSE IF accomodation(order(subtract(d, 1), e)) = timesheetAccomodation() AND accomodation(nextOrder(d, e)) != timesheetAccomodation() THEN {
+                endDate(order(subtract(d, 1), e)) <- startDate(nextOrder(d, e));
+            } ELSE IF accomodation(order(subtract(d, 1), e)) = timesheetAccomodation() AND NOT accomodation(nextOrder(d, e)) THEN {
+                endDate(order(subtract(d, 1), e)) <- NULL;
+            } ELSE IF accomodation(nextOrder(d, e)) = timesheetAccomodation() THEN {
+                startDate(nextOrder(d, e)) <- d;
+            } ELSE IF accomodation(nextOrder(d, e)) THEN {
+                NEW o = Order {
+                    startDate(o) <- d;
+                    employee(o) <- e;
+                    accomodation(o) <- timesheetAccomodation();
+                    endDate(o) <- startDate(nextOrder(d, e));
+                }
             } ELSE {
-                IF accomodation(order(subtract(d, 1), e)) = timesheetAccomodation() THEN {
-                    endDate(order(subtract(d, 1), e)) <- NULL;
-                } ELSE {
-                    IF accomodation(nextOrder(d, e)) = timesheetAccomodation() THEN {
-                        startDate(nextOrder(d, e)) <- d;
-                    } ELSE
-                        NEW o = Order {
-                            startDate(o) <- d;
-                            employee(o) <- e;
-                            accomodation(o) <- timesheetAccomodation();
-                        }
+                NEW o = Order {
+                    startDate(o) <- d;
+                    employee(o) <- e;
+                    accomodation(o) <- timesheetAccomodation();
                 }
             }
             APPLY;

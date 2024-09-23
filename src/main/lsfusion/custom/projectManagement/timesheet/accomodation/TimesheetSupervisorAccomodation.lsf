@@ -27,11 +27,33 @@ FORM timesheetSupervisorDateEmployeeAccomodationOrders 'Accomodations'
 
 symbolAccomodationOrder 'Symbol' (DATE d, Employee e) = symbol(accomodation(order(d, e)));
 accomodationOrder 'Symbol' (DATE d, Employee e, Project p) = accomodation(order(d, e)) IF in(p, accomodation(order(d, e)));
-symbolAccomodationOrder 'Symbol' (DATE d, Employee e, Project p) = symbol(accomodationOrder(d, e, p));
+
+maxTimeEntry (DATE d, Employee e) = GROUP MAX TimeEntry t IF hours(t) BY date(t), employee(t);
+
+minProjectAccomodation (DATE d, Employee e) = OVERRIDE
+    (GROUP MIN Project p IF in(p, accomodation(order(d, e)))
+        AND (assigned(p, e, interval(d, d)) OR (NOT countAssignments(p) AND NOT countAssignments(currentUser())))),
+    (GROUP MIN Project p IF in(p, accomodation(order(d, e))));
+
+projectByTimeEntry (DATE d, Employee e) = IF in(project(maxTimeEntry(d, e)), accomodation(order(d, e))) THEN project(maxTimeEntry(d, e)) ELSE NULL;
+
+projectAccomodation (DATE d, Employee e, Project p) = p = OVERRIDE projectByTimeEntry(d, e), minProjectAccomodation(d, e);
+
+accomodationOrder2 'Symbol' (DATE d, Employee e, Project p) = accomodation(order(d, e)) IF projectAccomodation(d, e, p);
+
+symbolAccomodationOrder 'Symbol' (DATE d, Employee e, Project p) = symbol(accomodationOrder2(d, e, p));
+
+countSymbols (Employee e, Project p, INTERVAL[DATE] i) = GROUP SUM 1 IF symbolAccomodationOrder(DATE d, e, p) AND iterate(d, from(i), to(i));
 
 countAccomodation 'Accomodation order (days)' (Employee e, Project p, DATE from, DATE to) =
     GROUP SUM 1 IF in(p, accomodationOrder(DATE d, e)) AND iterate(d, from, to);
 countAccomodation 'Accomodation order (days)' (Employee e, Project p, INTERVAL[DATE] i) = countAccomodation(e, p, from(i), to(i));
+
+accomodations 'accomodations' (DATE d, Employee e) = GROUP SUM 1 IF order(d, e) AND accomodationOrder2(d, e, Project p) AND in(p, accomodation(order(d, e)));
+accomodations 'accomodations' (DATE d, Employee e, Project p) = GROUP SUM 1 IF in(p, accomodationOrder(d, e)) AND accomodationOrder2(d, e, p);
+
+accomodationsT 'accomodations' (DATE d)= GROUP SUM accomodations(d, Employee e);
+accomodationsT 'accomodations' (DATE d, Project p)= GROUP SUM accomodations(d, Employee e, p);
 
 EXTEND FORM timesheetSupervisor
     PROPERTIES nameTimesheetAccomodation()
@@ -44,24 +66,41 @@ EXTEND FORM timesheetSupervisor
     ON CHANGE {
         IF timesheetAccomodation() THEN {
             NEWSESSION {
-                IF order(d, ea) THEN
+                IF accomodation(order(d, ea)) = timesheetAccomodation() THEN {
                     endDate(order(d, ea)) <- d;
-                ELSE NEW o = Order {
-                    startDate(o) <- d;
-                    employee(o) <- ea;
-                    accomodation(o) <- timesheetAccomodation();
+                } ELSE IF accomodation(order(subtract(d, 1), ea)) = timesheetAccomodation() AND accomodation(nextOrder(d, ea)) != timesheetAccomodation() THEN {
+                    endDate(order(subtract(d, 1), ea)) <- startDate(nextOrder(d, ea));
+                } ELSE IF accomodation(order(subtract(d, 1), ea)) = timesheetAccomodation() AND NOT accomodation(nextOrder(d, ea)) THEN {
+                    endDate(order(subtract(d, 1), ea)) <- NULL;
+                } ELSE IF accomodation(nextOrder(d, ea)) = timesheetAccomodation() THEN {
+                    startDate(nextOrder(d, ea)) <- d;
+                } ELSE IF accomodation(nextOrder(d, ea)) THEN {
+                    NEW o = Order {
+                        startDate(o) <- d;
+                        employee(o) <- ea;
+                        accomodation(o) <- timesheetAccomodation();
+                        endDate(o) <- startDate(nextOrder(d, ea));
+                    }
+                } ELSE {
+                    NEW o = Order {
+                        startDate(o) <- d;
+                        employee(o) <- ea;
+                        accomodation(o) <- timesheetAccomodation();
+                    }
                 }
                 APPLY;
             }
         } ELSE
             SHOW timesheetSupervisorDateEmployeeAccomodationOrders OBJECTS i = interval(d, d), e = ea FLOAT;
     } ON CONTEXTMENU checkIn(d, ea) ON CONTEXTMENU checkOut(d, ea) ON CONTEXTMENU delete(d, ea)
+    FOOTER (IF timesheetProject() THEN accomodationsT(d, timesheetProject()) ELSE accomodationsT(d))
+
     FILTERS assigned(pa, ea, dates) OR hours(ea, pa, dates) OR (NOT countAssignments(pa) AND NOT countAssignments(currentUser()))
     FILTERS pa == timesheetProject() OR NOT timesheetProject()
     FILTERS in(pa, timesheetAccomodation()) OR NOT timesheetAccomodation()
 
     FILTERGROUP onlyFilledAccomodation
-        FILTER 'Только заполненные' countAccomodation(ea, pa, dates)
+        FILTER 'Только заполненные' countSymbols(ea, pa, dates)
 ;
 
 DESIGN timesheetSupervisor {
@@ -79,3 +118,7 @@ DESIGN timesheetSupervisor {
         }
     }
 }
+
+EXTEND FORM timesheetSupervisor
+    PROPERTIES countAccomodation(ea, pa, dates) BEFORE symbolAccomodationOrder(d, ea, pa);
+;

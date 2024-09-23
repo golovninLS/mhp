@@ -147,7 +147,7 @@ FORM timesheetSupervisorDateEmployeeLuncheOrders 'Lunches'
 EXTEND FORM timesheetSupervisor
     PROPERTIES symbolProductOrder(d, el, pl) WAIT COLUMNS (d) HEADER extractDay(d) BACKGROUND backgroundHoursTimesheet(d, el)
     ON CHANGE {
-        FOR Product lp = timesheetLunchProduct() DO
+        FOR Product lp = timesheetLunchProduct() AND timesheetProject() DO
             NEWSESSION {
                 FOR Order o = order(d, el) DO {
                     IF product(o) = lp THEN
