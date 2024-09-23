@@ -1,0 +1,14 @@
+MODULE InvoiceCustom;
+
+REQUIRE Invoice;
+
+NAMESPACE Invoicing;
+
+EXTEND FORM invoice
+    OBJECTS tt = Tax
+    PROPERTIES (tt, l) taxAmount COLUMNS(tt) HEADER name(tt)
+;
+
+DESIGN invoice {
+    REMOVE BOX(t);
+}
