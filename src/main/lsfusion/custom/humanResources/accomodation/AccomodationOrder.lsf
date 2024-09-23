@@ -130,3 +130,38 @@ CONSTRAINT (SETCHANGED (startDate(Order o)) OR SETCHANGED(endDate(o)) OR SETCHAN
     AND iterate(d, startDate(o), maxDate(employee(o))) AND NOT endDate(o) MESSAGE 'There is already a placement for this employee in this time frame';
 
 CONSTRAINT SETCHANGED ((startDate(Order o)) OR SETCHANGED(endDate(o)) OR SETCHANGED(employee(o))) AND startDate(o) > endDate(o) MESSAGE 'The placement start date cannot be greater than the end date';
+
+FORM conflictingAccomodations 'Conflicting accomodations'
+    OBJECTS o = Order
+    PROPERTIES(o) READONLY startDate, endDate, nameEmployee, nameAccomodation
+    ORDERS nameEmployee(o) DESC
+    FILTERS (GROUP SUM 1 IF count(DATE d, employee(o), o) AND iterate(d, startDate(o), endDate(o)))
+        OR (GROUP SUM 1 IF count(DATE d, employee(o), o) AND iterate(d, startDate(o), maxDate(employee(o))) AND NOT endDate(o))
+
+    OBJECTS o1 = Order
+    PROPERTIES(o1) READONLY startDate, endDate, nameEmployee, nameAccomodation
+
+    FILTERS (startDate(o1) < startDate(o) AND NOT startDate(o) >= endDate(o1) AND employee(o1) = employee(o) AND o != o1 AND iterate(startDate(o), startDate(o), endDate(o)))
+        OR (startDate(o1) < startDate(o) AND NOT startDate(o) >= endDate(o1) AND employee(o1) = employee(o) AND o != o1 AND iterate(startDate(o), startDate(o), maxDate(employee(o))) AND NOT endDate(o))
+;
+
+FORM invalidAccomodations 'Invalid accomodations'
+    OBJECTS o = Order
+    PROPERTIES(o) READONLY startDate, endDate, nameEmployee, nameAccomodation
+
+    FILTERGROUP filters
+        FILTER 'Empty employees' (NOT nameEmployee(o))
+        FILTER 'Empty accomodations' (NOT nameAccomodation(o))
+        FILTER 'Start date is greater than the end date' (startDate(o) > endDate(o)) DEFAULT 
+
+    ORDERS startDate(o), nameEmployee(o)
+;
+
+NAVIGATOR {
+    operations {
+        NEW FOLDER reports 'Accomodation reports' {
+            NEW conflictingAccomodations;
+            NEW invalidAccomodations;
+        }
+    }
+}
