@@ -7,12 +7,13 @@ NAMESPACE ProjectManagement;
 CLASS ABSTRACT ProjectLedger 'Project ledger';
 TABLE projectLedger (ProjectLedger);
 
-active '{Active}' = ABSTRACT BOOLEAN (ProjectLedger);
+active '{Active}' = ABSTRACT BOOLEAN (ProjectLedger) MATERIALIZED;
 
 class 'Type' (ProjectLedger l) = objectClassName(l) IF l IS ProjectLedger CHARWIDTH 15;
 
 project 'Project' = ABSTRACT Project (ProjectLedger) MATERIALIZED;
 nameProject 'Project' (ProjectLedger l) = name(project(l));
+typeProject 'Type project' (ProjectLedger l) = type(project(l)) MATERIALIZED;
 
 number 'Number' = ABSTRACT STRING[31] (ProjectLedger) MATERIALIZED;
 

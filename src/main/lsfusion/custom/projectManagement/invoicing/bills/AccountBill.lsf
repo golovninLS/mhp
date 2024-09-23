@@ -7,6 +7,7 @@ NAMESPACE Bill;
 CLASS AccountObject 'Account object';
 name 'Name' = ABSTRACT STRING (AccountObject);
 type 'Type' = ABSTRACT STRING (AccountObject);
+accountObject = GROUP MAX AccountObject o BY name(o);
 
 EXTEND CLASS Project : AccountObject;
 name(Project p) += ProjectManagement.name(p);

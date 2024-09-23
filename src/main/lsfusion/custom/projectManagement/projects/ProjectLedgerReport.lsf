@@ -37,22 +37,22 @@ interval = DATA LOCAL INTERVAL[DATE] ();
 external 'Внешние' = DATA LOCAL BOOLEAN ();
 in 'Вкл' = DATA LOCAL BOOLEAN (ProjectType);
 countInSelectType = GROUP MAX ProjectType t IF in(t);
-typeIn 'Типы проектов' = GROUP CONCAT name(ProjectType t) IF in(t), ', ' ORDER t;
+typeIn 'Типы' = GROUP CONCAT name(ProjectType t) IF in(t), ', ' ORDER t CHARWIDTH 80;
 
 in 'Вкл.' = DATA BOOLEAN (Project);
 countInSelectProjects = GROUP MAX Project p IF in(p);
-projectsIn 'Проекты' = GROUP CONCAT name(Project p) IF in(p), ', ' ORDER p;
+projectsIn 'Проекты' = GROUP CONCAT name(Project p) IF in(p), ', ' ORDER p CHARWIDTH 80;
 
 EXTEND FORM projectTypes
     PROPERTIES (o) in FIRST 
 ;
 
 filter(ProjectLedger l) = ((date(l) >= from(interval()) AND date(l) <= to(interval())) OR NOT interval()) AND NOT inner(project(l))
-    AND (in(type(project(l))) OR NOT countInSelectType()) AND (in(project(l)) OR NOT countInSelectProjects())
+    AND (in(typeProject(l)) OR NOT countInSelectType()) AND (in(project(l)) OR NOT countInSelectProjects())
 ;
 
 CLASS ABSTRACT MetricAccount;
-name = ABSTRACT STRING(MetricAccount);
+name = ABSTRACT STRING(MetricAccount) MATERIALIZED;
 expense 'Expense' = ABSTRACT NUMERIC (Project, MetricAccount);
 profit 'Profit' = ABSTRACT NUMERIC (Project, MetricAccount);
 total 'Total' (Project p, MetricAccount m) = profit(p, m) (-) expense(p, m);
@@ -63,8 +63,8 @@ expense 'Expense' (Project p) = GROUP SUM expense(ProjectLedger l) IF expense(l)
 profit 'Profit' (Project p) = GROUP SUM profit(ProjectLedger l) IF profit(l) > 0 AND active(l) AND filter(l) BY project(l);
 total 'Total' (Project p) = profit(p) (-) expense(p);
 
-expense 'Expense' (ProjectType p) = GROUP SUM expense(ProjectLedger l) IF expense(l) > 0 AND active(l) AND filter(l) BY type(project(l));
-profit 'Profit' (ProjectType p) = GROUP SUM profit(ProjectLedger l) IF profit(l) > 0 AND active(l) AND filter(l) BY type(project(l));
+expense 'Expense' (ProjectType p) = GROUP SUM expense(ProjectLedger l) IF expense(l) > 0 AND active(l) AND filter(l) BY typeProject(l);
+profit 'Profit' (ProjectType p) = GROUP SUM profit(ProjectLedger l) IF profit(l) > 0 AND active(l) AND filter(l) BY  typeProject(l);
 total 'Total' (ProjectType p) = profit(p) (-) expense(p);
 
 CLASS StaticMetricAccount{
@@ -89,8 +89,10 @@ EXTEND CLASS SalesAccount : MetricAccount;
 expense  (Project p, SalesAccount a) += GROUP SUM expense(ProjectLedger l) IF NOT l IS AccountDistributionLine AND filter(l) AND project(l) = p AND account(l) = a;
 name(SalesAccount a) += STRING(Sales.name(a));
 
+skipAccountDistribution (ProjectLedger l) = l IS ProjectLedger AND NOT l IS AccountDistributionLine;
+
 in(ProjectType t, Project p) = type(p) = t;
-in(Project p, SalesAccount a) = GROUP MAX ProjectLedger l IF NOT l IS AccountDistributionLine AND filter(l) BY project(l), account(l);
+in(Project p, SalesAccount a) = GROUP MAX ProjectLedger l IF filter(l) AND NOT skipAccountDistribution(l) BY project(l), account(l);
 in(Project p, SalesAccount a) += TRUE IF in(p, a);
 
 expense 'Expense' (Project p, MetricAccount a, SalesAccount d) = 
@@ -149,43 +151,43 @@ DESIGN reportProjects {
 
 
 //v3
-in(Project p, STRING obj) = GROUP MAX ProjectLedger l IF active(l) AND filter(l) BY project(l), accountObject(l);
-in = ABSTRACT ProjectLedger (Project, STRING, MetricAccount);
-in(Project p, STRING s, SalesAccount a) = GROUP MAX ProjectLedger l IF active(l) AND filter(l) BY project(l), accountObject(l),account(l);
-in(Project p, STRING s, SalesAccount a) += in(p, s, a);
+in(Project p, AccountObject obj) = GROUP MAX ProjectLedger l IF active(l) AND filter(l) BY project(l), accountObject(accountObject(l));
+in = ABSTRACT ProjectLedger (Project, AccountObject, MetricAccount);
+in(Project p, AccountObject s, SalesAccount a) = GROUP MAX ProjectLedger l IF active(l) AND filter(l) BY project(l), accountObject(accountObject(l)), account(l);
+in(Project p, AccountObject s, SalesAccount a) += in(p, s, a);
 
-in(Project p, STRING s, StaticMetricAccount a) = IF a = StaticMetricAccount.invoice THEN
-        (GROUP MAX InvoiceLine l IF active(l) AND filter(l) AND l IS InvoiceLine AND project(l) = p AND accountObject(l) = s)
+in(Project p, AccountObject s, StaticMetricAccount a) = IF a = StaticMetricAccount.invoice THEN
+        (GROUP MAX InvoiceLine l IF active(l) AND filter(l) AND l IS InvoiceLine AND project(l) = p AND accountObject(accountObject(l)) = s)
 ;
 
-in(Project p, STRING s, StaticMetricAccount a) += in(p, s, a);
+in(Project p, AccountObject s, StaticMetricAccount a) += in(p, s, a);
 
-profit (Project p, STRING obj) = GROUP SUM profit(ProjectLedger l) IF active(l) AND profit(l) > 0 AND filter(l) BY project(l), accountObject(l);
-expense (Project p, STRING obj) = GROUP SUM expense(ProjectLedger l) IF active(l) AND expense(l) > 0 AND filter(l) BY project(l), accountObject(l);
-total 'Profit' (Project p, STRING obj) = profit(p, obj) (-) expense(p, obj);
+profit (Project p, AccountObject obj) = GROUP SUM profit(ProjectLedger l) IF active(l) AND profit(l) > 0 AND filter(l) BY project(l), accountObject(accountObject(l));
+expense (Project p, AccountObject obj) = GROUP SUM expense(ProjectLedger l) IF active(l) AND expense(l) > 0 AND filter(l) BY project(l), accountObject(accountObject(l));
+total 'Profit' (Project p, AccountObject obj) = profit(p, obj) (-) expense(p, obj);
 
-profit = ABSTRACT NUMERIC (Project, STRING, MetricAccount);
-expense = ABSTRACT NUMERIC (Project, STRING, MetricAccount);
-total 'Profit' (Project p, STRING s, MetricAccount a) = profit(p, s, a) (-) expense(p, s, a);
-profit(Project p, STRING obj, SalesAccount a) = GROUP SUM profit(ProjectLedger l) IF active(l) AND profit(l) > 0 AND filter(l) BY project(l), accountObject(l), account(l);
-profit(Project p, STRING obj, SalesAccount a) += profit(p, obj, a);
+profit = ABSTRACT NUMERIC (Project, AccountObject, MetricAccount);
+expense = ABSTRACT NUMERIC (Project, AccountObject, MetricAccount);
+total 'Profit' (Project p, AccountObject s, MetricAccount a) = profit(p, s, a) (-) expense(p, s, a);
+profit(Project p, AccountObject obj, SalesAccount a) = GROUP SUM profit(ProjectLedger l) IF active(l) AND profit(l) > 0 AND filter(l) BY project(l), accountObject(accountObject(l)), account(l);
+profit(Project p, AccountObject obj, SalesAccount a) += profit(p, obj, a);
 
-expense(Project p, STRING obj, SalesAccount a) = GROUP SUM expense(ProjectLedger l) IF active(l) AND expense(l) > 0 AND filter(l) BY project(l), accountObject(l), account(l);
-expense(Project p, STRING obj, SalesAccount a) += expense(p, obj, a);
+expense(Project p, AccountObject obj, SalesAccount a) = GROUP SUM expense(ProjectLedger l) IF active(l) AND expense(l) > 0 AND filter(l) BY project(l), accountObject(accountObject(l)), account(l);
+expense(Project p, AccountObject obj, SalesAccount a) += expense(p, obj, a);
 
-profit(Project p, STRING obj, StaticMetricAccount a) += GROUP SUM profit(ProjectLedger l) IF active(l) AND profit(l) > 0 AND filter(l) AND project(l) = p AND 
-    accountObject(l) = obj AND a = StaticMetricAccount.invoice AND l IS InvoiceLine
+profit(Project p, AccountObject obj, StaticMetricAccount a) += GROUP SUM profit(ProjectLedger l) IF active(l) AND profit(l) > 0 AND filter(l) AND project(l) = p AND
+    accountObject(accountObject(l)) = obj AND a = StaticMetricAccount.invoice AND l IS InvoiceLine
 ;
 
-expense 'Expense' (Project p, STRING s, MetricAccount a, Partner partner) =
-    GROUP SUM expense(ProjectLedger ll) IF active(ll) AND expense(ll) > 0 AND filter(ll) BY project(ll), accountObject(ll), account(ll), partner(ll);
+expense 'Expense' (Project p, AccountObject s, MetricAccount a, Partner partner) =
+    GROUP SUM expense(ProjectLedger ll) IF active(ll) AND expense(ll) > 0 AND filter(ll) BY project(ll), accountObject(accountObject(ll)), account(ll), partner(ll);
 ;
 
-profit 'Revenue' (Project p, STRING s, Partner partner) =
-    GROUP SUM profit(ProjectLedger ll) IF active(ll) AND profit(ll) > 0 AND filter(ll) BY project(ll), accountObject(ll), partner(ll);
+profit 'Revenue' (Project p, AccountObject s, Partner partner) =
+    GROUP SUM profit(ProjectLedger ll) IF active(ll) AND profit(ll) > 0 AND filter(ll) BY project(ll), accountObject(accountObject(ll)), partner(ll);
 ;
-profit 'Revenue' (Project p, STRING s, MetricAccount a, Partner partner) = IF a = StaticMetricAccount.invoice THEN profit(p, s, partner);
-total 'Profit' (Project p, STRING s, MetricAccount a, Partner partner) = profit(p, s, a, partner) (-) expense(p, s, a, partner);
+profit 'Revenue' (Project p, AccountObject s, MetricAccount a, Partner partner) = IF a = StaticMetricAccount.invoice THEN profit(p, s, partner);
+total 'Profit' (Project p, AccountObject s, MetricAccount a, Partner partner) = profit(p, s, a, partner) (-) expense(p, s, a, partner);
 
 intToColor = FORMULA '(256*256*($1)+256*($2)+($3))::integer';
 greyColor (INTEGER i, INTEGER x)= COLOR(intToColor(240-(i*x), 240-(i*x), 240-(i*x)));
@@ -199,9 +201,9 @@ FORM projectSelect
 FORM reportProjectsV2 'Отчет по проводкам v2'
     PROPERTIES interval 'Период' = interval(), typeIn(), projectsIn() 
 
-    TREE report t = ProjectType, p = Project, object = STRING , a = MetricAccount, partner = Partner 
+    TREE report t = ProjectType, p = Project, object = AccountObject , a = MetricAccount, partner = Partner 
     PROPERTIES READONLY name(t), nameProject 'Наименование' = '  ' + name(p) BACKGROUND background(0), 
-        nameObject 'Наименование' = VALUE (object) BACKGROUND background(1) , 'Наименование' = '\t' + name(a) BACKGROUND background(2), 
+        nameObject 'Наименование' =  name(object) BACKGROUND background(1) , 'Наименование' = '\t' + name(a) BACKGROUND background(2), 
         namePartner = '\t\t' + name(partner) BACKGROUND background(3)
     PROPERTIES expense(t), expense(p) BACKGROUND background(0), expense(p, object) BACKGROUND background(1), expense(p, object, a) BACKGROUND background(2), 
             expense(p, object, a, partner) BACKGROUND background(3)
@@ -216,21 +218,24 @@ FORM reportProjectsV2 'Отчет по проводкам v2'
     
 ;
 //service project
+
 filterService(ProjectLedger l) = ((date(l) >= from(interval()) AND date(l) <= to(interval())) OR NOT interval()) AND inner(project(l))
-    AND (in(type(project(l))) OR NOT countInSelectType()) AND (in(project(l)) OR NOT countInSelectProjects())
+    AND (in(typeProject(l)) OR NOT countInSelectType()) AND (in(project(l)) OR NOT countInSelectProjects())
 ;
 expenseService (Project p) = GROUP SUM expense(ProjectLedger l) IF filterService(l) BY project(l);
 expenseService (Project p, MetricAccount as) = GROUP SUM expense(ProjectLedger l) IF filterService(l) BY project(l), account(l);
 expenseService 'Expense' (Project p, MetricAccount as, Partner ps) = GROUP SUM expense(ProjectLedger l) IF filterService(l) BY project(l), account(l), partner(l);
 
-EXTEND FORM reportProjectsV2
+FORM reportServiceProjects 'Отчет по проводкам(сервисные)'
+    PROPERTIES interval 'Период' = interval(), typeIn(), projectsIn()
+    
     TREE reportService ps = Project, as = MetricAccount, partners = Partner
     PROPERTIES name(ps), = '\t' + name(as) BACKGROUND background(0), = '\t\t' + name(partners) BACKGROUND background(1)
     PROPERTIES expenseService(ps), expenseService(ps, as) BACKGROUND background(0), expenseService(ps, as, partners) BACKGROUND background(1)
     FILTERS inner(ps), expenseService(ps), expenseService(ps, as), expenseService(ps, as, partners)
 ;
 
-filterService(Project p) = FILTER reportProjectsV2.ps;
+filterService(Project p) = FILTER reportServiceProjects.ps;
 
 expenseService 'Expense' = GROUP SUM expenseService(Project p) IF filterService(p) CHARWIDTH 25;
 
@@ -244,6 +249,8 @@ profitV2 'Profit' = GROUP SUM total(ProjectType t) IF filteredV2(t) CHARWIDTH 25
 
 EXTEND FORM reportProjectsV2
     PROPERTIES () TOOLBAR DRAW t expenseV2, revenueV2, profitV2
+;
+EXTEND FORM reportServiceProjects
     PROPERTIES expenseService() TOOLBAR DRAW ps
 ;
 
@@ -253,17 +260,24 @@ DESIGN reportProjectsV2 {
         NEW filters FIRST {
             caption = 'Filters';
             horizontal = TRUE;
+            MOVE PROPERTY (interval) {fontSize = 10; }
+            MOVE PROPERTY (typeIn()) {fontSize = 10; }
+            MOVE PROPERTY (projectsIn()) {fontSize = 10; }
+        }
+        PROPERTY (namePartner) {charWidth = 30;}
+        MOVE BOX( TREE report) {caption = 'Проекты';}
+    }
+}
+DESIGN reportServiceProjects {
+    OBJECTS {
+        NEW filters FIRST {
+            caption = 'Filters';
+            horizontal = TRUE;
             MOVE PROPERTY (interval);
             MOVE PROPERTY (typeIn());
             MOVE PROPERTY (projectsIn());
         }
-        PROPERTY (namePartner) {charWidth = 30;}
-        NEW pane {
-            tabbed = TRUE;
-            fill = 1;
-            MOVE BOX( TREE report) {caption = 'Проекты';}
-            MOVE BOX( TREE reportService) {caption = 'Сервисные';}
-        }
+        MOVE BOX( TREE reportService) {caption = 'Проекты';}
     }
 }
 
@@ -271,8 +285,8 @@ NAVIGATOR {
     projectManagement {
         reporting {
             NEW projectLedgerReport;
-            NEW reportProjects;
             NEW reportProjectsV2;
+            NEW reportServiceProjects;
         }
     }
 }
