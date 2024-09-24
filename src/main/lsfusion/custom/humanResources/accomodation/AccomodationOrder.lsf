@@ -63,13 +63,16 @@ FORM order 'Accomodation order'
 
 DESIGN order {
     OBJECTS {
-        NEW dates {
-            horizontal = TRUE;
-            MOVE PROPERTY(startDate(o));
-            MOVE PROPERTY(endDate(o));
+        NEW orders {
+            fill = 1;
+            NEW dates {
+                horizontal = TRUE;
+                MOVE PROPERTY(startDate(o));
+                MOVE PROPERTY(endDate(o));
+            }
+            MOVE PROPERTY(nameEmployee(o)) { alignment = STRETCH; }
+            MOVE PROPERTY(nameAccomodation(o)) { alignment = STRETCH; }
         }
-        MOVE PROPERTY(nameEmployee(o)) { alignment = STRETCH; }
-        MOVE PROPERTY(nameAccomodation(o)) { alignment = STRETCH; }
     }
 }
 

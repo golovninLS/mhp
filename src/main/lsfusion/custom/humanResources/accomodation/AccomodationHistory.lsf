@@ -1,0 +1,43 @@
+MODULE AccomodationHistory;
+
+REQUIRE AccomodationOrder, Authentication;
+
+PRIORITY MasterData;
+
+NAMESPACE Accomodation;
+
+CLASS OrderHistory;
+
+order = DATA Order (OrderHistory);
+datetime 'Date' = DATA DATETIME (OrderHistory);
+author = DATA User (OrderHistory);
+nameAuthor 'User' (OrderHistory oh) = name(author(oh));
+loginAuthor '{authentication.login}' (OrderHistory oh) = login(author(oh));
+computer = DATA Computer (OrderHistory);
+hostnameComputer 'Computer' (OrderHistory oh) = hostname(computer(oh));
+
+WHEN SET(Accomodation.Order o IS Accomodation.Order) DO {
+    NEW oh = OrderHistory {
+        order(oh) <- o;
+        datetime(oh) <- currentDateTime();
+        author(oh) <- currentUser();
+        computer(oh) <- currentComputer();
+    }
+}
+
+EXTEND FORM order
+    OBJECTS oh = OrderHistory
+    PROPERTIES (oh) READONLY datetime, nameAuthor, loginAuthor, hostnameComputer
+    FILTERS order(oh) = o
+;
+
+DESIGN order {
+    OBJECTS {
+        NEW history {
+            caption = 'History';
+            fill = 0.2;
+            MOVE BOX(oh) { caption = ''; };
+            REMOVE TOOLBARSYSTEM(oh);
+        }
+    }
+}
