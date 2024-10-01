@@ -1,12 +1,12 @@
 MODULE PayslipProjectLedger;
 
-REQUIRE ProjectPayslipLedger, ProjectLedger;
+REQUIRE ProjectPayslipLedger, ProjectLedger, ProjectCustom;
 
 NAMESPACE Payroll;
 
 EXTEND CLASS PayslipLedger : ProjectLedger;
 
-active (PayslipLedger l) += l IS PayslipLedger AND NOT deduction(l) AND NOT skipLedger(category(l));
+active (PayslipLedger l) += l IS PayslipLedger AND NOT deduction(l) AND NOT skipLedger(category(l)) AND NOT inner(project(l));
 
 project (PayslipLedger l) += project(l);
 
