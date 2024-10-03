@@ -66,11 +66,30 @@ notifyUser (NotificationTypes type, STRING message) {
     FOR in(Chat c, type) DO TRY sendMessage(c, message);
 }
 
-WHEN CHANGED(status(Bill b)) DO {
+notify 'Уведомлять' =  DATA BOOLEAN (BillStatus);
+
+WHEN SETCHANGED(status(Bill b)) AND notify(status(b)) DO {
     TRY {
         LOCAL message = STRING ();
-        message() <- 'Change of status of the bill' + '\n\n' + 'The status of the bill' + ' № ' + number(b) + ' ' + 'changed from' + ' "' + PREV(nameStatus(b)) + '" to "' + nameStatus(b) + '"';
+        message() <- CONCAT '\n', 'Change of status of the bill', 'The status of the bill' + ' № ' + number(b), 
+            'changed from' + ' "' + PREV(nameStatus(b)), '" to "' + nameStatus(b) + '"';
         notifyUser(NotificationTypes.bill, message());
+    }
+    CATCH {
+        logToFile('telegram', messageCaughtException());
+    }
+}
+
+EXTEND FORM Invoicing.options
+    OBJECTS ns = BillStatus
+    PROPERTIES (ns) name READONLY, notify
+;
+DESIGN Invoicing.options{
+    tabbedPane{
+        NEW notification{
+            caption = 'Notifications';
+            MOVE BOX (ns);
+        }
     }
 }
 

@@ -26,9 +26,12 @@ FORM timesheetSupervisorDateEmployeeAccomodationOrders 'Accomodations'
 ;
 
 symbolAccomodationOrder 'Symbol' (DATE d, Employee e) = symbol(accomodation(order(d, e)));
-accomodationOrder 'Symbol' (DATE d, Employee e, Project p) = accomodation(order(d, e)) IF in(p, accomodation(order(d, e)));
+//accomodationOrder 'Symbol' (DATE d, Employee e, Project p) = accomodation(order(d, e)) IF in(p, accomodation(order(d, e)));
 
-maxTimeEntry (DATE d, Employee e) = GROUP MAX TimeEntry t IF hours(t) BY date(t), employee(t);
+project = DATA Project (Order);
+nameProject 'Project' (Order o) = name(project(o));
+
+maxTimeEntry (DATE d, Employee e) = GROUP LAST TimeEntry t ORDER hours(t) BY date(t), employee(t);
 
 minProjectAccomodation (DATE d, Employee e) = OVERRIDE
     (GROUP MIN Project p IF in(p, accomodation(order(d, e)))
@@ -40,13 +43,14 @@ projectByTimeEntry (DATE d, Employee e) = IF in(project(maxTimeEntry(d, e)), acc
 projectAccomodation (DATE d, Employee e, Project p) = p = OVERRIDE projectByTimeEntry(d, e), minProjectAccomodation(d, e);
 
 accomodationOrder2 'Symbol' (DATE d, Employee e, Project p) = accomodation(order(d, e)) IF projectAccomodation(d, e, p);
+accomodationOrder 'Symbol' (DATE d, Employee e, Project p) = accomodation(order(d, e)) IF project(order(d, e)) = p;
 
-symbolAccomodationOrder 'Symbol' (DATE d, Employee e, Project p) = symbol(accomodationOrder2(d, e, p));
+symbolAccomodationOrder 'Symbol' (DATE d, Employee e, Project p) = symbol(accomodationOrder(d, e, p));
 
 countSymbols (Employee e, Project p, INTERVAL[DATE] i) = GROUP SUM 1 IF symbolAccomodationOrder(DATE d, e, p) AND iterate(d, from(i), to(i));
 
 countAccomodation 'Accomodation order (days)' (Employee e, Project p, DATE from, DATE to) =
-    GROUP SUM 1 IF in(p, accomodationOrder(DATE d, e)) AND iterate(d, from, to);
+    GROUP SUM 1 IF project(order(DATE d, e)) = p AND iterate(d, from, to);
 countAccomodation 'Accomodation order (days)' (Employee e, Project p, INTERVAL[DATE] i) = countAccomodation(e, p, from(i), to(i));
 
 accomodations 'accomodations' (DATE d, Employee e) = GROUP SUM 1 IF order(d, e) AND accomodationOrder2(d, e, Project p) AND in(p, accomodation(order(d, e)));
@@ -55,6 +59,64 @@ accomodations 'accomodations' (DATE d, Employee e, Project p) = GROUP SUM 1 IF i
 accomodationsT 'accomodations' (DATE d)= GROUP SUM accomodations(d, Employee e);
 accomodationsT 'accomodations' (DATE d, Project p)= GROUP SUM accomodations(d, Employee e, p);
 
+//
+
+checkIn 'Check in' (DATE d, Employee e) {
+    IF timesheetAccomodation() THEN {
+        IF timesheetProject() THEN {
+            NEWSESSION {
+                IF accomodation(order(d, e)) = timesheetAccomodation() THEN {
+                    endDate(order(d, e)) <- d;
+                } ELSE IF accomodation(order(subtract(d, 1), e)) = timesheetAccomodation() AND accomodation(nextOrder(d, e)) != timesheetAccomodation() THEN {
+                    endDate(order(subtract(d, 1), e)) <- startDate(nextOrder(d, e));
+                } ELSE IF accomodation(order(subtract(d, 1), e)) = timesheetAccomodation() AND NOT accomodation(nextOrder(d, e)) THEN {
+                    endDate(order(subtract(d, 1), e)) <- NULL;
+                } ELSE IF accomodation(nextOrder(d, e)) = timesheetAccomodation() THEN {
+                    startDate(nextOrder(d, e)) <- d;
+                } ELSE IF accomodation(nextOrder(d, e)) THEN {
+                    NEW o = Order {
+                        startDate(o) <- d;
+                        employee(o) <- e;
+                        project(o) <- timesheetProject();
+                        accomodation(o) <- timesheetAccomodation();
+                        endDate(o) <- startDate(nextOrder(d, e));
+                    }
+                } ELSE {
+                    NEW o = Order {
+                        startDate(o) <- d;
+                        employee(o) <- e;
+                        project(o) <- timesheetProject();
+                        accomodation(o) <- timesheetAccomodation();
+                    }
+                }
+                APPLY;
+            }
+        }
+        ELSE
+            MESSAGE 'Project is not specified';
+    } ELSE
+        MESSAGE 'Accomodation is not specified';
+}
+
+checkOut 'Check out' (DATE d, Employee e) {
+    IF timesheetAccomodation() THEN {
+        NEWSESSION {
+            FOR Order o = order(d, e) DO {
+                endDate(o) <- d;
+            } ELSE {
+                IF accomodation(prevOrder(d, e)) = timesheetAccomodation() THEN {
+                    endDate(prevOrder(d, e)) <- d;
+                } ELSE
+                    MESSAGE 'Check out is impossible';
+            }
+            APPLY;
+        }
+    } ELSE
+        MESSAGE 'Accomodation is not specified';
+}
+
+
+//
 EXTEND FORM timesheetSupervisor
     PROPERTIES nameTimesheetAccomodation()
 
@@ -75,17 +137,19 @@ EXTEND FORM timesheetSupervisor
                 } ELSE IF accomodation(nextOrder(d, ea)) = timesheetAccomodation() THEN {
                     startDate(nextOrder(d, ea)) <- d;
                 } ELSE IF accomodation(nextOrder(d, ea)) THEN {
-                    NEW o = Order {
+                    IF timesheetProject() THEN NEW o = Order {
                         startDate(o) <- d;
                         employee(o) <- ea;
+                        project(o) <- timesheetProject();
                         accomodation(o) <- timesheetAccomodation();
                         endDate(o) <- startDate(nextOrder(d, ea));
                     }
-                } ELSE {
+                } ELSE IF timesheetProject() THEN {
                     NEW o = Order {
                         startDate(o) <- d;
                         employee(o) <- ea;
                         accomodation(o) <- timesheetAccomodation();
+                        project(o) <- timesheetProject();
                     }
                 }
                 APPLY;
@@ -121,4 +185,7 @@ DESIGN timesheetSupervisor {
 
 EXTEND FORM timesheetSupervisor
     PROPERTIES countAccomodation(ea, pa, dates) BEFORE symbolAccomodationOrder(d, ea, pa);
+;
+EXTEND FORM orders
+    PROPERTIES (o) READONLY nameProject
 ;

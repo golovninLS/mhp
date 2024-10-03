@@ -111,13 +111,15 @@ DESIGN project {
     }
 }
 
+endDateLedger = GROUP LAST ProjectLedger l ORDER date(l) BY project(l);
+overEndDate (Project p) = IF endDate(p) THEN MAX date(endDateLedger(p)), endDate(p);
 
 
-filterProject (Project p, INTERVAL[DATE]  dates) = startDate(p) <= to(dates) AND (NOT(endDate(p) < from(dates)) OR NOT endDate(p) OR NOT dates);
+filterProject (Project p, INTERVAL[DATE]  dates) = startDate(p) <= to(dates) AND (NOT(overEndDate(p) < from(dates)) OR NOT overEndDate(p) OR NOT dates);
 balance 'Balance' (Project p, INTERVAL[DATE] dates) = IF dates IS INTERVAL[DATE] THEN sumProfit(p, dates) (-) sumExpense(p, dates)
     ELSE sumProfit(p) (-) sumExpense(p)
 ;
-balance(INTERVAL[DATE] dates) = IF dates IS INTERVAL[DATE] THEN GROUP SUM balance(Project p, dates) ELSE 
+balance(INTERVAL[DATE] dates) = IF dates IS INTERVAL[DATE] THEN (GROUP SUM balance(Project p, dates) IF filtered(p)) ELSE 
     GROUP SUM (sumProfit(Project p) (-) sumExpense(p)) IF filtered(p)
 ;
 
@@ -134,7 +136,6 @@ EXTEND FORM projects
     EVENTS ON INIT {
         SEEK projects.dates = interval(firstDayOfMonth(currentDate()), lastDayOfMonth(currentDate()));
     }
-    
     FILTERS filterProject(p, dates) OR NOT dates
 ;
 
