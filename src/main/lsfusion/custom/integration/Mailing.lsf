@@ -31,7 +31,7 @@ in 'Incl.' (Employee e, Mailing m) = OVERRIDE dataIn(e, m) IF chat(e), in(positi
 statusMessage 'Status' = DATA STRING (Employee, Mailing) CHARWIDTH 30;
 isSent 'Sent' = DATA BOOLEAN (Employee, Mailing) CHARWIDTH 10;
 
-countSentMessages (Mailing m) = GROUP SUM 1 IF isSent(Employee e, m);
+countSentMessages (Mailing m) = GROUP SUM 1 IF isSent(Employee e, m) AND in(e, m);
 countEmployeeMailing (Mailing m) = GROUP SUM 1 IF in(Employee e, m);
 
 isSent 'Sent' (Mailing m) = TRUE IF countSentMessages(m) = countEmployeeMailing(m) CHARWIDTH 10;
