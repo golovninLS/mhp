@@ -10,53 +10,6 @@ nameTimesheetAccomodation 'Accomodation' = name(timesheetAccomodation());
 CONSTRAINT timesheetAccomodation() AND archived(timesheetAccomodation())
     CHECKED BY timesheetAccomodation[] MESSAGE '';
 
-checkIn 'Check in' (DATE d, Employee e) {
-    IF timesheetAccomodation() THEN {
-        NEWSESSION {
-            IF accomodation(order(d, e)) = timesheetAccomodation() THEN {
-                endDate(order(d, e)) <- d;
-            } ELSE IF accomodation(order(subtract(d, 1), e)) = timesheetAccomodation() AND accomodation(nextOrder(d, e)) != timesheetAccomodation() THEN {
-                endDate(order(subtract(d, 1), e)) <- startDate(nextOrder(d, e));
-            } ELSE IF accomodation(order(subtract(d, 1), e)) = timesheetAccomodation() AND NOT accomodation(nextOrder(d, e)) THEN {
-                endDate(order(subtract(d, 1), e)) <- NULL;
-            } ELSE IF accomodation(nextOrder(d, e)) = timesheetAccomodation() THEN {
-                startDate(nextOrder(d, e)) <- d;
-            } ELSE IF accomodation(nextOrder(d, e)) THEN {
-                NEW o = Order {
-                    startDate(o) <- d;
-                    employee(o) <- e;
-                    accomodation(o) <- timesheetAccomodation();
-                    endDate(o) <- startDate(nextOrder(d, e));
-                }
-            } ELSE {
-                NEW o = Order {
-                    startDate(o) <- d;
-                    employee(o) <- e;
-                    accomodation(o) <- timesheetAccomodation();
-                }
-            }
-            APPLY;
-        }
-    } ELSE
-        MESSAGE 'Accomodation is not specified';
-}
-
-checkOut 'Check out' (DATE d, Employee e) {
-    IF timesheetAccomodation() THEN {
-        NEWSESSION {
-            FOR Order o = order(d, e) DO {
-                endDate(o) <- d;
-            } ELSE {
-                IF accomodation(prevOrder(d, e)) = timesheetAccomodation() THEN {
-                    endDate(prevOrder(d, e)) <- d;
-                } ELSE
-                    MESSAGE 'Check out is impossible';
-            }
-            APPLY;
-        }
-    } ELSE
-        MESSAGE 'Accomodation is not specified';
-}
 
 delete 'Delete' (DATE d, Employee e) {
     IF order(d, e) THEN {

@@ -261,7 +261,8 @@ DESIGN employee{
         MOVE PROPERTY (showAllProjects(e));
     }
 }
-skipCheckAssigned(CustomUser c) += WHEN showAllProjects(c) THEN TRUE;
+skipCheckAssigned(CustomUser c, Project p) += WHEN showAllProjects(c) AND p IS Project THEN TRUE;
+skipCheckAssigned(CustomUser c, Project p) += WHEN manager(p) = c THEN TRUE;
 
 CONSTRAINT SETCHANGED(TimeEntry t IS TimeEntry) AND NOT hours(t) MESSAGE 'В отметке времени обязательно указание часов';
 CONSTRAINT DROPPED(hours(TimeEntry t)) AND employee(t) MESSAGE 'В отметке времени обязательно указание часов';

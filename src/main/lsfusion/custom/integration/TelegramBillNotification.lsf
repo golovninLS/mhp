@@ -71,7 +71,8 @@ notify 'Уведомлять' =  DATA BOOLEAN (BillStatus);
 WHEN SETCHANGED(status(Bill b)) AND notify(status(b)) DO {
     TRY {
         LOCAL message = STRING ();
-        message() <- CONCAT '\n', 'Change of status of the bill', 'The status of the bill' + ' № ' + number(b), 'changed from' + ' "' + PREV(nameStatus(b)) + '" to "' + nameStatus(b) + '"';
+        message() <- CONCAT '\n', 'Change of status of the bill', 'The status of the bill' + ' № ' + number(b), 
+            'changed from' + ' "' + PREV(nameStatus(b)), '" to "' + nameStatus(b) + '"';
         notifyUser(NotificationTypes.bill, message());
     }
     CATCH {

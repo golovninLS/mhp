@@ -109,6 +109,7 @@ revenueYear 'Year' = DATA INTEGER (PlannedRevenue);
 planned = GROUP MAX PlannedRevenue pr BY project(pr), INTERVAL[DATE] d
     IF month(pr) = extractMonth(to(d)) AND revenueYear(pr) = extractYear(to(d));
 projectRevenue 'Planned revenue' (Project p, INTERVAL[DATE] d) = plannedRevenue(planned(p, d));
+projectRevenue 'Planned revenue' (INTERVAL[DATE] d) = GROUP SUM projectRevenue(Project p, d) IF filtered(p);
 
 uniqueByPeriod = GROUP AGGR PlannedRevenue pr BY project(pr), month(pr), revenueYear(pr);
 
@@ -133,5 +134,5 @@ DESIGN project {
 }
 
 EXTEND FORM projects
-    PROPERTIES (p, dates) projectRevenue
+    PROPERTIES (p, dates) projectRevenue FOOTER projectRevenue(dates)
 ;

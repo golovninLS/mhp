@@ -94,7 +94,11 @@ REQUIRE Eval, ProcessMonitor, Backup,
 
         BillLunch, ProjectBillCustom, EmployeeTimesheet,
 
-        ProjectFileFolder,
+        ProjectFileFolder, TaskKanban, RabbitMQ,
         
         TelegramCustom, TelegramBillNotification, Mailing, ScrapProject, ScrapProjectLedger, InvoiceCustom, AccomodationHistory
 ;
+
+onMessage(Channel c, STRING s)+{
+    printToLog(CONCAT ' : ', queue(c), s);
+}
