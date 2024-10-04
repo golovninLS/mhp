@@ -308,3 +308,12 @@ NAVIGATOR {
         NEW docTypes;
     }
 }
+
+backgroundExpired (DocType dt, Employee e) = IF dateTo(dt, e) AND trackDays(dt) AND dateTo(dt, e) < sum(currentDate(), trackDays(dt)) THEN RGB(245, 51, 64);
+
+
+DESIGN employeesCustom {
+    PROPERTY (dateTo(t, e)) {
+        background = backgroundExpired(t, e);
+    }
+}
