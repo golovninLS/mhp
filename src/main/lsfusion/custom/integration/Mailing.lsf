@@ -1,6 +1,6 @@
 MODULE Mailing;
 
-REQUIRE EmployeeCustom, TelegramBillNotification;
+REQUIRE EmployeeCustom, TelegramBillNotification, Task;
 
 NAMESPACE MasterData;
 
@@ -191,4 +191,8 @@ NAVIGATOR {
     masterData {
         NEW mailing;
     }
+}
+
+WHEN SETCHANGED(Task t IS Task) OR SETCHANGED(assignedTo(t)) AND assignedTo(t) AND chat(assignedTo(t)) DO {
+    sendMessage(chat(assignedTo(t)), ('New task assigned' + ': ' + name(t)) + IF deadline(t) THEN ('.\n' + 'Deadline' + ' — ' + deadline(t) + '.') ELSE '.\n');
 }
