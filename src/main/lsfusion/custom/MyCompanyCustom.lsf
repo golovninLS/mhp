@@ -83,7 +83,7 @@ REQUIRE Eval, ProcessMonitor, Backup,
         BillProject, BillProjectLedger,
 
         BillPaymentDashboard, PaymentProjectDashboard, PaymentProjectDashboardReport, PaymentListDashboard,
-        BankAccountVat,    
+        BankAccountVat, PaymentsDashboardCustom,
     
         TimesheetCustom,
         TimesheetSupervisorCustom,
@@ -94,11 +94,12 @@ REQUIRE Eval, ProcessMonitor, Backup,
 
         BillLunch, ProjectBillCustom, EmployeeTimesheet,
 
-        ProjectFileFolder, TaskKanban, RabbitMQ,
+        ProjectFileFolder, TaskCustom, RabbitMQ,
         
         TelegramCustom, TelegramBillNotification, Mailing, ScrapProject, ScrapProjectLedger, InvoiceCustom, AccomodationHistory
 ;
 
-onMessage(Channel c, STRING s)+{
-    printToLog(CONCAT ' : ', queue(c), s);
+onStarted()+{
+    permission(UserRole r, NavigatorElement e) <- Permission.permit WHERE sid(r) = 'admin';
+    APPLY;
 }

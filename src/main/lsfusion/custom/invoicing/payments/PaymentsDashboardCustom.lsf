@@ -1,0 +1,181 @@
+MODULE PaymentsDashboardCustom;
+
+REQUIRE OutgoingPaymentLedger, IncomingPaymentLedger, BillCustom, BillDebt, InvoiceDebt, 
+        InvoiceCustom, ProjectInvoiceCustom, ProjectCustom, PaymentsPayslipBatch;
+
+NAMESPACE Invoicing;
+
+//планируемые платежи
+EXTEND CLASS Bill : Payment;
+payment (Bill b) = GROUP SUM 1 IF paid(b, OutgoingPayment o);
+active [Payment](Bill b) += active(b) AND NOT payment(b);
+nameType (Bill b) += ISTRING[50](nameType(b) + '(план)');
+
+dateTime[Payment] (Bill b) += dueDateTime(b);
+
+number[Payment](Bill b) += number(b);
+
+partner [Payment](Bill b) += vendor(b);
+company [Payment](Bill b) += company(b);
+
+companyAccount (Bill b) += defaultBankAccount(company(b));
+signedAmount (Bill b) += -amount(b);
+
+note (Bill b) += ISTRING[50](note(b));
+
+EXTEND CLASS Invoice : Payment;
+payment (Invoice i) = GROUP SUM 1 IF paid(IncomingDebt o, i);
+active [Payment](Invoice i) += active(i) AND NOT payment(i);
+
+nameType (Invoice i) += ISTRING[50](nameType(i) + '(план)');
+
+dateTime[Payment] (Invoice i) += dueDateTime(i);
+
+number[Payment](Invoice i) += number(i);
+
+partner [Payment](Invoice i) += customer(i);
+company [Payment](Invoice i) += company(i);
+
+companyAccount (Invoice i) += defaultBankAccount(company(i));
+signedAmount (Invoice i) += amount(i);
+note (Invoice b) += ISTRING[50](note(b));
+
+EXTEND CLASS PlannedRevenue : Payment;
+
+invoice (PlannedRevenue p) = GROUP SUM 1 IF project(Invoice i) = project(p) AND extractMonth(date(i)) = month(p) 
+    AND revenueYear(p) = extractYear(date(i)) MATERIALIZED;
+active (PlannedRevenue p) += NOT invoice(p);
+
+nameType(PlannedRevenue p) += ISTRING[50]('Planned revenue');// + '[' + name(project(p)) + ']');
+
+dateTime (PlannedRevenue p) += DATETIME(lastDayOfMonth(DATE('01.' + number(month(p)) + '.' + revenueYear(p))));
+
+number(PlannedRevenue p) += STRING[31](name(project(p)));
+
+partner(PlannedRevenue p) += partner(project(p));
+company(PlannedRevenue p) += company(project(p));
+
+companyAccount (PlannedRevenue p) += defaultBankAccount(company(project(p)));
+signedAmount (PlannedRevenue p) += NUMERIC[14,2](plannedRevenue(p));
+note (PlannedRevenue p) += ISTRING[50](CONCAT ' ', name(project(p)), 'за', name(month(p)), revenueYear(p));
+
+//платежный календарь
+
+date 'Date' (Payment p) = DATE(dateTime(p));
+
+balance 'On hand' (Account a, DATE d) = GROUP SUM signedAmount(Payment p) IF companyAccount(p) = a AND date(p) <= d;
+
+payment = ABSTRACT CASE ISTRING (Account, STRING, DATE);
+payment (Account a, STRING t, DATE d) += WHEN t = 'ОСТАТОК' AND a IS Account AND d IS DATE THEN STRING(balance(a, d));
+
+//payment (Account a, ISTRING[50] t, DATE d) = GROUP SUM signedAmount(Payment p) BY companyAccount(p), nameType(p), date(p);
+payment (Account a, DATE d) = GROUP SUM signedAmount(Payment p) BY companyAccount(p), date(p);
+payment (Account a, STRING t, INTERVAL[DATE] d) = GROUP SUM 1 IF payment(a, t, DATE dd) AND dd >= from(d) AND dd <= to(d);
+payment (Account a, INTERVAL[DATE] d) = GROUP SUM 1 IF payment(a, DATE dd) AND dd >= from(d) AND dd <= to(d);
+paymentValue (Account a, STRING t, DATE d) = IF t != 'ОСТАТОК' AND a IS Account AND t IS STRING AND d IS DATE THEN 
+    GROUP SUM signedAmount(Payment p) IF companyAccount(p) = a AND active(p) AND nameType(p) = t AND date(p) = d;
+
+
+
+background (Account a, STRING t, DATE d) = CASE
+    WHEN t = 'ОСТАТОК' AND payment(a, d) > balance(a, d) THEN RGB(255, 102, 102)
+    WHEN t = 'ОСТАТОК' AND NOT payment(a, d) > balance(a, d) THEN RGB(51, 255, 204)
+    WHEN paymentValue(a, t, d) < 0 THEN RGB(255, 204, 255)
+    WHEN paymentValue(a, t, d) > 0 THEN RGB(204, 255, 204)
+;
+
+order(STRING t) = IF t = 'ОСТАТОК' THEN 100 ELSE 50;
+
+currentBalance 'Текущий остаток' (Account a) = balance(a, currentDate()) CHARWIDTH 16;
+
+caption (Payment p) = CONCAT ' ', namePartner(p), signedAmount(p);
+
+//paymentsString (Account a, STRING t, DATE d) = GROUP CONCAT caption(Payment p) IF active(p), ',' ORDER caption(p) BY companyAccount(p), nameType(p), date(p);
+
+payment (Account a, STRING t, DATE d) += WHEN t != 'ОСТАТОК' AND a IS Account AND t IS STRING AND d IS DATE THEN
+    OVERRIDE STRING(paymentValue(a, t, d))
+;
+
+in 'Отм' = DATA LOCAL BOOLEAN (Account);
+countInAccount = GROUP SUM 1 IF in(Account a);
+
+FORM paymentsDate 'Платежи на дату'
+    OBJECTS p = Payment
+    PROPERTIES (p) READONLY nameType, number, namePartner, 'Сумма' = signedAmount
+    PROPERTIES (p) EDIT 
+    FILTERS active(p)
+;
+filterPayment = FILTER paymentsDate.p;
+inSum 'Приход' = GROUP SUM signedAmount(Payment p) IF signedAmount(p) > 0 AND filterPayment(p);
+outSum 'Расход' = GROUP SUM signedAmount(Payment p) IF signedAmount(p) < 0 AND filterPayment(p);
+balance 'Баланс' = inSum() (-) outSum();
+
+EXTEND FORM paymentsDate
+    PROPERTIES () TOOLBAR inSum, outSum, balance 
+    OBJECTS date = DATE PANEL, account = Account PANEL
+    PROPERTIES TOOLBAR DRAW p balance(account, date)  HEADER 'Остаток на ' + toChar(date, 'dd.MM.yy')
+;
+
+DESIGN paymentsDate{
+    PROPERTY (balance(account, date)) {charWidth = 16; }
+}
+showPaymentDate(Account a, STRING t, DATE d){
+    IF t != 'ОСТАТОК' THEN{
+        SHOW paymentsDate OBJECTS account = a, date = d FILTERS date(p) = d, nameType(p) = t, companyAccount(p) = a;
+    } ELSE{
+        SHOW paymentsDate OBJECTS account = a, date = d FILTERS date(p) = d, companyAccount(p) = a;
+    }
+}
+
+FORM paymentCalendar 'Payment calendar'
+    OBJECTS dates = INTERVAL[DATE] PANEL NULL
+    PROPERTIES dates '' = VALUE(dates)
+    OBJECTS ac = Account
+    PROPERTIES READONLY name(ac), currentBalance(ac)
+    PROPERTIES in(ac) FIRST
+    FILTERS holder(ac) IS Company
+    
+    OBJECTS d = DATE
+    FILTERS iterate(d, from(dates), to(dates))
+    
+    OBJECTS col = (a = Invoicing.Account, t = STRING)
+    PROPERTIES 'Account' = name(a), type 'Type' = VALUE(t), sum  = OVERRIDE payment(a, t, d), '-' COLUMNS (d) HEADER (extractDay(d) + '.' + extractMonthNumber(d)) ON CHANGE showPaymentDate(a, t, d)
+    BACKGROUND background(a, t, d), order(t) SHOWIF NULL
+    ORDERS order(t)
+    FILTERS payment(a, t, dates) OR t = 'ОСТАТОК'
+    FILTERS (GROUP SUM 1 IF companyAccount(Payment p) = a AND date(p) <= to(dates))
+    FILTERS holder(a) IS Company
+    FILTERS in(a) OR NOT countInAccount()
+    EVENTS ON INIT {
+        SEEK paymentCalendar.dates = interval(firstDayOfMonth(currentDate()), lastDayOfMonth(currentDate()));
+    }
+;
+
+DESIGN paymentCalendar{
+    OBJECTS {
+        NEW info{
+            alignment = STRETCH;
+            MOVE PROPERTY (dates) {fontSize = 14;}
+            MOVE BOX (ac){
+                caption = '';
+                REMOVE TOOLBARBOX (ac);
+            }
+        }
+        NEW detail{
+            fill = 1;
+            caption = 'Календарь';
+            MOVE BOX(col){
+                caption = '';
+                PROPERTY (type) { charWidth = 20; }
+            }
+        }
+    }
+}
+
+NAVIGATOR {
+    invoicing{
+        reporting{
+            NEW paymentCalendar;
+        }
+    }
+}

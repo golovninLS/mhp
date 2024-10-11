@@ -194,5 +194,5 @@ NAVIGATOR {
 }
 
 WHEN (SETCHANGED(Task t IS Task) OR SETCHANGED(assignedTo(t))) AND chat(assignedTo(t)) DO {
-    sendMessage(chat(assignedTo(t)), ('New task assigned' + ': ' + name(t)) + IF deadline(t) THEN ('.\n' + 'Deadline' + ' — ' + deadline(t) + '.') ELSE '.\n');
+    sendMessage(chat(assignedTo(t)), ('New task assigned' + ':\n' + name(t)) + IF deadline(t) THEN ('.\n' + 'Deadline' + ' — ' + deadline(t) + '.') ELSE '.\n');
 }

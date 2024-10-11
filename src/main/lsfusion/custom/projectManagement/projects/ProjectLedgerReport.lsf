@@ -36,11 +36,11 @@ DESIGN projectLedgerReport {
 interval = DATA LOCAL INTERVAL[DATE] ();
 external 'Внешние' = DATA LOCAL BOOLEAN ();
 in 'Вкл' = DATA LOCAL BOOLEAN (ProjectType);
-countInSelectType = GROUP MAX ProjectType t IF in(t);
+countInSelectType = GROUP SUM 1 IF in(ProjectType t);
 typeIn 'Типы' = GROUP CONCAT name(ProjectType t) IF in(t), ', ' ORDER t CHARWIDTH 80;
 
 in 'Вкл.' = DATA BOOLEAN (Project);
-countInSelectProjects = GROUP MAX Project p IF in(p);
+countInSelectProjects = GROUP SUM 1 IF in(Project p);
 projectsIn 'Проекты' = GROUP CONCAT name(Project p) IF in(p), ', ' ORDER p CHARWIDTH 80;
 
 EXTEND FORM projectTypes
@@ -64,7 +64,7 @@ profit 'Profit' (Project p) = GROUP SUM profit(ProjectLedger l) IF profit(l) > 0
 total 'Total' (Project p) = profit(p) (-) expense(p);
 
 expense 'Expense' (ProjectType p) = GROUP SUM expense(ProjectLedger l) IF expense(l) > 0 AND active(l) AND filter(l) BY typeProject(l);
-profit 'Profit' (ProjectType p) = GROUP SUM profit(ProjectLedger l) IF profit(l) > 0 AND active(l) AND filter(l) BY  typeProject(l);
+profit 'Profit' (ProjectType p) = GROUP SUM profit(ProjectLedger l) IF profit(l) > 0 AND active(l) AND filter(l) BY typeProject(l);
 total 'Total' (ProjectType p) = profit(p) (-) expense(p);
 
 CLASS StaticMetricAccount{

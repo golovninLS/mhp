@@ -1,0 +1,63 @@
+MODULE TaskCustom;
+
+REQUIRE TaskKanban, ProjectCustom;
+
+NAMESPACE ProjectManagement;
+
+showAllTasks 'Показывать все задачи' = DATA BOOLEAN (CustomUser);
+
+EXTEND FORM tasks
+    FILTERS (author(t) = currentUser() OR assignedTo(t) = currentUser()) OR showAllTasks(currentUser())
+    FILTERS (author(tt) = currentUser() OR assignedTo(tt) = currentUser()) OR showAllTasks(currentUser())
+;
+
+EXTEND FORM customUsers
+    PROPERTIES showAllTasks(u)
+;
+
+
+datePlannedTask 'Дата создания задачи по планируемой выручке' = DATA INTEGER ();
+deadlinePlannedTask 'Дедлайн + дней(планируемая выручка)' = DATA INTEGER ();
+    
+dateClosedTask 'Дата создания задачи по закрытию месяца' = DATA INTEGER ();
+deadlineClosedTask 'Дедлайн + дней(закрытие месяца)' = DATA INTEGER ();
+
+createPeriodTasks 'Создать периодические задачи' ABSTRACT LIST ();
+
+createPeriodTasks()+{
+    IF datePlannedTask() = extractDay(currentDate()) THEN{
+        FOR Employee e = manager(Project p) AND (endDate(p) >= firstDayOfMonth(currentDate()) OR NOT endDate(p)) AND NOT 
+            planned(p, interval(firstDayOfMonth(currentDate()), lastDayOfMonth(currentDate())))
+            DO NEWSESSION NEW t = Task{
+            assignedTo(t) <- e;
+            name(t) <- '[' + name(p) + '] Заполнение плановой выручки на ' + lower(name(extractMonth(currentDate())));
+            deadline(t) <- sum(currentDate(), OVERRIDE deadlinePlannedTask(), 2);
+            APPLY;
+        }
+    }
+    IF dateClosedTask() = extractDay(currentDate()) THEN{
+        FOR Employee e = manager(Project p) AND (endDate(p) >= sum(firstDayOfMonth(currentDate()), -1) OR NOT endDate(p)) DO NEWSESSION NEW t = Task{
+            assignedTo(t) <- e;
+            name(t) <- '[' + name(p) + '] Закрытие табеля за ' + lower(name(extractMonth(sum(firstDayOfMonth(currentDate()), -1))));
+            deadline(t) <- sum(currentDate(), OVERRIDE deadlineClosedTask(), 2);
+            APPLY;
+        }
+    }
+}
+
+EXTEND FORM options
+    PROPERTIES () datePlannedTask, deadlinePlannedTask, dateClosedTask, deadlineClosedTask, createPeriodTasks
+;
+DESIGN options{
+    tabbedPane{
+        NEW periodTasks{
+            caption = 'Периодические задачи';
+            MOVE PROPERTY (datePlannedTask());
+            MOVE PROPERTY (deadlinePlannedTask());
+            MOVE PROPERTY (dateClosedTask());
+            MOVE PROPERTY (deadlineClosedTask());
+            MOVE PROPERTY (createPeriodTasks());
+        }
+    }
+}
+    

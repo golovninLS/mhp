@@ -1,0 +1,91 @@
+MODULE PaymentsPayslipBatch;
+
+REQUIRE Payment, PayslipBatch, BankAccount, CashAccount;
+
+NAMESPACE Invoicing;
+
+CLASS PaymentsPayslipBatch 'Payment PayslipBatch';
+
+in 'Вкл.' = DATA BOOLEAN (Account, PayslipBatch);
+
+sum 'Сумма' = DATA NUMERIC[14,2](Payslip, Account);
+sum 'Сумма' (Account a, PayslipBatch b) = GROUP SUM sum(Payslip p, a) IF batch(p) = b;
+date 'Дата оплаты' = DATA DATE (Account, PayslipBatch);
+
+paid 'Paid' (Payslip p) = GROUP SUM sum(p, Account a) IF in(a, batch(p));
+left 'Left' (Payslip p) = netWage(p) (-) paid(p);
+
+distributeLeft 'Заплатить остаток'(Account a, PayslipBatch b){
+    sum(Payslip p, a) <- (IF NOT sum(p, a) THEN left(p) ELSE netWage(p) ) WHERE batch(p) = b;
+    
+}
+
+paid 'Paid' (PayslipBatch b) = GROUP SUM paid(Payslip p) BY batch(p);
+left 'Left' (PayslipBatch b) = GROUP SUM left(Payslip p) BY batch(p);
+
+
+background(Payslip p) = CASE 
+    WHEN paid(p) AND NOT left(p) THEN RGB(51, 255, 204)
+    WHEN left(p) THEN RGB(255, 204, 204)
+;
+
+EXTEND FORM payslipBatches
+    PROPERTIES (b) paid, left
+;
+
+EXTEND FORM payslipBatch
+    OBJECTS a = Account
+    PROPERTIES sum(p, a) COLUMNS (a) HEADER name(a), paid(p) BACKGROUND background(p), left(p)  BACKGROUND background(p)
+    FILTERS in(a, b)
+    
+    OBJECTS ac = Account
+    PROPERTIES (ac) READONLY name, nameType, nameAccountHolder
+    PROPERTIES in(ac, b) FIRST, sum(ac, b), distributeLeft(ac, b) TOOLBAR DRAW ac, date(ac, b)
+    FILTERS holder(a) = company(p)
+;
+
+DESIGN payslipBatch{
+    details{
+        NEW accounts{
+            caption = 'Счета';
+            MOVE BOX (ac);
+        }
+    }
+}
+
+paymentPaysliBatch = AGGR PaymentsPayslipBatch WHERE sum(Account account, PayslipBatch batch) AND in(account, batch);
+
+EXTEND CLASS PaymentsPayslipBatch : Payment;
+active(PaymentsPayslipBatch b) += TRUE;
+
+nameType(PaymentsPayslipBatch b) += ISTRING[50]('Оплата платежной ведомости');
+number(PaymentsPayslipBatch b) += Payroll.number(batch(b));
+
+dateTime(PaymentsPayslipBatch b) += DATETIME(OVERRIDE date(account(b), batch(b)), sum(endDate(batch(b)), 10));
+partner(PaymentsPayslipBatch b) += Payroll.company(batch(b));
+company(PaymentsPayslipBatch b) += Payroll.company(batch(b));
+
+companyAccount (PaymentsPayslipBatch b) += account(b);
+
+signedAmount (PaymentsPayslipBatch b) += -NUMERIC[14,2](sum(account(b), batch(b)));
+
+note (PaymentsPayslipBatch b) += ISTRING[50](CONCAT ' ', 'оплата труда', 'за', name(extractMonth(endDate(batch(b)))), extractYear(endDate(batch(b))));
+
+//
+
+EXTEND CLASS PayslipBatch : Payment;
+amount = GROUP SUM netWage(Payslip p) BY batch(p);
+active(PayslipBatch b) += TRUE IF left(b) > 0;
+
+nameType(PayslipBatch b) += ISTRING[50]('Платежная ведомость');
+number(PayslipBatch b) += Payroll.number(b);
+
+dateTime(PayslipBatch b) += DATETIME(sum(endDate(b), 10));
+partner(PayslipBatch b) += Payroll.company(b);
+company(PayslipBatch b) += Payroll.company(b);
+
+companyAccount (PayslipBatch b) += defaultBankAccount(company(b));
+
+signedAmount (PayslipBatch b) += -NUMERIC[14,2](left(b));
+
+note (PayslipBatch b) += ISTRING[50](CONCAT ' ', 'оплата труда', 'за', name(extractMonth(endDate(b))), extractYear(endDate(b)));
