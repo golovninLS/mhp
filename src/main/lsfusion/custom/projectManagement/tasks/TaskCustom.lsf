@@ -1,8 +1,18 @@
 MODULE TaskCustom;
 
-REQUIRE TaskKanban, ProjectCustom;
+REQUIRE TaskKanban, ProjectCustom, TelegramNotification;
 
 NAMESPACE ProjectManagement;
+
+defaultTaskStatus = DATA TaskStatus ();
+nameDefaultStatus = name(defaultTaskStatus());
+
+EXTEND FORM options PROPERTIES nameDefaultStatus();
+DESIGN options {
+    BOX(ts){
+        MOVE PROPERTY (nameDefaultStatus());
+    }
+}
 
 showAllTasks 'Показывать все задачи' = DATA BOOLEAN (CustomUser);
 
@@ -15,28 +25,29 @@ EXTEND FORM customUsers
     PROPERTIES showAllTasks(u)
 ;
 
-
 datePlannedTask 'Дата создания задачи по планируемой выручке' = DATA INTEGER ();
 deadlinePlannedTask 'Дедлайн + дней(планируемая выручка)' = DATA INTEGER ();
-    
+
 dateClosedTask 'Дата создания задачи по закрытию месяца' = DATA INTEGER ();
 deadlineClosedTask 'Дедлайн + дней(закрытие месяца)' = DATA INTEGER ();
 
 createPeriodTasks 'Создать периодические задачи' ABSTRACT LIST ();
 
-createPeriodTasks()+{
-    IF datePlannedTask() = extractDay(currentDate()) THEN{
-        FOR Employee e = manager(Project p) AND (endDate(p) >= firstDayOfMonth(currentDate()) OR NOT endDate(p)) AND NOT 
+createPeriodTasks() + {
+    IF datePlannedTask() = extractDay(currentDate()) THEN {
+        FOR Employee e = manager(Project p) AND (endDate(p) >= firstDayOfMonth(currentDate()) OR NOT endDate(p)) AND NOT
             planned(p, interval(firstDayOfMonth(currentDate()), lastDayOfMonth(currentDate())))
             DO NEWSESSION NEW t = Task{
+            status(t) <- defaultTaskStatus();
             assignedTo(t) <- e;
             name(t) <- '[' + name(p) + '] Заполнение плановой выручки на ' + lower(name(extractMonth(currentDate())));
             deadline(t) <- sum(currentDate(), OVERRIDE deadlinePlannedTask(), 2);
             APPLY;
         }
     }
-    IF dateClosedTask() = extractDay(currentDate()) THEN{
-        FOR Employee e = manager(Project p) AND (endDate(p) >= sum(firstDayOfMonth(currentDate()), -1) OR NOT endDate(p)) DO NEWSESSION NEW t = Task{
+    IF dateClosedTask() = extractDay(currentDate()) THEN {
+        FOR Employee e = manager(Project p) AND (endDate(p) >= sum(firstDayOfMonth(currentDate()), -1) OR NOT endDate(p)) DO NEWSESSION NEW t = Task {
+            status(t) <- defaultTaskStatus();
             assignedTo(t) <- e;
             name(t) <- '[' + name(p) + '] Закрытие табеля за ' + lower(name(extractMonth(sum(firstDayOfMonth(currentDate()), -1))));
             deadline(t) <- sum(currentDate(), OVERRIDE deadlineClosedTask(), 2);
@@ -60,4 +71,30 @@ DESIGN options{
         }
     }
 }
-    
+
+EXTEND CLASS NotificationType {
+    task 'Task'
+}
+
+taskTemplateInitialized = TRUE IF template(NotificationType.task);
+
+onStarted() + {
+    IF NOT taskTemplateInitialized() THEN {
+        template(NotificationType.task) <-
+        'Задача «[name]» в рамках проекта [nameProject] назначена на [nameAssignedTo].\nПриоритет: [namePriority].\nСрок выполнения: [deadline].\nТекущий статус: [nameStatus].\nАвтор задачи: [nameAuthor].';
+        APPLY;
+    }
+}
+
+messageNotification(Task t) =
+    replace(replace(replace(replace(replace(replace(replace(template(NotificationType.task), '[name]', OVERRIDE name(t), ''),
+        '[nameProject]', OVERRIDE nameProject(t), '-'),
+        '[nameAuthor]', OVERRIDE nameAuthor(t), '-'),
+        '[nameAssignedTo]', OVERRIDE nameAssignedTo(t), '-'),
+        '[nameStatus]', OVERRIDE nameStatus(t), '-'),
+        '[namePriority]', OVERRIDE namePriority(t), '-'),
+        '[deadline]', OVERRIDE STRING(deadline(t)), '-');
+
+WHEN (SETCHANGED(Task t IS Task) OR SETCHANGED(assignedTo(t))) AND chat(assignedTo(t)) DO {
+    sendMessage(chat(assignedTo(t)), messageNotification(t));
+}

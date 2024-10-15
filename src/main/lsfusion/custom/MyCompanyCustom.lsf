@@ -96,7 +96,7 @@ REQUIRE Eval, ProcessMonitor, Backup,
 
         ProjectFileFolder, TaskCustom, RabbitMQ,
         
-        TelegramCustom, TelegramBillNotification, Mailing, ScrapProject, ScrapProjectLedger, InvoiceCustom, AccomodationHistory
+        TelegramCustom, TelegramNotification, Mailing, ScrapProject, ScrapProjectLedger, InvoiceCustom, AccomodationHistory, PaymentCustom
 ;
 
 onStarted()+{

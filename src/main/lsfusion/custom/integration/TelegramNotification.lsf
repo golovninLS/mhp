@@ -1,0 +1,156 @@
+MODULE TelegramNotification;
+
+REQUIRE TelegramCustom, Bill, EmployeeCustom, AccountBillProject, Debt;
+
+CLASS Notification 'Notifications';
+
+employee = DATA Employee (Chat);
+nameEmployee 'Employee' (Chat c) = name[Partner](employee(c));
+chat = GROUP AGGR Chat c BY employee(c);
+nameChat 'Chat' (Employee e) = name(chat(e));
+EXTEND FORM employeesCustom
+    PROPERTIES (e) READONLY nameChat
+    FILTERGROUP telegram
+        FILTER 'Telegram' chat(e)
+;
+
+EXTEND FORM messengers
+    PROPERTIES nameEmployee(c)
+;
+
+CLASS NotificationType 'Notification type' {
+    bill 'Bill change'
+}
+
+type = DATA NotificationType (Notification) MATERIALIZED NONULL;
+name 'Notification type' (NotificationType m) = staticCaption(m) IF m IS NotificationType;
+
+in 'Incl.' = DATA BOOLEAN (Chat, NotificationType);
+
+captionAttachment (Chat c) = IF newAttachment(c) THEN name(newAttachment(c)) ELSE 'Attach file';
+
+attachment 'Attach' (Chat c){
+    INPUT f = NAMEDFILE DO newAttachment(c) <- f;
+}
+
+EXTEND FORM employee
+    OBJECTS c = Chat PANEL, nt = NotificationType
+    PROPERTIES in(c, nt), name(nt)
+    PROPERTIES(c) PANEL newMessage, sendMessage, attachment HEADER captionAttachment(c)
+    FILTERS c = chat(e)
+;
+
+DESIGN employee {
+    details {
+        NEW notifications {
+            showIf = chat(e);
+            caption = 'Notifications';
+            alignment = STRETCH;
+            MOVE BOX (nt);
+            NEW message{
+                caption = 'Message';
+                horizontal = TRUE;
+                alignment = STRETCH;
+                MOVE PROPERTY (newMessage(c));
+                NEW action{
+                    MOVE PROPERTY (attachment(c));
+                    MOVE PROPERTY (sendMessage(c));
+                }
+            }
+        }
+    }
+}
+
+notifyUser (NotificationType type, STRING message) {
+    timeoutHttp() <- 20000;
+    FOR in(Chat c, type) DO TRY sendMessage(c, message);
+}
+
+notify 'Уведомлять' = DATA BOOLEAN (BillStatus);
+
+EXTEND FORM Invoicing.options
+    OBJECTS ns = BillStatus
+    PROPERTIES (ns) name READONLY, notify
+;
+DESIGN Invoicing.options{
+    tabbedPane{
+        NEW notification{
+            caption = 'Notifications';
+            MOVE BOX (ns);
+        }
+    }
+}
+
+NAVIGATOR {
+    masterData{
+        MOVE messengers;
+    }
+}
+
+template 'Template' = DATA TEXT (NotificationType);
+
+FORM templates 'Notification templates'
+    OBJECTS nt = NotificationType
+    PROPERTIES (nt) name READONLY, template
+;
+
+DESIGN templates {
+    alignment = STRETCH;
+    PROPERTY (name(nt)) { charWidth = 10; }
+    PROPERTY (template(nt)) {
+        tooltip = 'Шаблоны для счёта:
+        [nameProjectConcat] - название проекта;
+        [nameVendor] - поставщик;
+        [note] - примечание;
+        [dueDate] - оплатить до;
+        [nameStatus] - статус;
+        [prevNameStatus] - предыдущий статус;
+        [amount] - brutto;
+        [paid] - оплачено.
+        Шаблоны для задач:
+        [nameProject] - проект;
+        [nameAuthor] - автор;
+        [nameAssignedTo] - назначена на;
+        [nameStatus] - статус;
+        [namePriority] - приоритет;
+        [deadline] - срок исполнения.
+        ';
+    }
+}
+
+NAVIGATOR {
+    masterData {
+        NEW templates LAST;
+    }
+}
+
+billTemplateInitialized = TRUE IF template(NotificationType.bill);
+
+onStarted() + {
+    IF NOT billTemplateInitialized() THEN {
+        template(NotificationType.bill) <- 'Изменение статуса фактуры:\nСтатус фактуры №[number] изменился с "[prevNameStatus]" на "[nameStatus]".';
+        APPLY;
+    }
+}
+
+messageNotification(Bill b) =
+    replace(replace(replace(replace(replace(replace(replace(replace(replace(template(NotificationType.bill), '[number]', OVERRIDE number(b), ''),
+        '[nameProjectConcat]', OVERRIDE nameProjectConcat(b), ''),
+        '[nameVendor]', OVERRIDE nameVendor(b), ''),
+        '[note]', OVERRIDE note(b), ''),
+        '[dueDate]', OVERRIDE STRING(dueDate(b)), ''),
+        '[nameStatus]', OVERRIDE nameStatus(b), ''),
+        '[prevNameStatus]', OVERRIDE PREV(nameStatus(b)), ''),
+        '[amount]', OVERRIDE STRING(amount(b)), ''),
+        '[paid]', OVERRIDE STRING(paid(b)), '');
+
+WHEN SETCHANGED(status(Bill b)) AND notify(status(b)) DO {
+    TRY {
+        LOCAL message = STRING ();
+        message() <- messageNotification(b);
+        notifyUser(NotificationType.bill, message());
+    }
+        CATCH {
+        logToFile('telegram', messageCaughtException());
+    }
+}
