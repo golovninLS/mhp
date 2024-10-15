@@ -1,6 +1,6 @@
 MODULE TimesheetSupervisorCustom;
 
-REQUIRE TimesheetSupervisor, TimeEntryTypeCustom;
+REQUIRE TimesheetSupervisor, TimeEntryTypeCustom, ProjectCustom;
 
 PRIORITY MasterData;
 
@@ -266,3 +266,11 @@ skipCheckAssigned(CustomUser c, Project p) += WHEN manager(p) = c THEN TRUE;
 
 CONSTRAINT SETCHANGED(TimeEntry t IS TimeEntry) AND NOT hours(t) MESSAGE 'В отметке времени обязательно указание часов';
 CONSTRAINT DROPPED(hours(TimeEntry t)) AND employee(t) MESSAGE 'В отметке времени обязательно указание часов';
+
+EXTEND FORM timesheetSupervisor
+    FILTERS manager(p) = currentUser() OR showProjects(currentUser())
+
+    EVENTS ON INIT {
+        timesheetProject() <- IF projectByManager(currentUser()) THEN projectByManager(currentUser());
+    }
+;

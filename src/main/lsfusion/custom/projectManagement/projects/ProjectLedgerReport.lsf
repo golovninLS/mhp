@@ -1,6 +1,6 @@
 MODULE ProjectLedgerReport;
 
-REQUIRE ProjectLedger, AccountDistributionLineLedger,  ProjectManagementSettings, BillProject;
+REQUIRE ProjectLedger, AccountDistributionLineLedger, ProjectManagementSettings, BillProject;
 
 NAMESPACE ProjectManagement;
 
@@ -8,7 +8,7 @@ FORM projectLedgerReport 'Project report'
     OBJECTS l = ProjectLedger PIVOT
     PROPERTIES(l) READONLY class, date, number, nameProject, namePartner, category, description, nameAccount, accountObject
     PROPERTIES(l) READONLY MEASURE
-                    income, expense, profit
+    income, expense, profit
     FILTERS active(l)
 ;
 
@@ -44,7 +44,7 @@ countInSelectProjects = GROUP SUM 1 IF in(Project p);
 projectsIn 'Проекты' = GROUP CONCAT name(Project p) IF in(p), ', ' ORDER p CHARWIDTH 80;
 
 EXTEND FORM projectTypes
-    PROPERTIES (o) in FIRST 
+    PROPERTIES (o) in FIRST
 ;
 
 filter(ProjectLedger l) = ((date(l) >= from(interval()) AND date(l) <= to(interval())) OR NOT interval()) AND NOT inner(project(l))
@@ -70,23 +70,23 @@ total 'Total' (ProjectType p) = profit(p) (-) expense(p);
 CLASS StaticMetricAccount{
     invoice 'Реализация',
     distribute 'Распределение затрат'
-} : MetricAccount;
+    } : MetricAccount;
 
 in(Project p, StaticMetricAccount a) = IF a = StaticMetricAccount.invoice AND [GROUP MAX InvoiceLine l IF active(l) AND filter(l) AND l IS InvoiceLine BY project(l)](p) THEN TRUE
     ELSE TRUE IF [GROUP MAX AccountDistributionLine ll IF active(ll) AND filter(ll) AND ll IS AccountDistributionLine BY project(ll)](p);
 in(Project p, StaticMetricAccount a) += in(p, a);
 
-profit (Project p, StaticMetricAccount t) += IF t = StaticMetricAccount.invoice THEN 
+profit (Project p, StaticMetricAccount t) += IF t = StaticMetricAccount.invoice THEN
     GROUP SUM profit(InvoiceLine l) IF profit(l) > 0 AND l IS InvoiceLine AND filter(l) AND project(l) = p
-;
+    ;
 expense (Project p, StaticMetricAccount t) += IF t = StaticMetricAccount.distribute THEN
     GROUP SUM expense(AccountDistributionLine l) IF expense(l) > 0 AND filter(l) AND l IS AccountDistributionLine AND project(l) = p
-;
+    ;
 name(StaticMetricAccount a) += STRING(staticCaption(a));
 
 EXTEND CLASS SalesAccount : MetricAccount;
 
-expense  (Project p, SalesAccount a) += GROUP SUM expense(ProjectLedger l) IF NOT l IS AccountDistributionLine AND filter(l) AND project(l) = p AND account(l) = a;
+expense (Project p, SalesAccount a) += GROUP SUM expense(ProjectLedger l) IF NOT l IS AccountDistributionLine AND filter(l) AND project(l) = p AND account(l) = a;
 name(SalesAccount a) += STRING(Sales.name(a));
 
 skipAccountDistribution (ProjectLedger l) = l IS ProjectLedger AND NOT l IS AccountDistributionLine;
@@ -95,8 +95,8 @@ in(ProjectType t, Project p) = type(p) = t;
 in(Project p, SalesAccount a) = GROUP MAX ProjectLedger l IF filter(l) AND NOT skipAccountDistribution(l) BY project(l), account(l);
 in(Project p, SalesAccount a) += TRUE IF in(p, a);
 
-expense 'Expense' (Project p, MetricAccount a, SalesAccount d) = 
-    GROUP SUM expense(AccountDistributionLine ll) IF ll IS AccountDistributionLine AND active(ll) AND filter(ll) AND a = StaticMetricAccount.distribute AND 
+expense 'Expense' (Project p, MetricAccount a, SalesAccount d) =
+    GROUP SUM expense(AccountDistributionLine ll) IF ll IS AccountDistributionLine AND active(ll) AND filter(ll) AND a = StaticMetricAccount.distribute AND
         project(ll) = p AND salesAccount(ll) = d
 ;
 
@@ -112,14 +112,13 @@ profit 'Revenue' (Project p, MetricAccount a, SalesAccount d, STRING s) = IF p I
 
 total 'Profit' (Project p, MetricAccount a, SalesAccount d, STRING s) = - expense(p, a, d, s);
 
-
 FORM reportProjects 'Отчет по проводкам'
     PROPERTIES interval 'Период' = interval()
-    
+
     TREE report t = ProjectType, p = Project, a = MetricAccount, d = SalesAccount, o = STRING
     PROPERTIES READONLY name(t), 'Наименование' = '  ' + name(p), 'Наименование' = '\t' + name(a), 'Наименование' = '\t\t' + name(d), name 'Name' = '\t\t\t' + o,
         expense(p, a), expense(p), expense(t), expense(p, a, d), expense 'Expense' = expense(p, a, d, o),
-        profit(p, a), profit(p), profit(t), profit(p, a, d),  profit 'Profit' = profit(p, a, d, o),
+        profit(p, a), profit(p), profit(t), profit(p, a, d), profit 'Profit' = profit(p, a, d, o),
         total(p, a), total(p), total(t), total(p, a, d), total 'Total' = total(p, a, d, o)
     FILTERS in(t, p), in(p, a), expense(p, a, d), expense(p, a, d, o)
 ;
@@ -149,7 +148,6 @@ DESIGN reportProjects {
     }
 }
 
-
 //v3
 in(Project p, AccountObject obj) = GROUP MAX ProjectLedger l IF active(l) AND filter(l) BY project(l), accountObject(accountObject(l));
 in = ABSTRACT ProjectLedger (Project, AccountObject, MetricAccount);
@@ -157,7 +155,7 @@ in(Project p, AccountObject s, SalesAccount a) = GROUP MAX ProjectLedger l IF ac
 in(Project p, AccountObject s, SalesAccount a) += in(p, s, a);
 
 in(Project p, AccountObject s, StaticMetricAccount a) = IF a = StaticMetricAccount.invoice THEN
-        (GROUP MAX InvoiceLine l IF active(l) AND filter(l) AND l IS InvoiceLine AND project(l) = p AND accountObject(accountObject(l)) = s)
+    (GROUP MAX InvoiceLine l IF active(l) AND filter(l) AND l IS InvoiceLine AND project(l) = p AND accountObject(accountObject(l)) = s)
 ;
 
 in(Project p, AccountObject s, StaticMetricAccount a) += in(p, s, a);
@@ -177,7 +175,7 @@ expense(Project p, AccountObject obj, SalesAccount a) += expense(p, obj, a);
 
 profit(Project p, AccountObject obj, StaticMetricAccount a) += GROUP SUM profit(ProjectLedger l) IF active(l) AND profit(l) > 0 AND filter(l) AND project(l) = p AND
     accountObject(accountObject(l)) = obj AND a = StaticMetricAccount.invoice AND l IS InvoiceLine
-;
+    ;
 
 expense 'Expense' (Project p, AccountObject s, MetricAccount a, Partner partner) =
     GROUP SUM expense(ProjectLedger ll) IF active(ll) AND expense(ll) > 0 AND filter(ll) BY project(ll), accountObject(accountObject(ll)), account(ll), partner(ll);
@@ -190,7 +188,7 @@ profit 'Revenue' (Project p, AccountObject s, MetricAccount a, Partner partner) 
 total 'Profit' (Project p, AccountObject s, MetricAccount a, Partner partner) = profit(p, s, a, partner) (-) expense(p, s, a, partner);
 
 intToColor = FORMULA '(256*256*($1)+256*($2)+($3))::integer';
-greyColor (INTEGER i, INTEGER x)= COLOR(intToColor(240-(i*x), 240-(i*x), 240-(i*x)));
+greyColor (INTEGER i, INTEGER x)= COLOR(intToColor(240 - (i * x), 240 - (i * x), 240 - (i * x)));
 background (INTEGER i) = greyColor(i, 10);
 
 FORM projectSelect
@@ -199,23 +197,23 @@ FORM projectSelect
 ;
 
 FORM reportProjectsV2 'Отчет по проводкам v2'
-    PROPERTIES interval 'Период' = interval(), typeIn(), projectsIn() 
+    PROPERTIES interval 'Период' = interval(), typeIn(), projectsIn()
 
-    TREE report t = ProjectType, p = Project, object = AccountObject , a = MetricAccount, partner = Partner 
-    PROPERTIES READONLY name(t), nameProject 'Наименование' = '  ' + name(p) BACKGROUND background(0), 
-        nameObject 'Наименование' =  name(object) BACKGROUND background(1) , 'Наименование' = '\t' + name(a) BACKGROUND background(2), 
+    TREE report t = ProjectType, p = Project, object = AccountObject, a = MetricAccount, partner = Partner
+    PROPERTIES READONLY name(t), nameProject 'Наименование' = '  ' + name(p) BACKGROUND background(0),
+        nameObject 'Наименование' = name(object) BACKGROUND background(1), 'Наименование' = '\t' + name(a) BACKGROUND background(2),
         namePartner = '\t\t' + name(partner) BACKGROUND background(3)
-    PROPERTIES expense(t), expense(p) BACKGROUND background(0), expense(p, object) BACKGROUND background(1), expense(p, object, a) BACKGROUND background(2), 
-            expense(p, object, a, partner) BACKGROUND background(3)
-    PROPERTIES profit(t), profit(p) BACKGROUND background(0),  profit(p, object) BACKGROUND background(1), profit(p, object, a) BACKGROUND background(2),
+    PROPERTIES expense(t), expense(p) BACKGROUND background(0), expense(p, object) BACKGROUND background(1), expense(p, object, a) BACKGROUND background(2),
+        expense(p, object, a, partner) BACKGROUND background(3)
+    PROPERTIES profit(t), profit(p) BACKGROUND background(0), profit(p, object) BACKGROUND background(1), profit(p, object, a) BACKGROUND background(2),
         profit(p, object, a, partner) BACKGROUND background(3)
-    PROPERTIES total(t), total(p) BACKGROUND background(0), total(p, object) BACKGROUND background(1), total(p, object, a) BACKGROUND background(2), 
+    PROPERTIES total(t), total(p) BACKGROUND background(0), total(p, object) BACKGROUND background(1), total(p, object, a) BACKGROUND background(2),
         total(p, object, a, partner) BACKGROUND background(3)
-    
+
     FILTERS in(t, p), in(p, object), in(p, object, a), expense(p, object, a, partner) OR profit(p, object, a, partner)
     FILTERS profit(t) OR expense(t)
     FILTERS profit(p) OR expense(p), NOT inner(p)
-    
+
 ;
 //service project
 
@@ -228,7 +226,7 @@ expenseService 'Expense' (Project p, MetricAccount as, Partner ps) = GROUP SUM e
 
 FORM reportServiceProjects 'Отчет по проводкам(сервисные)'
     PROPERTIES interval 'Период' = interval(), typeIn(), projectsIn()
-    
+
     TREE reportService ps = Project, as = MetricAccount, partners = Partner
     PROPERTIES name(ps), = '\t' + name(as) BACKGROUND background(0), = '\t\t' + name(partners) BACKGROUND background(1)
     PROPERTIES expenseService(ps), expenseService(ps, as) BACKGROUND background(0), expenseService(ps, as, partners) BACKGROUND background(1)
@@ -239,13 +237,11 @@ filterService(Project p) = FILTER reportServiceProjects.ps;
 
 expenseService 'Expense' = GROUP SUM expenseService(Project p) IF filterService(p) CHARWIDTH 25;
 
-
 filteredV2 (ProjectType t) = FILTER reportProjectsV2.t;
 
 revenueV2 'Revenue' = GROUP SUM profit(ProjectType t) IF filteredV2(t) CHARWIDTH 25;
 expenseV2 'Expense' = GROUP SUM expense(ProjectType t) IF filteredV2(t) CHARWIDTH 25;
 profitV2 'Profit' = GROUP SUM total(ProjectType t) IF filteredV2(t) CHARWIDTH 25;
-
 
 EXTEND FORM reportProjectsV2
     PROPERTIES () TOOLBAR DRAW t expenseV2, revenueV2, profitV2
@@ -253,7 +249,6 @@ EXTEND FORM reportProjectsV2
 EXTEND FORM reportServiceProjects
     PROPERTIES expenseService() TOOLBAR DRAW ps
 ;
-
 
 DESIGN reportProjectsV2 {
     OBJECTS {
@@ -290,3 +285,10 @@ NAVIGATOR {
         }
     }
 }
+
+access = GROUP SUM 1 IF manager(Project p) = currentUser() OR showProjects(currentUser()) BY type(p);
+
+EXTEND FORM reportProjectsV2
+    FILTERS manager(p) = currentUser() OR showProjects(currentUser())
+    FILTERS access(t)
+;

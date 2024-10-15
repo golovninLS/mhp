@@ -1,6 +1,6 @@
 MODULE TimesheetSupervisorMobile;
 
-REQUIRE Timesheet, Mobile;
+REQUIRE Timesheet, Mobile, ProjectCustom;
 
 PRIORITY MasterData;
 
@@ -12,9 +12,9 @@ FORM timesheetSupervisorMobile 'Timesheet'
     PROPERTIES dow '' = extractDOWName (d) READONLY
 
     PROPERTIES prevWeek '<<' = { SEEK timesheetSupervisorMobile.d = subtract(d, 7); },
-               prevDate '<' = { SEEK timesheetSupervisorMobile.d = subtract(d, 1); },
-               nextDate '>' = { SEEK timesheetSupervisorMobile.d = sum(d, 1); },
-               nextWeek '>>' = { SEEK timesheetSupervisorMobile.d = sum(d, 7); }
+        prevDate '<' = { SEEK timesheetSupervisorMobile.d = subtract(d, 1); },
+        nextDate '>' = { SEEK timesheetSupervisorMobile.d = sum(d, 1); },
+        nextWeek '>>' = { SEEK timesheetSupervisorMobile.d = sum(d, 7); }
 
     PROPERTIES(d) copyApply, clearApply
     
@@ -25,19 +25,19 @@ FORM timesheetSupervisorMobile 'Timesheet'
         timesheetTimeEntryType() <- OVERRIDE defaultTimeEntryType(), firstTimeEntryType();
     }
 
-    OBJECTS e = Employee
+    OBJECTS pe = (pp = Project, e = Employee)
     PROPERTIES(e) READONLY name
     PROPERTIES hoursTimesheet(d, e) BACKGROUND backgroundHoursTimesheet(d, e)
-               READONLYIF NOT timesheetTimeEntryType()
-               ON CHANGE { 
-                   INPUT n = hoursTimesheet(d, e) DO
-                       changeSaveTimesheetHours(d, e, timesheetTimeEntryType(), n, NULL, TRUE); 
-               }
+    READONLYIF NOT timesheetTimeEntryType()
+    ON CHANGE {
+        INPUT n = hoursTimesheet(d, e) DO
+            changeSaveTimesheetHours(d, e, timesheetTimeEntryType(), n, NULL, TRUE);
+    }
     FILTERS assigned(timesheetProject(), e) OR (NOT countAssignments(timesheetProject()) AND NOT countAssignments(currentUser()))
     
     OBJECTS h = TimeEntryHours
     PROPERTIES NOWAIT changeHours = { changeSaveTimesheetHours(d, e, timesheetTimeEntryType(), hours(h), h, TRUE); }
-               COLUMNS (h) HEADER nameHours(h)
+    COLUMNS (h) HEADER nameHours(h)
     FILTERS type(h) = timesheetTimeEntryType()
 ;
 
@@ -69,11 +69,11 @@ DESIGN timesheetSupervisorMobile {
                     MOVE PROPERTY(copyApply(d)) { fill = 1; }
                     MOVE PROPERTY(clearApply(d)) { fill = 1; }
                 }
-                MOVE GRID(e) {
+                MOVE GRID(pe) {
                     PROPERTY(name(e)) { caption = ''; }
                     PROPERTY(hoursTimesheet(d, e)) { caption = ''; charWidth = 4; };
                 }
-                REMOVE BOX(e);
+                REMOVE BOX(pe);
                 MOVE PROPERTY(nameTimesheetTimeEntryType()) {
                     alignment = STRETCH;
                     caption = '';
@@ -99,3 +99,11 @@ showMobileForms() + {
     IF permit(currentUser(), navigatorElementCanonicalName('ProjectManagement.timesheetSupervisorMobile')) THEN
         SHOW timesheetSupervisorMobile NOWAIT;
 }
+
+EXTEND FORM timesheetSupervisorMobile
+    FILTERS (manager(timesheetProject()) = currentUser() AND timesheetProject() = pp) OR showProjects(currentUser())
+
+    EVENTS ON INIT {
+        timesheetProject() <- IF projectByManager(currentUser()) THEN projectByManager(currentUser());
+    }
+;
