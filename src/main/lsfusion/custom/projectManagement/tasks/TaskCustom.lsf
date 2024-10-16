@@ -5,12 +5,18 @@ REQUIRE TaskKanban, ProjectCustom, TelegramNotification;
 NAMESPACE ProjectManagement;
 
 defaultTaskStatus = DATA TaskStatus ();
-nameDefaultStatus = name(defaultTaskStatus());
+nameDefaultStatus 'Статус по умолчанию' = name(defaultTaskStatus());
 
 EXTEND FORM options PROPERTIES nameDefaultStatus();
 DESIGN options {
-    BOX(ts){
-        MOVE PROPERTY (nameDefaultStatus());
+    tabbedPane {
+        NEW statuses {
+            fill = 1;
+            alignment = STRETCH;
+            caption = 'Task statuses';
+            MOVE PROPERTY (nameDefaultStatus());
+            MOVE BOX(ts);
+        }
     }
 }
 
@@ -97,4 +103,8 @@ messageNotification(Task t) =
 
 WHEN (SETCHANGED(Task t IS Task) OR SETCHANGED(assignedTo(t))) AND chat(assignedTo(t)) DO {
     sendMessage(chat(assignedTo(t)), messageNotification(t));
+}
+
+WHEN SET(Task t IS Task) AND NOT status(t) DO {
+    status(t) <- defaultTaskStatus();
 }
