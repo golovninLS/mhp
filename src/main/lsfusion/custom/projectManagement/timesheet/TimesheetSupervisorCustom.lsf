@@ -257,7 +257,7 @@ EXTEND FORM employee
     PROPERTIES showAllProjects(e)
 ;
 DESIGN employee{
-    info{
+    info {
         MOVE PROPERTY (showAllProjects(e));
     }
 }
@@ -267,10 +267,24 @@ skipCheckAssigned(CustomUser c, Project p) += WHEN manager(p) = c THEN TRUE;
 CONSTRAINT SETCHANGED(TimeEntry t IS TimeEntry) AND NOT hours(t) MESSAGE 'В отметке времени обязательно указание часов';
 CONSTRAINT DROPPED(hours(TimeEntry t)) AND employee(t) MESSAGE 'В отметке времени обязательно указание часов';
 
+projectByManager = GROUP MAX Project p BY manager(p);
+
+DESIGN employee {
+    REMOVE PROPERTY(showAllProjects(e));
+}
+
+EXTEND FORM customUsers
+    PROPERTIES showAllProjects(u) CHANGEABLE
+;
+
 EXTEND FORM timesheetSupervisor
-    FILTERS manager(p) = currentUser() OR showProjects(currentUser())
+    FILTERS manager(p) = currentUser() OR showAllProjects(currentUser())
 
     EVENTS ON INIT {
         timesheetProject() <- IF projectByManager(currentUser()) THEN projectByManager(currentUser());
     }
+;
+
+EXTEND FORM projects
+    FILTERS manager(p) = currentUser() OR showAllProjects(currentUser())
 ;

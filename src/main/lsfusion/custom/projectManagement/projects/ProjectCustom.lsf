@@ -136,15 +136,3 @@ DESIGN project {
 EXTEND FORM projects
     PROPERTIES (p, dates) projectRevenue FOOTER projectRevenue(dates)
 ;
-
-projectByManager = GROUP MAX Project p BY manager(p);
-
-showProjects 'Показывать все проекты' = DATA BOOLEAN (CustomUser);
-
-EXTEND FORM customUsers
-    PROPERTIES showProjects(u)
-;
-
-EXTEND FORM projects
-    FILTERS manager(p) = currentUser() OR showProjects(currentUser())
-;
