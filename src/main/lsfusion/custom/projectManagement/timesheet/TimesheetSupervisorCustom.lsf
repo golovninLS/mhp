@@ -251,7 +251,7 @@ DESIGN timesheetSupervisor {
         }
     }
 }
-showAllProjects 'Отображать все проекты' = DATA BOOLEAN (Employee);
+showAllProjects 'Отображать все проекты' = DATA BOOLEAN (CustomUser);
 
 EXTEND FORM employee
     PROPERTIES showAllProjects(e)
@@ -274,7 +274,7 @@ DESIGN employee {
 }
 
 EXTEND FORM customUsers
-    PROPERTIES showAllProjects(u) CHANGEABLE
+    PROPERTIES showAllProjects(u) 
 ;
 
 EXTEND FORM timesheetSupervisor
