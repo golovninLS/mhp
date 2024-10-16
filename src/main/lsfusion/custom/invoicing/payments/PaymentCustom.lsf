@@ -73,7 +73,7 @@ importPaymentXLS 'Импорт из XLS'() {
                 companyAccount(payment) <- a;
                 done(payment) <- TRUE;
             }
-        } ELSE MESSAGE 'Отсутствует сумма исходящего платежа';
+        }
         
         FOR nettoPlus(INTEGER i) AND BankAccount a = numberAccount(substrFrom(replace(account(i), ' ', ''), 3)) DO {
             NEW payment = IncomingPayment {
@@ -86,7 +86,7 @@ importPaymentXLS 'Импорт из XLS'() {
                 companyAccount(payment) <- a;
                 done(payment) <- TRUE;
             }
-        } ELSE MESSAGE 'Отсутствует сумма входящего платежа';
+        }
         APPLY;
     }
 }
