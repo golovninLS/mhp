@@ -1,0 +1,94 @@
+MODULE PaymentCustom;
+
+REQUIRE Payment, BankAccount, OutgoingPayment, OutgoingPaymentCurrency, OutgoingPaymentDone, IncomingPayment, IncomingPaymentCurrency, IncomingPaymentDone;
+
+NAMESPACE Invoicing;
+
+numberAccount = GROUP AGGR BankAccount b BY replace(number(b), ' ', '');
+currency = GROUP AGGR Currency c BY name(c);
+
+defaultOutgoingPaymentType = DATA OutgoingPaymentType ();
+nameDefaultOutgoingPaymentType 'Тип исходящего платежа по умолчанию' = name(defaultOutgoingPaymentType());
+defaultIncomingPaymentType = DATA IncomingPaymentType();
+nameDefaultIncomingPaymentType 'Тип входящего платежа по умолчанию' = name(defaultIncomingPaymentType());
+
+default 'Default' = DATA BOOLEAN (Bank) CHARWIDTH 10;
+uniqueBank = GROUP AGGR Bank b BY default(b);
+defaultBank = GROUP MAX Bank b IF default(b);
+
+EXTEND FORM banks
+    PROPERTIES (b) default LAST
+;
+
+EXTEND FORM options PROPERTIES () nameDefaultOutgoingPaymentType, nameDefaultIncomingPaymentType;
+
+DESIGN options {
+    tabbedPane {
+        NEW outgoing {
+            fill = 1;
+            alignment = STRETCH;
+            caption = 'Types of outgoing payments';
+            MOVE PROPERTY (nameDefaultOutgoingPaymentType());
+            MOVE BOX(opt);
+        }
+        NEW incoming {
+            fill = 1;
+            alignment = STRETCH;
+            caption = 'Types of incoming payments';
+            MOVE PROPERTY (nameDefaultIncomingPaymentType());
+            MOVE BOX(ipt);
+        }
+    }
+}
+
+importPaymentXLS 'Импорт из XLS'() {
+    IF NOT defaultOutgoingPaymentType() OR NOT defaultIncomingPaymentType() THEN { MESSAGE 'Отсутствует тип исходящего/входящего платежа по умолчанию.'; BREAK; }
+    IF NOT defaultBank() THEN { MESSAGE 'Отсутствует банк по умолчанию.'; BREAK; }
+
+    INPUT f = EXCELFILE DO {
+        LOCAL date = DATE(INTEGER);
+        LOCAL nettoMinus = NUMERIC[14,2](INTEGER);
+        LOCAL nettoPlus = NUMERIC[14,2](INTEGER);
+        LOCAL account = STRING[50](INTEGER);
+        LOCAL note = ISTRING[50](INTEGER);
+        LOCAL currency = STRING[3](INTEGER);
+
+        IMPORT XLS NOHEADER FROM f AS EXCELFILE TO account = A, date = B, note = G, nettoMinus = H, nettoPlus = I, currency = K;
+
+        FOR [GROUP MAX INTEGER i BY account(i)](STRING id) AND NOT numberAccount(substrFrom(replace(id, ' ', ''), 3))
+            NEW b = BankAccount DO {
+            number(b) <- STRING[30](substrFrom(replace(id, ' ', ''), 3));
+            holder(b) <- defaultCompany();
+            bank(b) <- defaultBank();
+        }
+
+        FOR nettoMinus(INTEGER i) AND BankAccount a = numberAccount(substrFrom(replace(account(i), ' ', ''), 3)) DO {
+            NEW payment = OutgoingPayment {
+                type(payment) <- defaultOutgoingPaymentType() ;
+                dateTime(payment) <- OVERRIDE DATETIME(date(i)), currentDateTime();
+                amount(payment) <- nettoMinus(i);
+                note(payment) <- note(i);
+                currency(payment) <- currency(currency(i));
+                company(payment) <- defaultCompany();
+                companyAccount(payment) <- a;
+                done(payment) <- TRUE;
+            }
+        } ELSE MESSAGE 'Отсутствует сумма исходящего платежа';
+        
+        FOR nettoPlus(INTEGER i) AND BankAccount a = numberAccount(substrFrom(replace(account(i), ' ', ''), 3)) DO {
+            NEW payment = IncomingPayment {
+                type(payment) <- defaultIncomingPaymentType();
+                dateTime(payment) <- OVERRIDE DATETIME(date(i)), currentDateTime();
+                amount(payment) <- nettoPlus(i);
+                note(payment) <- note(i);
+                currency(payment) <- currency(currency(i));
+                company(payment) <- defaultCompany();
+                companyAccount(payment) <- a;
+                done(payment) <- TRUE;
+            }
+        } ELSE MESSAGE 'Отсутствует сумма входящего платежа';
+        APPLY;
+    }
+}
+
+EXTEND FORM payments PROPERTIES importPaymentXLS() PANEL;
