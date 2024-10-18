@@ -83,7 +83,7 @@ REQUIRE Eval, ProcessMonitor, Backup,
         BillProject, BillProjectLedger,
 
         BillPaymentDashboard, PaymentProjectDashboard, PaymentProjectDashboardReport, PaymentListDashboard,
-        BankAccountVat, PaymentsDashboardCustom,
+        BankAccountVat, PaymentsDashboardCustom, PaymentsPayslipBatch,
     
         TimesheetCustom,
         TimesheetSupervisorCustom,

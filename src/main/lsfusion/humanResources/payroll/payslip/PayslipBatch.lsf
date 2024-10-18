@@ -61,15 +61,21 @@ DESIGN payslipBatch {
             MOVE PROPERTY(generate(b));
         }
         NEW header {
-            NEW headerRow1 {
+            NEW headerColumns{
                 horizontal = TRUE;
-                alignment = STRETCH;
-                MOVE PROPERTY(number(b))  { notNull = TRUE; }
-                MOVE PROPERTY(period(b));
+                NEW headerColumn1 {
+                    alignment = STRETCH;
+                    NEW headerRow1{
+                        horizontal = TRUE;
+                        MOVE PROPERTY(number(b)) { notNull = TRUE; }
+                        MOVE PROPERTY(period(b));
+                    }
+                    MOVE PROPERTY(name(b)) { alignment = STRETCH; }
+                    MOVE PROPERTY(nameCompany(b)) { notNull = TRUE; alignment = STRETCH; }
+                }
             }
-            MOVE PROPERTY(name(b)) { alignment = STRETCH; }
-            MOVE PROPERTY(nameCompany(b)) { notNull = TRUE; alignment = STRETCH; }
         }
+        
         NEW details {
             fill = 1;
             tabbed = TRUE;

@@ -1,7 +1,7 @@
 MODULE PaymentsDashboardCustom;
 
 REQUIRE OutgoingPaymentLedger, IncomingPaymentLedger, BillCustom, BillDebt, InvoiceDebt, 
-        InvoiceCustom, ProjectInvoiceCustom, ProjectCustom, PaymentsPayslipBatch;
+        InvoiceCustom, ProjectInvoiceCustom, ProjectCustom;
 
 NAMESPACE Invoicing;
 
@@ -11,7 +11,7 @@ payment (Bill b) = GROUP SUM 1 IF paid(b, OutgoingPayment o);
 active [Payment](Bill b) += active(b) AND NOT payment(b);
 nameType (Bill b) += ISTRING[50](nameType(b) + '(план)');
 
-dateTime[Payment] (Bill b) += dueDateTime(b);
+dateTime[Payment] (Bill b) += OVERRIDE DATETIME(paymentDate(b)), dueDateTime(b);
 
 number[Payment](Bill b) += number(b);
 

@@ -23,6 +23,8 @@ DESIGN options {
 showAllTasks 'Показывать все задачи' = DATA BOOLEAN (CustomUser);
 
 EXTEND FORM tasks
+    EXTEND FILTERGROUP my
+        FILTER 'My tasks + Assigned to me' author(t) = currentUser() OR assignedTo(t) = currentUser() 'F7' DEFAULT 
     FILTERS (author(t) = currentUser() OR assignedTo(t) = currentUser()) OR showAllTasks(currentUser())
     FILTERS (author(tt) = currentUser() OR assignedTo(tt) = currentUser()) OR showAllTasks(currentUser())
 ;
