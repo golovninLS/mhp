@@ -44,6 +44,7 @@ DESIGN options {
 importPaymentXLS 'Импорт из XLS'() {
     IF NOT defaultOutgoingPaymentType() OR NOT defaultIncomingPaymentType() THEN { MESSAGE 'Отсутствует тип исходящего/входящего платежа по умолчанию.'; BREAK; }
     IF NOT defaultBank() THEN { MESSAGE 'Отсутствует банк по умолчанию.'; BREAK; }
+    IF NOT defaultCompany() THEN { MESSAGE 'Отсутствует компания по умолчанию.'; BREAK; }
 
     INPUT f = EXCELFILE DO {
         LOCAL date = DATE(INTEGER);
@@ -54,15 +55,18 @@ importPaymentXLS 'Импорт из XLS'() {
         LOCAL currency = STRING[3](INTEGER);
 
         IMPORT XLS NOHEADER FROM f AS EXCELFILE TO account = A, date = B, note = G, nettoMinus = H, nettoPlus = I, currency = K;
+        LOCAL index = INTEGER(INTEGER);
+        index(INTEGER i) <- PARTITION SUM 1 IF account(i) ORDER i;
 
-        FOR [GROUP MAX INTEGER i BY account(i)](STRING id) AND NOT numberAccount(substrFrom(replace(id, ' ', ''), 3))
+        FOR INTEGER int = [GROUP MAX INTEGER i BY account(i)](STRING id) AND NOT numberAccount(substrFrom(replace(id, ' ', ''), 3)) AND int > 0
             NEW b = BankAccount DO {
             number(b) <- STRING[30](substrFrom(replace(id, ' ', ''), 3));
             holder(b) <- defaultCompany();
+            currency(b) <- currency(currency(int));
             bank(b) <- defaultBank();
         }
 
-        FOR nettoMinus(INTEGER i) AND BankAccount a = numberAccount(substrFrom(replace(account(i), ' ', ''), 3)) DO {
+        FOR nettoMinus(INTEGER i) AND BankAccount a = numberAccount(substrFrom(replace(account(i), ' ', ''), 3)) AND i > 0 DO {
             NEW payment = OutgoingPayment {
                 type(payment) <- defaultOutgoingPaymentType() ;
                 dateTime(payment) <- OVERRIDE DATETIME(date(i)), currentDateTime();
@@ -74,8 +78,8 @@ importPaymentXLS 'Импорт из XLS'() {
                 done(payment) <- TRUE;
             }
         }
-        
-        FOR nettoPlus(INTEGER i) AND BankAccount a = numberAccount(substrFrom(replace(account(i), ' ', ''), 3)) DO {
+
+        FOR nettoPlus(INTEGER i) AND BankAccount a = numberAccount(substrFrom(replace(account(i), ' ', ''), 3)) AND i > 0 DO {
             NEW payment = IncomingPayment {
                 type(payment) <- defaultIncomingPaymentType();
                 dateTime(payment) <- OVERRIDE DATETIME(date(i)), currentDateTime();
@@ -87,6 +91,12 @@ importPaymentXLS 'Импорт из XLS'() {
                 done(payment) <- TRUE;
             }
         }
+
+        LOCAL message = STRING ();
+        message() <- 'Not imported rows' + ':\n' +
+            (GROUP CONCAT (CONCAT ', ', '№' + index(INTEGER i) + '. ' + 'Numer rachunku/karty: ' + account(i), 'Opis: ' + note(i)) IF i > 0 AND (NOT nettoPlus(i) AND NOT nettoMinus(i)), '' ORDER i);
+        
+        IF message() THEN MESSAGE message() + 'Import completed' NOWAIT; ELSE MESSAGE 'Import completed';
         APPLY;
     }
 }
