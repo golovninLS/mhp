@@ -1,6 +1,6 @@
 MODULE BillCustom;
 
-REQUIRE BillReceipt, BillProject, ProjectBill;
+REQUIRE BillReceipt, BillProject, ProjectBill, BillDone;
 
 NAMESPACE Invoicing;
 
@@ -174,3 +174,15 @@ DESIGN bill {
     PROPERTY (taxAmount(l)) { pattern = '#,##0.00##'; }
     PROPERTY (untaxedAmount(l)) { pattern = '#,##0.00##'; }
 }
+
+paymentDate 'Date of payment' = DATA DATE (Bill);
+
+EXTEND FORM bill PROPERTIES paymentDate(b);
+
+DESIGN bill {
+    headerLeft {
+        MOVE PROPERTY (paymentDate(b)) AFTER PROPERTY (dueDate(b));
+    }
+}
+
+WHEN SETCHANGED(status(Bill b)) AND done(b) DO paymentDate(b) <- currentDate();
