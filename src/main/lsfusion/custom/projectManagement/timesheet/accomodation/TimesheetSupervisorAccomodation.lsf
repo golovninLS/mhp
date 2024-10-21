@@ -1,6 +1,6 @@
 MODULE TimesheetSupervisorAccomodation;
 
-REQUIRE TimesheetSupervisor, TimesheetAccomodation, AccomodationOrder, ProjectAccomodation;
+REQUIRE TimesheetSupervisorCustom, TimesheetAccomodation, AccomodationOrder, ProjectAccomodation;
 
 PRIORITY MasterData;
 
@@ -115,7 +115,6 @@ checkOut 'Check out' (DATE d, Employee e) {
         MESSAGE 'Accomodation is not specified';
 }
 
-
 //
 EXTEND FORM timesheetSupervisor
     PROPERTIES nameTimesheetAccomodation()
@@ -162,6 +161,7 @@ EXTEND FORM timesheetSupervisor
     FILTERS assigned(pa, ea, dates) OR hours(ea, pa, dates) OR (NOT countAssignments(pa) AND NOT countAssignments(currentUser()))
     FILTERS pa == timesheetProject() OR NOT timesheetProject()
     FILTERS in(pa, timesheetAccomodation()) OR NOT timesheetAccomodation()
+    FILTERS in(pa, currentUser()) OR showAllProjects(currentUser())
 
     FILTERGROUP onlyFilledAccomodation
         FILTER 'Только заполненные' countSymbols(ea, pa, dates)

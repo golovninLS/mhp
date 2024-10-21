@@ -101,7 +101,7 @@ showMobileForms() + {
 }
 
 EXTEND FORM timesheetSupervisorMobile
-    FILTERS (manager(timesheetProject()) = currentUser() AND timesheetProject() = pp) OR showAllProjects(currentUser())
+    FILTERS in(pp, currentUser()) OR showAllProjects(currentUser())
 
     EVENTS ON INIT {
         timesheetProject() <- IF projectByManager(currentUser()) THEN projectByManager(currentUser());

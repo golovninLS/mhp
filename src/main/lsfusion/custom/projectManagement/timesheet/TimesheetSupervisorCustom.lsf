@@ -278,13 +278,9 @@ EXTEND FORM customUsers
 ;
 
 EXTEND FORM timesheetSupervisor
-    FILTERS manager(p) = currentUser() OR showAllProjects(currentUser())
-
-    EVENTS ON INIT {
-        timesheetProject() <- IF projectByManager(currentUser()) THEN projectByManager(currentUser());
-    }
+    FILTERS in(p, currentUser()) OR showAllProjects(currentUser())
 ;
 
 EXTEND FORM projects
-    FILTERS manager(p) = currentUser() OR showAllProjects(currentUser())
+    FILTERS in(p, currentUser()) OR showAllProjects(currentUser())
 ;

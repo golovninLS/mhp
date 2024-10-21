@@ -15,6 +15,7 @@ EXTEND FORM timesheetSupervisor
     OBJECTS pel = (pl = Project, el = Employee)
     PROPERTIES READONLY nameProjectLunch 'Project' = name(pl)
     PROPERTIES(el) READONLY firstName, lastName, namePosition, rolesTimesheet
+    FILTERS in(pl, currentUser()) OR showAllProjects(currentUser())
 ;
 
 clearLunch 'Clear for date' (DATE d) {
@@ -174,8 +175,7 @@ EXTEND FORM timesheetSupervisor
     FILTERS assigned(pl, el, dates) OR hours(el, pl, dates) OR (NOT countAssignments(pl) AND NOT countAssignments(currentUser()))
     FILTERS pl == timesheetProject() OR NOT timesheetProject()
     FILTERS in(pl, timesheetLunchProduct()) OR NOT timesheetLunchProduct()
-    
-    
+
     FILTERGROUP onlyFilledLunch
         FILTER 'Только заполненные' countLunchProduct(pl, el, dates)
 ;

@@ -136,3 +136,33 @@ DESIGN project {
 EXTEND FORM projects
     PROPERTIES (p, dates) projectRevenue FOOTER projectRevenue(dates)
 ;
+
+in 'Вкл.' = DATA BOOLEAN (Project, Employee);
+managers (Project p) = GROUP SUM 1 IF in(p, Employee e);
+
+managersIn 'Менеджеры' (Project p) = GROUP CONCAT MasterData.name(Employee e) IF in(p, e), ', ' ORDER e CHARWIDTH 80;
+
+FORM dialogEmployees 'Employees'
+    OBJECTS p = Project PANEL
+
+    OBJECTS e = Employee
+    PROPERTIES in(p, e)
+    PROPERTIES(e) READONLY name[Partner] SELECTOR
+;
+
+EXTEND FORM project
+    PROPERTIES(p) managersIn ON CHANGE { DIALOG dialogEmployees OBJECTS p = p; }
+;
+
+DESIGN project {
+    REMOVE PROPERTY (nameManager(p));
+    headerRight {
+        MOVE PROPERTY (managersIn(p));
+    }
+}
+
+onStarted() + {
+    FOR NOT managers(Project p) AND Employee e = manager(p) DO {
+        in(p, e) <- TRUE;
+    }
+}
