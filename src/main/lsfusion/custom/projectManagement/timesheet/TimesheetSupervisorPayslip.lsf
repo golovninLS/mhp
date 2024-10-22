@@ -41,9 +41,10 @@ payslipTimesheet (Employee e, INTERVAL[DATE] dates) = GROUP MAX Payslip ps IF em
 totalTimesheet (Employee e, PayslipCategory c, INTERVAL[DATE] dates) = total(payslipTimesheet(e, dates), c, timesheetProject());
 totalTimesheet (PayslipCategory c, INTERVAL[DATE] dates) = GROUP SUM total(payslipTimesheet(Employee e, dates), c, timesheetProject());
 
-
-totalTimesheet 'To pay' (Employee e, Project p, INTERVAL[DATE]  dates) = timesheetSalaryProject(e, p, dates) (+) GROUP SUM totalTimesheet(e, PayslipCategory c, dates) * (IF deduction(c) THEN -1 ELSE 1) IF c IS PayslipCategory AND NOT isTimeEntry(c) AND NOT skip(c); 
+totalTimesheet 'To pay' (Employee e, Project p, INTERVAL[DATE] dates) = timesheetSalaryProject(e, p, dates) (+) GROUP SUM totalTimesheet(e, PayslipCategory c, dates) * (IF deduction(c) THEN -1 ELSE 1) IF c IS PayslipCategory AND NOT isTimeEntry(c) AND NOT skip(c);
 totalTimesheet 'To pay' (INTERVAL[DATE] dates, Project p) = GROUP SUM totalTimesheet(Employee e, p, dates);
+
+in(Project p, Payslip ps) = GROUP SUM 1 IF PayslipLedger pl AND project(pl) = p AND payslip(pl) = ps;
 
 EXTEND FORM timesheetSupervisor
     OBJECTS pc = PayslipCategory
@@ -51,18 +52,22 @@ EXTEND FORM timesheetSupervisor
     ORDERS index(pc)
     
     PROPERTIES nameTimesheetCompany(), generatePayslips(dates) SHOWIF timesheetCompany()
-    
+
+    OBJECTS pr = Project
+    FILTERS in(pr, currentUser()) OR showAllProjects(currentUser())
+
     OBJECTS ps = Payslip
-    PROPERTIES(ps) READONLY number, startDate, endDate, firstNameEmployee, lastNameEmployee, namePositionEmployee, nameCompany, 
-                           netWage
+    PROPERTIES(ps) READONLY number, startDate, endDate, firstNameEmployee, lastNameEmployee, namePositionEmployee, nameCompany,
+        netWage
     PROPERTIES(ps) NEWSESSION EDIT
+    FILTERS in(pr, ps) OR showAllProjects(currentUser())
 
     PROPERTIES(ps, pc) total COLUMNS 'total' (pc) HEADER name(pc) SHOWIF NOT timesheetProject() READONLYIF readonly(pc) ON CHANGE {
-                        NEWSESSION {
-                            changeTotal(ps, pc);
-                            APPLY;
-                        }
-                    }
+        NEWSESSION {
+            changeTotal(ps, pc);
+            APPLY;
+        }
+    }
 
     PROPERTIES(ps, pc) 'Total (project)' = totalTimesheet COLUMNS 'total' (pc) 
         HEADER name(pc) + '(' + 'Project' + ')' READONLYIF readonly(pc)
