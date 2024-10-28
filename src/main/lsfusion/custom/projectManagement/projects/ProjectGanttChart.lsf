@@ -5,8 +5,8 @@ REQUIRE FrappeGantt, Time, Icon, TaskCustom, TaskStatus;
 NAMESPACE ProjectManagement;
 
 id = DATA STRING (Task);
-start = DATA DATE (Task);
-end = DATA DATE (Task);
+start 'Start' = DATA DATE (Task);
+end 'Deadline'  = DATA DATE (Task);
 
 progress 'Progress' = DATA INTEGER (Task);
 
