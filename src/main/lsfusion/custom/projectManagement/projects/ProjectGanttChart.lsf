@@ -1,0 +1,108 @@
+MODULE ProjectGanttChart;
+
+REQUIRE FrappeGantt, Time, Icon, TaskCustom, TaskStatus;
+
+NAMESPACE ProjectManagement;
+
+id = DATA STRING (Task);
+start = DATA DATE (Task);
+end = DATA DATE (Task);
+
+progress 'Progress' = DATA INTEGER (Task);
+
+//depends = DATA BOOLEAN (Task, Task);
+//idChildren 'Dependencies' (Task parent) = GROUP CONCAT id(Task child), ',' IF depends(parent, child) ORDER child;
+//nameChildren 'Dependencies' (Task parent) = GROUP CONCAT name(Task child) IF depends(parent, child) AND parent != child, ' ' ORDER child;
+
+order = DATA INTEGER (Task);
+index = PARTITION SUM 1 ORDER order(Task t), t;
+task (INTEGER i) = GROUP MAX Task t BY index(t);
+
+moveUp 'Move Up' (Task t) {
+    FOR INTEGER i = index(t) AND INTEGER o = order(task(i)) AND Task st = task(i - 1) DO {
+        order(t) <- order(st);
+        order(st) <- o;
+    }
+}
+
+moveDown 'Move Down' (Task t) {
+    FOR INTEGER i = index(t) AND INTEGER o = order(task(i)) AND Task st = task(i + 1) DO {
+        order(t) <- order(st);
+        order(st) <- o;
+    }
+}
+
+deadline(Task t) += end(t);
+
+WHEN LOCAL SET(Task t IS Task) AND NOT id(t) DO id(t) <- STRING(t);
+WHEN LOCAL SETCHANGED(Task t IS Task) AND NOT order(t) DO order(t) <- [GROUP MAX order(Task tt)]() (+) 1;
+WHEN LOCAL SETCHANGED(Task t IS Task) AND NOT name(t) DO name(t) <- 'Task ' + order(t);
+WHEN LOCAL SETCHANGED(Task t IS Task) AND NOT start(t) DO start(t) <- currentDate();
+WHEN LOCAL SETCHANGED(Task t IS Task) AND NOT end(t) DO end(t) <- currentDate();
+
+EXTEND FORM tasks
+    OBJECTS tg = Task CUSTOM 'gantt_day'
+
+    PROPERTIES(tg) id, name, start, end, progress, order //dependencies = idChildren,
+    PROPERTIES(tg) NEW
+    ORDERS order(tg)
+
+    PROPERTIES(tg) PANEL tgname = name, pprogress = progress, pproject = nameProject, pAuthor = nameAuthor, pAssigned = nameAssignedTo,
+        pstart = start, pend = end, ppriority = namePriority, tgtags = tags, pclosed = closed, pstatus = nameStatus // pchildren = nameChildren
+    PROPERTIES(tg) PANEL moveUp, moveDown, gdelete = DELETE
+
+    FILTERS [FILTER tasks.t](tg)
+;
+
+DESIGN tasks {
+    tabbedPane {
+        NEW gantt LAST {
+            fill = 1;
+            caption = 'Диаграмма Ганта';
+            MOVE GRID(tg) {
+                fill = 1;
+                size = (200, 200);
+                NEW header {
+                    alignment = STRETCH;
+                    horizontal = TRUE;
+                    NEW box1 {
+                        MOVE PROPERTY(tgname);
+                        MOVE PROPERTY(pproject);
+                        MOVE PROPERTY(pAuthor);
+                        MOVE PROPERTY(pAssigned);
+                        MOVE PROPERTY(pstart);
+                        MOVE PROPERTY(pend);
+                    }
+                    NEW box2 {
+                        MOVE PROPERTY(pstatus);
+                        MOVE PROPERTY(pprogress);
+                        MOVE PROPERTY(ppriority);
+                        MOVE PROPERTY(tgtags);
+                        MOVE PROPERTY(pclosed);
+                    }
+                    //MOVE PROPERTY(pchildren);
+                }
+                NEW actions1 {
+                    alignment = STRETCH;
+                    horizontal = TRUE;
+                    fill = 1;
+                    MOVE PROPERTY(moveUp(tg)) { fill = 1; };
+                    MOVE PROPERTY(moveDown(tg)) { fill = 1; };
+                    MOVE PROPERTY(gdelete) { fill = 1; };
+                }
+                REMOVE TOOLBARSYSTEM(tg);
+                REMOVE BOX(tg);
+            }
+        }
+    }
+}
+
+onStarted() + {
+    FOR Task t IS Task AND NOT id(t) DO id(t) <- STRING(t);
+    FOR Task t IS Task AND NOT end(t) DO end(t) <- currentDate();
+    FOR Task t IS Task AND NOT start(t) DO start(t) <- OVERRIDE end(t), currentDate();
+    FOR Task t IS Task AND NOT order(t) DO {
+        order(t) <- [GROUP MAX order(Task tt)]() (+) 1;
+    }
+    APPLY;
+}

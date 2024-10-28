@@ -21,7 +21,7 @@ WHEN SET(Task t IS Task) AND NOT author(t) AND currentUser() IS Employee DO auth
 assignedTo 'Assigned to' = DATA Employee (Task);
 nameAssignedTo 'Assigned to' (Task t) = name(assignedTo(t));
 
-deadline 'Deadline' = DATA DATE (Task);
+deadline 'Deadline' = ABSTRACT DATE (Task);
 
 description 'Description' = DATA RICHTEXT (Task) CHARWIDTH 20;
 
