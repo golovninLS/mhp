@@ -1,0 +1,14 @@
+.progress-cell {
+    background-color: #f3f3f3;
+    border-radius: 4px;
+    overflow: hidden;
+    height: 10px !important;
+    text-align: center;
+    color: black;
+    color: black !important;
+}
+
+.progress-bar {
+    height: 100% ;
+    background-color: #a3cca4;
+}

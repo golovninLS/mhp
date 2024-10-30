@@ -110,3 +110,85 @@ WHEN (SETCHANGED(Task t IS Task) OR SETCHANGED(assignedTo(t))) AND chat(assigned
 WHEN SET(Task t IS Task) AND NOT status(t) DO {
     status(t) <- defaultTaskStatus();
 }
+
+CLASS CheckList 'Checklist';
+
+task = DATA Task (CheckList);
+name 'Name' = DATA STRING (CheckList) NONULL;
+progress 'Progress' = ABSTRACT INTEGER (CheckList);
+
+CLASS CheckListLine 'Checklist line';
+
+checklist = DATA CheckList (CheckListLine);
+description 'Description' = DATA STRING (CheckListLine);
+deadline 'Deadline' = DATA DATE (CheckListLine);
+responsible = DATA Employee (CheckListLine);
+nameResponsible 'Responsible' (CheckListLine l) = name[Partner](responsible(l));
+done 'Done' = DATA BOOLEAN (CheckListLine);
+
+order '№' = DATA INTEGER (CheckListLine);
+WHEN LOCAL SETCHANGED(CheckListLine t IS CheckListLine) AND CheckList ct = checklist(t) AND NOT order(t) DO
+    order(t) <- [GROUP MAX order(CheckListLine tt) BY checklist(tt)](ct) (+) 1;
+
+amountLines (CheckList c) = GROUP SUM 1 IF checklist(CheckListLine cl) = c;
+amountDone (CheckList c) = GROUP SUM 1 IF checklist(CheckListLine cl) = c AND done(cl);
+progress (CheckList c) += round0((amountDone(c) * 100) / amountLines(c));
+
+taskChecklists () = JSON FROM id = CheckList c, progress(c) WHERE c IS CheckList;
+
+EXTEND FORM task
+    OBJECTS c = CheckList
+    PROPERTIES(c) name READONLYIF currentUser() != author(t) AND NOT showAllTasks(currentUser()) BACKGROUND RGB(163, 204, 164) IF progress(c) = 100
+    //HEADER JSON FROM checklists = taskChecklists()
+    PROPERTIES(c) SHOWIF currentUser() = author(t) OR showAllTasks(currentUser()) NEW, DELETE
+    LIST CheckList OBJECT c
+    FILTERS task(c) = t
+
+    OBJECTS cl = CheckListLine
+    PROPERTIES(cl) READONLYIF currentUser() != author(t) AND NOT showAllTasks(currentUser()) order READONLY, description, deadline, nameResponsible, done
+    PROPERTIES(cl) SHOWIF (currentUser() = author(t) OR showAllTasks(currentUser())) AND c NEW, DELETE
+    PROPERTIES(c) progress READONLY CUSTOM 'addProgressBar' DRAW cl PANEL
+    ORDERS order(cl)
+    FILTERS checklist(cl) = c
+;
+
+DESIGN task {
+    details {
+        NEW checklist {
+            caption = 'Checklist';
+            fill = 1;
+            horizontal = TRUE;
+            NEW headerL {
+                fill = 1;
+                MOVE BOX (c) { caption = ''; };
+                PROPERTY (name(c)) { charWidth = 15; }
+                //PROPERTY (progress(c)) { charWidth = 30; }
+            }
+            NEW bodyL {
+                fill = 20;
+                alignment = STRETCH;
+                MOVE PROPERTY (progress(c)) { fill = 1; };
+                NEW box {
+                    fill = 100;
+                    MOVE BOX(cl) { caption = ''; };
+                    PROPERTY (order(cl)) { charWidth = 3; }
+                    PROPERTY (description(cl)) { charWidth = 40; }
+                    PROPERTY (deadline(cl)) { charWidth = 15; }
+                    PROPERTY (nameResponsible(cl)) { charWidth = 10; }
+                    PROPERTY (done(cl)) { charWidth = 12; }
+                }
+            }
+        }
+    }
+}
+
+WHEN LOCAL FORMS task SETCHANGED(deadline(CheckListLine cl)) AND (deadline(cl) > deadline(task(checklist(cl))) OR NOT deadline(task(checklist(cl)))) DO
+    deadline(task(checklist(cl))) <- deadline(cl);
+
+CONSTRAINT CHANGED(author(Task t)) AND PREV(author(t)) != currentUser() AND NOT showAllTasks(currentUser())
+    MESSAGE 'Только автор задачи может переназначить автора.';
+
+onWebClientInit() + {
+    onWebClientInit('checklist.js') <- 1;
+    onWebClientInit('checklist.css') <- 2;
+}
