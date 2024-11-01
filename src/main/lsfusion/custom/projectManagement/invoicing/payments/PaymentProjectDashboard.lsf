@@ -92,7 +92,7 @@ EXTEND FORM paymentProjectDashboard
 
 NAVIGATOR {
     dashboards {
-        NEW paymentProjectDashboard;
+        //NEW paymentProjectDashboard;
     }
 }
 

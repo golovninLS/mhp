@@ -1,0 +1,206 @@
+MODULE MetaCompanySeparation;
+
+REQUIRE EmployeeCustom, Company, Project, InvLedgerItem, ResLedgerItem, BillItem, InvoiceItem, Mailing, InvLedgerLot, Receipt, Shipment, Scrap, Adjustment,
+        AdjustmentCreate, TransferMobile, InventoryReport, InventoryValuation, ProductMoves, LocationProduct, AccountDistribution, IncomingPayment,
+        OutgoingPayment, BillPaymentDashboard, PaymentProjectDashboard, PaymentListDashboard, BillReport, InvoiceReport, Payment, ProjectCustom,
+        ProjectTimeEntry, ProjectTask, TimesheetSupervisorCustom, TimesheetSupervisorMobile, ProjectLedgerReport, TimesheetSupervisorLunch,
+        TimesheetSupervisorAccomodation, TimesheetSupervisorTotal, TimesheetSupervisorPayslip, LunchOrder, PaymentsDashboardCustom, ProjectFilter
+;
+
+NAMESPACE MasterData;
+
+META setCompanySeparation (form, obj, prop)
+    EXTEND FORM form
+        FILTERS prop(obj) = legalEntity(currentUser()) OR showAllCompaniesData(currentUser())
+    ;
+END
+
+META setCompanySeparationDiffProps (form, obj, propOuter, propInner)
+    EXTEND FORM form
+        FILTERS propOuter(propInner(obj)) = legalEntity(currentUser()) OR showAllCompaniesData(currentUser())
+    ;
+END
+
+META setCompanySeparationDiffPropsDiff (form, obj, propOuter, prop1, prop2)
+    EXTEND FORM form
+        FILTERS (propOuter(prop1(obj)) = legalEntity(currentUser()) OR propOuter(prop2(obj)) = legalEntity(currentUser())) OR showAllCompaniesData(currentUser())
+    ;
+END
+
+//проекты
+@setCompanySeparation(projects, p, company);
+
+//сотрудники
+@setCompanySeparation(employeesCustom, e, legalEntity);
+
+//номенклатура
+//1. склад
+@setCompanySeparation(item, l, company);
+
+//2. движения
+@setCompanySeparationDiffPropsDiff(item, inv, company, toLocation, fromLocation);
+
+//3. резервирование
+@setCompanySeparationDiffProps(item, res, company, location);
+
+DESIGN item {
+    operations {
+        REMOVE BOX(bl);
+    }
+}
+
+//реализации
+@setCompanySeparationDiffProps(item, il, company, invoice);
+
+//приёмки
+@setCompanySeparationDiffProps(receipts, r, company, location);
+
+//отгрузки
+@setCompanySeparationDiffPropsDiff(shipments, s, company, toLocation, location);
+
+//списания
+@setCompanySeparationDiffProps(scraps, s, company, location);
+
+//инвентаризации
+@setCompanySeparationDiffProps(adjustments, a, company, location);
+
+@setCompanySeparation(adjustments, l, company);
+
+//мобильное перемещение
+@setCompanySeparation(transferMobile, l, company);
+
+//текущие остатки
+@setCompanySeparation(inventoryReport, l, company);
+
+//себестоимость остатков
+@setCompanySeparation(inventoryValuation, l, company);
+
+//движение товара
+@setCompanySeparationDiffPropsDiff(productMoves, il, company, toLocation, location);
+
+//места хранения
+@setCompanySeparation(locations, l, company);
+
+//размещение товаров
+@setCompanySeparation(locationProduct, l, company);
+
+//распределения затрат
+@setCompanySeparation(accountDistributions, a, company);
+
+//реестр фактур
+@setCompanySeparation(bills, b, company);
+
+//реализации
+@setCompanySeparation(invoices, i, company);
+
+//входящие платежи
+@setCompanySeparation(incomingPayments, p, company);
+
+//исходящие платежи
+@setCompanySeparation(outgoingPayments, p, company);
+
+//фактуры
+@setCompanySeparation(billPaymentDashboard, b, company);
+
+//к оплате
+@setCompanySeparation(paymentListDashboard, o, company);
+
+//отчёт по фактурам
+@setCompanySeparation(billReport, i, company);
+
+//отчёт по реализациям
+@setCompanySeparation(invoiceReport, i, company);
+
+//платежи
+@setCompanySeparation(payments, p, company);
+
+//платёжный календарь
+@setCompanySeparation(paymentCalendar, ac, holder);
+
+@setCompanySeparation(paymentCalendar, a, holder);
+
+//проекты
+@setCompanySeparation(projects, p, company);
+
+DESIGN projects {
+    filters {
+        REMOVE PROPERTY(nameProjectCompany());
+    }
+}
+
+//отметки времени
+@setCompanySeparationDiffProps(timeEntries, t, company, project);
+
+//задачи
+@setCompanySeparationDiffProps(tasks, t, legalEntity, assignedTo);
+
+////табель менеджера
+@setCompanySeparation(timesheetSupervisor, p, company);
+
+//обеды
+@setCompanySeparation(timesheetSupervisor, pl, company);
+
+//размещение
+@setCompanySeparation(timesheetSupervisor, pa, company);
+
+//итого
+@setCompanySeparation(timesheetSupervisor, tp, company);
+
+//расчётный лист
+readonly() += NOT showAllCompaniesData(currentUser());
+EXTEND FORM timesheetSupervisor
+    EVENTS ON INIT {
+        timesheetCompany() <- GROUP MAX Company c IF c = legalEntity(currentUser()) AND NOT showAllCompaniesData(currentUser());
+    }
+;
+
+//табель менеджера мобильный
+@setCompanySeparationDiffProps(timesheetSupervisorMobile, , company, timesheetProject);
+
+//отчёт по проекту
+@setCompanySeparationDiffProps(projectLedgerReport, l, company, project);
+
+//отчёт по проводкам V2
+//@setCompanySeparation(reportProjectsV2, p, company);
+//access2 = GROUP SUM 1 IF (company(Project p) = legalEntity(currentUser()) OR showAllCompaniesData(currentUser())) BY type(p);
+//EXTEND FORM reportProjectsV2
+//    FILTERS access2(t);
+//;
+
+//отчёт по проводкам (сервисные)
+//@setCompanySeparation(reportServiceProjects, ps, company);
+
+//выбор проектов в задаче
+@setCompanySeparationDiffProps(task, t, company, project);
+
+//Заказы обедов
+@setCompanySeparationDiffProps(Lunch.orders, o, company, project);
+
+//расчётные листы
+@setCompanySeparation(payslips, p, company);
+
+//платёжные ведомости
+@setCompanySeparation(payslipBatches, b, company);
+
+//размещения
+@setCompanySeparationDiffProps(Accomodation.orders, o, company, project);
+
+//фильтрация полей
+access (Company c, CustomUser u) = IF showAllCompaniesData(u) THEN TRUE ELSE c = legalEntity(u);
+
+META companyConstraint(prop)
+    CONSTRAINT prop() AND NOT access(prop(), currentUser())
+        CHECKED BY prop[] MESSAGE '';
+END
+
+META projectConstraint(prop, class)
+    CONSTRAINT prop(class obj) AND NOT access(company(prop(obj)), currentUser())
+        CHECKED BY prop[class] MESSAGE '';
+END
+
+@companyConstraint(projectPartner);
+
+@projectConstraint(project, TimeEntry);
+
+//проекты (ДИАЛОГ)
+@setCompanySeparation(dialogProjects, p, company);

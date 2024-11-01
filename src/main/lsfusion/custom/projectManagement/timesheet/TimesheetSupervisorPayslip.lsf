@@ -46,12 +46,14 @@ totalTimesheet 'To pay' (INTERVAL[DATE] dates, Project p) = GROUP SUM totalTimes
 
 in(Project p, Payslip ps) = GROUP SUM 1 IF PayslipLedger pl AND project(pl) = p AND payslip(pl) = ps;
 
+readonly = ABSTRACT BOOLEAN;
+
 EXTEND FORM timesheetSupervisor
     OBJECTS pc = PayslipCategory
     PROPERTIES(pc) index
     ORDERS index(pc)
     
-    PROPERTIES nameTimesheetCompany(), generatePayslips(dates) SHOWIF timesheetCompany()
+    PROPERTIES nameTimesheetCompany() READONLYIF readonly(), generatePayslips(dates) SHOWIF timesheetCompany()
 
     OBJECTS pr = Project
     FILTERS in(pr, currentUser()) OR showAllProjects(currentUser())

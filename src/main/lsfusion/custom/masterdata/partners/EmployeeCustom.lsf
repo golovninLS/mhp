@@ -31,3 +31,9 @@ EXTEND FORM employeesCustom
     EXTEND FILTERGROUP filters
         FILTER '{Inactive}' archived(e)
 ;
+
+showAllCompaniesData 'Показывать данные всех компаний' = DATA BOOLEAN (CustomUser);
+
+EXTEND FORM customUsers
+    PROPERTIES showAllCompaniesData(u)
+;
