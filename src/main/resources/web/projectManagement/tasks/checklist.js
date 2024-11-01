@@ -7,7 +7,7 @@ function addProgressBar() {
         },
         update: function (element, controller, list, options) {
             //const cells = document.querySelectorAll('div[lsfusion-container="GRID(c)"] td.data-grid-last-cell');
-            const cells = document.querySelectorAll('div[lsfusion-container="PROPERTY(progress(c))"]');
+            const cells = document.querySelectorAll('div[lsfusion-container="PROPERTY(progressBar(c))"]');
             console.log(cells);
             cells.forEach(cell => {
             console.log(cell);

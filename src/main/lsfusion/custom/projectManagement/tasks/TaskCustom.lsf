@@ -115,7 +115,7 @@ CLASS CheckList 'Checklist';
 
 task = DATA Task (CheckList);
 name 'Name' = DATA STRING (CheckList) NONULL;
-progress 'Progress' = ABSTRACT INTEGER (CheckList);
+progressBar 'Progress' = ABSTRACT INTEGER (CheckList);
 
 CLASS CheckListLine 'Checklist line';
 
@@ -132,13 +132,13 @@ WHEN LOCAL SETCHANGED(CheckListLine t IS CheckListLine) AND CheckList ct = check
 
 amountLines (CheckList c) = GROUP SUM 1 IF checklist(CheckListLine cl) = c;
 amountDone (CheckList c) = GROUP SUM 1 IF checklist(CheckListLine cl) = c AND done(cl);
-progress (CheckList c) += round0((amountDone(c) * 100) / amountLines(c));
+progressBar (CheckList c) += round0((amountDone(c) * 100) / amountLines(c));
 
-taskChecklists () = JSON FROM id = CheckList c, progress(c) WHERE c IS CheckList;
+taskChecklists () = JSON FROM id = CheckList c, progressBar(c) WHERE c IS CheckList;
 
 EXTEND FORM task
     OBJECTS c = CheckList
-    PROPERTIES(c) name READONLYIF currentUser() != author(t) AND NOT showAllTasks(currentUser()) BACKGROUND RGB(163, 204, 164) IF progress(c) = 100
+    PROPERTIES(c) name READONLYIF currentUser() != author(t) AND NOT showAllTasks(currentUser()) BACKGROUND RGB(163, 204, 164) IF progressBar(c) = 100
     //HEADER JSON FROM checklists = taskChecklists()
     PROPERTIES(c) SHOWIF currentUser() = author(t) OR showAllTasks(currentUser()) NEW, DELETE
     LIST CheckList OBJECT c
@@ -147,7 +147,7 @@ EXTEND FORM task
     OBJECTS cl = CheckListLine
     PROPERTIES(cl) READONLYIF currentUser() != author(t) AND NOT showAllTasks(currentUser()) order READONLY, description, deadline, nameResponsible, done
     PROPERTIES(cl) SHOWIF (currentUser() = author(t) OR showAllTasks(currentUser())) AND c NEW, DELETE
-    PROPERTIES(c) progress READONLY CUSTOM 'addProgressBar' DRAW cl PANEL
+    PROPERTIES(c) progressBar READONLY CUSTOM 'addProgressBar' DRAW cl PANEL
     ORDERS order(cl)
     FILTERS checklist(cl) = c
 ;
@@ -167,7 +167,6 @@ DESIGN task {
             NEW bodyL {
                 fill = 20;
                 alignment = STRETCH;
-                MOVE PROPERTY (progress(c)) { fill = 1; };
                 NEW box {
                     fill = 100;
                     MOVE BOX(cl) { caption = ''; };
@@ -177,6 +176,8 @@ DESIGN task {
                     PROPERTY (nameResponsible(cl)) { charWidth = 10; }
                     PROPERTY (done(cl)) { charWidth = 12; }
                 }
+                MOVE PROPERTY (progressBar(c)) { fill = 1; };
+                MOVE TOOLBARBOX(cl);
             }
         }
     }
@@ -186,7 +187,7 @@ WHEN LOCAL FORMS task SETCHANGED(deadline(CheckListLine cl)) AND (deadline(cl) >
     deadline(task(checklist(cl))) <- deadline(cl);
 
 CONSTRAINT CHANGED(author(Task t)) AND PREV(author(t)) != currentUser() AND NOT showAllTasks(currentUser())
-    MESSAGE 'Только автор задачи может переназначить автора.';
+    MESSAGE 'Только автор задачи может назначить другого автора.';
 
 onWebClientInit() + {
     onWebClientInit('checklist.js') <- 1;
