@@ -9,7 +9,7 @@ comment 'Comment' = DATA STRING (Employee);
 
 FORM employeesCustom 'Employees'
     OBJECTS e = Employee BACKGROUND background(e)
-    PROPERTIES(e) READONLY  firstName, lastName, name, login, namePosition, nameLegalEntity
+    PROPERTIES(e) READONLY firstName, lastName, name, login, namePosition, nameLegalEntity
     PROPERTIES (e) comment
     PROPERTIES(e) NEWSESSION NEW, EDIT, DELETE
 
@@ -32,8 +32,27 @@ EXTEND FORM employeesCustom
         FILTER '{Inactive}' archived(e)
 ;
 
-showAllCompaniesData 'Показывать данные всех компаний' = DATA BOOLEAN (CustomUser);
+showAllCompaniesData 'Показывать все компании' = DATA BOOLEAN (CustomUser);
 
 EXTEND FORM customUsers
     PROPERTIES showAllCompaniesData(u)
 ;
+
+accessToCompany = DATA BOOLEAN (CustomUser, Company);
+in 'Incl.' (CustomUser u, Company c) = OVERRIDE accessToCompany(u, c), TRUE IF legalEntity(u) = c;
+
+EXTEND FORM employee
+    OBJECTS comp = Company
+    PROPERTIES(comp) READONLY name
+    PROPERTIES(e, comp) in
+;
+
+DESIGN employee {
+    details {
+        NEW companies LAST {
+            showIf = showAllCompaniesData(currentUser());
+            caption = 'Company';
+            MOVE BOX(comp) { caption = ''; };
+        }
+    }
+}

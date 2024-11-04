@@ -4,26 +4,32 @@ REQUIRE EmployeeCustom, Company, Project, InvLedgerItem, ResLedgerItem, BillItem
         AdjustmentCreate, TransferMobile, InventoryReport, InventoryValuation, ProductMoves, LocationProduct, AccountDistribution, IncomingPayment,
         OutgoingPayment, BillPaymentDashboard, PaymentProjectDashboard, PaymentListDashboard, BillReport, InvoiceReport, Payment, ProjectCustom,
         ProjectTimeEntry, ProjectTask, TimesheetSupervisorCustom, TimesheetSupervisorMobile, ProjectLedgerReport, TimesheetSupervisorLunch,
-        TimesheetSupervisorAccomodation, TimesheetSupervisorTotal, TimesheetSupervisorPayslip, LunchOrder, PaymentsDashboardCustom, ProjectFilter
+        TimesheetSupervisorAccomodation, TimesheetSupervisorTotal, TimesheetSupervisorPayslip, LunchOrder, PaymentsDashboardCustom, ProjectFilter,
+        ReceiptFilter
 ;
 
 NAMESPACE MasterData;
 
+access (CustomUser u, Company c) = IF showAllCompaniesData(u) THEN TRUE ELSE in(u, c);
+
+//фильтрация форм
 META setCompanySeparation (form, obj, prop)
     EXTEND FORM form
-        FILTERS prop(obj) = legalEntity(currentUser()) OR showAllCompaniesData(currentUser())
+        FILTERS access(currentUser(), prop(obj))
     ;
 END
 
 META setCompanySeparationDiffProps (form, obj, propOuter, propInner)
     EXTEND FORM form
-        FILTERS propOuter(propInner(obj)) = legalEntity(currentUser()) OR showAllCompaniesData(currentUser())
+        FILTERS access(currentUser(), propOuter(propInner(obj)))
     ;
 END
 
 META setCompanySeparationDiffPropsDiff (form, obj, propOuter, prop1, prop2)
     EXTEND FORM form
-        FILTERS (propOuter(prop1(obj)) = legalEntity(currentUser()) OR propOuter(prop2(obj)) = legalEntity(currentUser())) OR showAllCompaniesData(currentUser())
+        FILTERS (access(currentUser(), propOuter(prop1(obj))) AND access(currentUser(), propOuter(prop2(obj))))
+            OR (access(currentUser(), propOuter(prop1(obj))) AND NOT propOuter(prop2(obj)))
+            OR (access(currentUser(), propOuter(prop2(obj))) AND NOT propOuter(prop1(obj)))
     ;
 END
 
@@ -72,14 +78,18 @@ DESIGN item {
 //текущие остатки
 @setCompanySeparation(inventoryReport, l, company);
 
+@setCompanySeparationDiffPropsDiff(inventoryReport, il, company, toLocation, fromLocation);
+
 //себестоимость остатков
 @setCompanySeparation(inventoryValuation, l, company);
 
 //движение товара
-@setCompanySeparationDiffPropsDiff(productMoves, il, company, toLocation, location);
+@setCompanySeparationDiffPropsDiff(productMoves, il, company, toLocation, fromLocation);
 
 //места хранения
 @setCompanySeparation(locations, l, company);
+
+@setCompanySeparation(locations, lt, company);
 
 //размещение товаров
 @setCompanySeparation(locationProduct, l, company);
@@ -114,6 +124,8 @@ DESIGN item {
 //платежи
 @setCompanySeparation(payments, p, company);
 
+@setCompanySeparation(payments, a, holder);
+
 //платёжный календарь
 @setCompanySeparation(paymentCalendar, ac, holder);
 
@@ -143,32 +155,17 @@ DESIGN projects {
 //размещение
 @setCompanySeparation(timesheetSupervisor, pa, company);
 
+//расчётный лист 
+@setCompanySeparation(timesheetSupervisor, ps, company);
+
 //итого
 @setCompanySeparation(timesheetSupervisor, tp, company);
-
-//расчётный лист
-readonly() += NOT showAllCompaniesData(currentUser());
-EXTEND FORM timesheetSupervisor
-    EVENTS ON INIT {
-        timesheetCompany() <- GROUP MAX Company c IF c = legalEntity(currentUser()) AND NOT showAllCompaniesData(currentUser());
-    }
-;
 
 //табель менеджера мобильный
 @setCompanySeparationDiffProps(timesheetSupervisorMobile, , company, timesheetProject);
 
 //отчёт по проекту
 @setCompanySeparationDiffProps(projectLedgerReport, l, company, project);
-
-//отчёт по проводкам V2
-//@setCompanySeparation(reportProjectsV2, p, company);
-//access2 = GROUP SUM 1 IF (company(Project p) = legalEntity(currentUser()) OR showAllCompaniesData(currentUser())) BY type(p);
-//EXTEND FORM reportProjectsV2
-//    FILTERS access2(t);
-//;
-
-//отчёт по проводкам (сервисные)
-//@setCompanySeparation(reportServiceProjects, ps, company);
 
 //выбор проектов в задаче
 @setCompanySeparationDiffProps(task, t, company, project);
@@ -185,22 +182,90 @@ EXTEND FORM timesheetSupervisor
 //размещения
 @setCompanySeparationDiffProps(Accomodation.orders, o, company, project);
 
+@setCompanySeparation(locations, l, company);
+
 //фильтрация полей
-access (Company c, CustomUser u) = IF showAllCompaniesData(u) THEN TRUE ELSE c = legalEntity(u);
-
-META companyConstraint(prop)
-    CONSTRAINT prop() AND NOT access(prop(), currentUser())
-        CHECKED BY prop[] MESSAGE '';
-END
-
-META projectConstraint(prop, class)
-    CONSTRAINT prop(class obj) AND NOT access(company(prop(obj)), currentUser())
+META companyConstraint(prop, class, obj)
+    CONSTRAINT prop(class obj) AND NOT access(currentUser(), prop(obj))
         CHECKED BY prop[class] MESSAGE '';
 END
 
-@companyConstraint(projectPartner);
+META projectConstraint(prop, class, obj)
+    CONSTRAINT prop(class obj) AND NOT access(currentUser(), company(prop(obj)))
+        CHECKED BY prop[class] MESSAGE '';
+END
 
-@projectConstraint(project, TimeEntry);
+@companyConstraint(projectPartner, ,);
 
-//проекты (ДИАЛОГ)
-@setCompanySeparation(dialogProjects, p, company);
+//отметка времени
+@projectConstraint(project, TimeEntry, t);
+
+@companyConstraint(company, Project, proj);
+
+//приёмка
+@projectConstraint(location, Receipt, r);
+
+@projectConstraint(receiptLocation, ,);
+
+//отгрузка
+@projectConstraint(location, Shipment, s);
+
+@projectConstraint(toLocation, Shipment, s);
+
+//списание
+@projectConstraint(location, Scrap, s);
+
+@projectConstraint(accountObject, ScrapProject, sp);
+
+//инвентаризация
+@projectConstraint(location, Adjustment, a);
+
+@projectConstraint(adjustmentLocation, ,);
+
+//распределение затрат
+@companyConstraint(company, AccountDistribution, a);
+
+@projectConstraint(accountObject, AccountDistribution, ad);
+
+@projectConstraint(project, AccountDistributionLine, adl);
+
+//фактура
+@companyConstraint(company, Bill, b);
+
+@companyConstraint(billPaymentDashboardCompany, ,);
+
+@projectConstraint(accountObject, BillProject, bp);
+
+//реализация
+@companyConstraint(company, Invoice, i);
+
+@projectConstraint(project, Invoice, i);
+
+//исходящий платёж
+@companyConstraint(company, OutgoingPayment, i);
+
+//входящий платёж
+@companyConstraint(company, IncomingPayment, i);
+
+//задача
+@projectConstraint(project, Task, t);
+
+@projectConstraint(taskProject, ,);
+
+//проект
+@companyConstraint(company, Project, p);
+
+//расчётный лист
+@companyConstraint(company, Payslip, p);
+
+//платёжная ведомость
+@companyConstraint(company, PayslipBatch, p);
+
+//к оплате
+@companyConstraint(paymentListDashboardCompany, ,);
+
+//место хранения
+@companyConstraint(company, Location, l);
+
+//табель менеджера - расчётный лист
+@companyConstraint(timesheetCompany, ,);
