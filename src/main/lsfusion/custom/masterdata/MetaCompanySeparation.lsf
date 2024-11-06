@@ -167,9 +167,6 @@ DESIGN projects {
 //отчёт по проекту
 @setCompanySeparationDiffProps(projectLedgerReport, l, company, project);
 
-//выбор проектов в задаче
-@setCompanySeparationDiffProps(task, t, company, project);
-
 //Заказы обедов
 @setCompanySeparationDiffProps(Lunch.orders, o, company, project);
 
