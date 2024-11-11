@@ -212,8 +212,6 @@ END
 //списание
 @projectConstraint(location, Scrap, s);
 
-@projectConstraint(accountObject, ScrapProject, sp);
-
 //инвентаризация
 @projectConstraint(location, Adjustment, a);
 
@@ -221,8 +219,6 @@ END
 
 //распределение затрат
 @companyConstraint(company, AccountDistribution, a);
-
-@projectConstraint(accountObject, AccountDistribution, ad);
 
 @projectConstraint(project, AccountDistributionLine, adl);
 
@@ -264,3 +260,17 @@ END
 
 //табель менеджера - расчётный лист
 @companyConstraint(timesheetCompany, ,);
+
+META accountObjectConstraint(class, obj)
+    CONSTRAINT accountObject(class obj) AND NOT access(currentUser(), company(accountObject(obj))) AND NOT (accountObject(obj) IS ExtraAccountObject)
+        CHECKED BY accountObject[class] MESSAGE '';
+END
+
+//списание
+@accountObjectConstraint(ScrapProject, sp);
+
+//распределение затрат
+@accountObjectConstraint(AccountDistribution, ad);
+
+//фактура
+@accountObjectConstraint(BillProject, bp);
