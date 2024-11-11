@@ -231,8 +231,6 @@ END
 
 @companyConstraint(billPaymentDashboardCompany, ,);
 
-@projectConstraint(accountObject, BillProject, bp);
-
 //реализация
 @companyConstraint(company, Invoice, i);
 
