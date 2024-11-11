@@ -193,3 +193,15 @@ onWebClientInit() + {
     onWebClientInit('checklist.js') <- 1;
     onWebClientInit('checklist.css') <- 2;
 }
+
+startDate 'Дата начала' = ABSTRACT DATE (Task);
+
+EXTEND FORM task PROPERTIES(t) startDate;
+
+DESIGN task {
+    params {
+        MOVE PROPERTY(startDate(t)) BEFORE PROPERTY (deadline(t));
+    }
+}
+
+EXTEND FORM tasks PROPERTIES(t) startDate BEFORE deadline(t);

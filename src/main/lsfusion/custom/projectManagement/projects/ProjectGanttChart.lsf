@@ -106,3 +106,5 @@ onStarted() + {
     }
     APPLY;
 }
+
+startDate(Task t) += start(t);
