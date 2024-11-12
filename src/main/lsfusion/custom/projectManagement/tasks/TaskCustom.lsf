@@ -162,7 +162,6 @@ DESIGN task {
                 fill = 1;
                 MOVE BOX (c) { caption = ''; };
                 PROPERTY (name(c)) { charWidth = 15; }
-                //PROPERTY (progress(c)) { charWidth = 30; }
             }
             NEW bodyL {
                 fill = 20;

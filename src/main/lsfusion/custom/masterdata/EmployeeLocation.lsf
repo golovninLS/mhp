@@ -1,6 +1,6 @@
 MODULE EmployeeLocation;
 
-REQUIRE Employee, InventoryReportLot;
+REQUIRE EmployeeCustom, InventoryReportLot;
 
 NAMESPACE MasterData;
 
@@ -69,4 +69,9 @@ DESIGN employee{
             }
         }
     }
+}
+
+DESIGN employee {
+    inventory { showIf = GROUP SUM 1 IF has(currentUser(), UserRole role) AND showInventory(role);}
+    BOX(TREE locations) { showIf = GROUP SUM 1 IF has(currentUser(), UserRole role) AND showLocations(role);}
 }

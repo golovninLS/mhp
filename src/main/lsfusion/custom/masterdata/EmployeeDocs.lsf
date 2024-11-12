@@ -317,3 +317,10 @@ DESIGN employeesCustom {
         background = backgroundExpired(t, e);
     }
 }
+
+DESIGN employee {
+    infoDetails { showIf = GROUP SUM 1 IF has(currentUser(), UserRole role) AND showInfo(role); }
+    roles { showIf = GROUP SUM 1 IF has(currentUser(), UserRole role) AND showRoles(role); }
+    companies { showIf = GROUP SUM 1 IF has(currentUser(), UserRole role) AND showCompanies(role);}
+    login { fill = 8; }
+}

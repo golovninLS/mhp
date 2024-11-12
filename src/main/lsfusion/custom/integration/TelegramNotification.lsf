@@ -154,3 +154,7 @@ WHEN SETCHANGED(status(Bill b)) AND notify(status(b)) DO {
         logToFile('telegram', messageCaughtException());
     }
 }
+
+DESIGN employee {
+    notifications { showIf = GROUP SUM 1 IF has(currentUser(), UserRole role) AND showNotifications(role);}
+}

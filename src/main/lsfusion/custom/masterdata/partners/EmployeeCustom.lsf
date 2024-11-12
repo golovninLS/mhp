@@ -56,3 +56,24 @@ DESIGN employee {
         }
     }
 }
+
+showInfo 'Отображать вкладку инфо' = DATA BOOLEAN (UserRole);
+showRoles 'Отображать вкладку роли' = DATA BOOLEAN (UserRole);
+showLocations 'Отображать вкладку места хранения' = DATA BOOLEAN (UserRole);
+showInventory 'Отображать вкладку инвентарь сотрудника' = DATA BOOLEAN (UserRole);
+showNotifications 'Отображать вкладку инвентарь уведомления' = DATA BOOLEAN (UserRole);
+showCompanies 'Отображать вкладку компания' = DATA BOOLEAN (UserRole);
+
+EXTEND FORM securityPolicy PROPERTIES(ur) PANEL showInfo, showRoles, showLocations, showInventory, showCompanies;
+DESIGN securityPolicy {
+    rolePolicyContainer {
+        NEW permissionsContainer {
+            caption = 'Настройки приложения';
+            MOVE PROPERTY(showInfo(ur));
+            MOVE PROPERTY(showRoles(ur));
+            MOVE PROPERTY(showLocations(ur));
+            MOVE PROPERTY(showInventory(ur));
+            MOVE PROPERTY(showCompanies(ur));
+        }
+    }
+}
