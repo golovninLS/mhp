@@ -180,8 +180,8 @@ FORM sell
     PROPERTIES IN request type = 'sell' 
     
     OBJECTS l = InvoiceLine IN request EXTID 'items'
-    PROPERTIES(l) typeLine EXTID 'type', nameItem EXTID 'name', price, quantity,
-                  nameUom EXTID 'measurementUnit', paymentObject, untaxedAmount EXTID 'amount'
+    PROPERTIES(l) typeLine EXTID 'type', nameItem EXTID 'name', resultPrice EXTID 'price', quantity,
+                  nameUom EXTID 'measurementUnit', paymentObject, untaxedAmount EXTID 'amount', discountAmount EXTID 'infoDiscountAmount' 
 
     FILTERS i = invoice(l)
     
@@ -196,8 +196,10 @@ sell(Invoice i) {
     EXPORT sell OBJECTS i = i JSON CHARSET 'UTF-8';
     TRY {
         EXTERNAL HTTP CLIENT 'http://' + hostname(pos(session(i))) + ':16732/requests' PARAMS exportFile();
-        fiscal(i) <- TRUE;
-        APPLY;
+        NEWSESSION {
+            fiscal(i) <- TRUE;
+            APPLY;
+        }
     } CATCH
         CASE
             WHEN statusHttp() > 299 THEN
