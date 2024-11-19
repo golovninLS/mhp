@@ -130,8 +130,7 @@ EXTEND FORM project
 
 DESIGN project {
     details {
-        NEW files {
-            caption = badged('Files', countFiles(p));
+        MOVE files LAST {
             horizontal = TRUE;
             
             MOVE BOX(TREE projectFileFolders){

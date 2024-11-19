@@ -280,3 +280,5 @@ EXTEND FORM partners
     FILTERS (access(currentUser(), p) AND p IS Company) OR NOT p IS Company
     FILTERS access(currentUser(), legalEntity(p)) AND permit(currentUser(), navigatorElementCanonicalName('MasterData.employeesCustom')) OR NOT p IS Employee
 ;
+
+@setCompanySeparation(ProjectManagement.dialogEmployees, e, legalEntity);
