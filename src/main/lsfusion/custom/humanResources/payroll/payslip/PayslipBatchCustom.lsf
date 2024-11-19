@@ -1,0 +1,63 @@
+MODULE PayslipBatchCustom;
+
+REQUIRE PayslipBatch, PaymentsPayslipBatch, PaymentCustom;
+
+PRIORITY HumanResources, MasterData;
+
+NAMESPACE Payroll;
+
+FORM typePaymentBatch 'Выберите тип выплаты и введите дату'
+    OBJECTS b = PayslipBatch
+
+    OBJECTS tc = TypePaymentPayslip
+    PROPERTIES name(tc) READONLY, date(tc, b)
+    LIST TypePaymentPayslip OBJECT tc
+;
+
+fullNameEmployeePayslip (Payslip p) = CONCAT ' ', firstNameEmployee(p), lastNameEmployee(p);
+fullNameEmployeePayslip2 (Payslip p) = CONCAT ' ', lastNameEmployee(p), firstNameEmployee(p);
+
+replaceCommas = FORMULA STRING 'regexp_replace(($1), \'\\,+\', \',\', \'g\')';
+
+importStatement 'Импортировать ведомость' () {
+    DIALOG payslipBatches OBJECTS b INPUT DO {
+        DIALOG typePaymentBatch OBJECTS b = b, tc INPUT DO {
+            INPUT f = FILE DO {
+                LOCAL str = STRING(INTEGER);
+                IMPORT CSV NOHEADER FROM f AS FILE TO str;
+                FOR imported(INTEGER i) DO {
+                    str(i) <- replaceCommas(str(i));
+                }
+
+                LOCAL replacedFile = FILE ();
+                EXPORT CSV NOHEADER FROM str(INTEGER i) TO replacedFile;
+                open(replacedFile());
+
+                LOCAL account = STRING(INTEGER);
+                LOCAL employeeName = STRING(INTEGER);
+                LOCAL amount = STRING(INTEGER);
+
+                fileToString(replacedFile(), 'UTF-8');
+
+                IMPORT CSV ',' NOHEADER FROM replacedFile() AS FILE TO account = A, employeeName = F, amount = H;
+
+                FOR imported(INTEGER i) AND employeeName(i) DO {
+                    employeeName(i) <- upper(employeeName(i));
+                    account(i) <- STRING[30](substrFrom(replace(account(i), ' ', ''), 3));
+                    FOR Payslip p = GROUP MAX Payslip pp IF batch(pp) = b AND
+                        (upper(fullNameEmployeePayslip(pp)) = employeeName(i) OR upper(fullNameEmployeePayslip2(pp)) = employeeName(i)) DO {
+                        amount(tc, numberAccount(account(i)), p) <- NUMERIC[14,2](substrFrom(amount(i), 2));
+                    }
+                }
+            }
+            APPLY;
+        }
+    }
+} IMAGE 'add.png';
+
+EXTEND FORM payslipBatches PROPERTIES importStatement();
+DESIGN payslipBatches {
+    TOOLBARRIGHT (b) {
+        MOVE PROPERTY (importStatement()) FIRST;
+    }
+}

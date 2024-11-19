@@ -98,7 +98,7 @@ REQUIRE Eval, ProcessMonitor, Backup,
         
         TelegramCustom, TelegramNotification, Mailing, ScrapProject, ScrapProjectLedger, InvoiceCustom, AccomodationHistory, PaymentCustom, ProjectGanttChart,
 
-        MetaCompanySeparation
+        MetaCompanySeparation, PayslipBatchCustom
 ;
 
 onStarted()+{
