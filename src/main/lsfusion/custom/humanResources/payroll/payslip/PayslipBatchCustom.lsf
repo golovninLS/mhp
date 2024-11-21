@@ -19,8 +19,7 @@ fullNameEmployeePayslip2 (Payslip p) = CONCAT ' ', lastNameEmployee(p), firstNam
 
 replaceCommas = FORMULA STRING 'regexp_replace(($1), \'\\,+\', \',\', \'g\')';
 
-importStatement 'Импортировать ведомость' () {
-    DIALOG payslipBatches OBJECTS b INPUT DO {
+importStatement 'Импортировать ведомость' (PayslipBatch b) {
         DIALOG typePaymentBatch OBJECTS b = b, tc INPUT DO {
             INPUT f = FILE DO {
                 LOCAL str = STRING(INTEGER);
@@ -52,12 +51,11 @@ importStatement 'Импортировать ведомость' () {
             }
             APPLY;
         }
-    }
 } IMAGE 'add.png';
 
-EXTEND FORM payslipBatches PROPERTIES importStatement();
+EXTEND FORM payslipBatches PROPERTIES importStatement(b);
 DESIGN payslipBatches {
     TOOLBARRIGHT (b) {
-        MOVE PROPERTY (importStatement()) FIRST;
+        MOVE PROPERTY (importStatement(b)) FIRST;
     }
 }
