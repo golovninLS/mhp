@@ -112,3 +112,8 @@ deleteBill '{Delete}' (BillProject bp) {
 EXTEND FORM project
     PROPERTIES (bp) deleteBill TOOLBAR DRAW bp
 ;
+
+company = DATA Company (ExtraAccountObject);
+nameCompany 'Company' (ExtraAccountObject a) = name(company(a));
+
+EXTEND FORM Invoicing.options PROPERTIES nameCompany(ao);

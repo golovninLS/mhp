@@ -5,7 +5,7 @@ REQUIRE EmployeeCustom, Company, Project, InvLedgerItem, ResLedgerItem, BillItem
         OutgoingPayment, BillPaymentDashboard, PaymentProjectDashboard, PaymentListDashboard, BillReport, InvoiceReport, Payment, ProjectCustom,
         ProjectTimeEntry, ProjectTask, TimesheetSupervisorCustom, TimesheetSupervisorMobile, ProjectLedgerReport, TimesheetSupervisorLunch,
         TimesheetSupervisorAccomodation, TimesheetSupervisorTotal, TimesheetSupervisorPayslip, LunchOrder, PaymentsDashboardCustom, ProjectFilter,
-        ReceiptFilter
+        ReceiptFilter, AccountBillProject
 ;
 
 NAMESPACE MasterData;
@@ -262,7 +262,7 @@ END
 @companyConstraint(timesheetCompany, ,);
 
 META accountObjectConstraint(class, obj)
-    CONSTRAINT accountObject(class obj) AND NOT access(currentUser(), company(accountObject(obj))) AND NOT (accountObject(obj) IS ExtraAccountObject)
+    CONSTRAINT accountObject(class obj) AND (NOT access(currentUser(), company[Project](accountObject(obj))) AND NOT access(currentUser(), company[ExtraAccountObject](accountObject(obj))))
         CHECKED BY accountObject[class] MESSAGE '';
 END
 
@@ -282,3 +282,5 @@ EXTEND FORM partners
 ;
 
 @setCompanySeparation(ProjectManagement.dialogEmployees, e, legalEntity);
+
+@setCompanySeparation(Invoicing.options, ao, Bill.company);
