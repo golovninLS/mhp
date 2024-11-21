@@ -262,7 +262,7 @@ END
 @companyConstraint(timesheetCompany, ,);
 
 META accountObjectConstraint(class, obj)
-    CONSTRAINT accountObject(class obj) AND (NOT access(currentUser(), company[Project](accountObject(obj))) AND NOT access(currentUser(), company[ExtraAccountObject](accountObject(obj))))
+    CONSTRAINT accountObject(class obj) AND NOT access(currentUser(), company[Project](accountObject(obj))) AND NOT access(currentUser(), company[ExtraAccountObject](accountObject(obj)))
         CHECKED BY accountObject[class] MESSAGE '';
 END
 
@@ -284,3 +284,15 @@ EXTEND FORM partners
 @setCompanySeparation(ProjectManagement.dialogEmployees, e, legalEntity);
 
 @setCompanySeparation(Invoicing.options, ao, Bill.company);
+
+//ограничение к выбору доп. объекта затрат
+META checkExtraAccountObject(class, param1, param2)
+    CONSTRAINT accountObject(class obj) AND company[ExtraAccountObject](accountObject(obj)) != company(param1(param2(obj)))
+        CHECKED BY accountObject[class] MESSAGE '';
+END
+
+@checkExtraAccountObject(AccountDistribution, , );
+
+@checkExtraAccountObject(BillProject, , );
+
+@checkExtraAccountObject(ScrapProject, location, scrap);
