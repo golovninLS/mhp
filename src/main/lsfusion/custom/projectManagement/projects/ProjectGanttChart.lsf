@@ -10,9 +10,8 @@ end 'Deadline'  = DATA DATE (Task);
 
 progress 'Progress' = DATA INTEGER (Task);
 
-//depends = DATA BOOLEAN (Task, Task);
-//idChildren 'Dependencies' (Task parent) = GROUP CONCAT id(Task child), ',' IF depends(parent, child) ORDER child;
-//nameChildren 'Dependencies' (Task parent) = GROUP CONCAT name(Task child) IF depends(parent, child) AND parent != child, ' ' ORDER child;
+depends 'Подзадачи' = DATA BOOLEAN (Task, Task);
+idChildren (Task parent) = GROUP CONCAT id(Task child), ',' IF depends(parent, child) AND NOT parent = child ORDER child;
 
 order = DATA INTEGER (Task);
 index = PARTITION SUM 1 ORDER order(Task t), t;
@@ -40,15 +39,29 @@ WHEN LOCAL SETCHANGED(Task t IS Task) AND NOT name(t) DO name(t) <- 'Task ' + or
 WHEN LOCAL SETCHANGED(Task t IS Task) AND NOT start(t) DO start(t) <- currentDate();
 WHEN LOCAL SETCHANGED(Task t IS Task) AND NOT end(t) DO end(t) <- currentDate();
 
+FORM dialogTasks 'Tasks'
+    OBJECTS t = Task
+
+    OBJECTS t1 = Task
+    PROPERTIES depends(t, t1)
+    PROPERTIES(t1) READONLY name, nameStatus, deadline
+    FILTERS t != t1
+;
+
+DESIGN dialogTasks { size = (600, 500); }
+
+tasksIn 'Подзадачи' (Task t) = GROUP CONCAT name(Task t1) IF depends(t, t1), ', ' ORDER t CHARWIDTH 20;
+
 EXTEND FORM tasks
     OBJECTS tg = Task CUSTOM 'gantt_day'
 
-    PROPERTIES(tg) id, name, start, end, progress, order //dependencies = idChildren,
+    PROPERTIES(tg) id, name, start, end, progress, order, dependencies = idChildren
     PROPERTIES(tg) NEW
     ORDERS order(tg)
 
     PROPERTIES(tg) PANEL tgname = name, pprogress = progress, pproject = nameProject, pAuthor = nameAuthor, pAssigned = nameAssignedTo,
-        pstart = start, pend = end, ppriority = namePriority, tgtags = tags, pclosed = closed, pstatus = nameStatus // pchildren = nameChildren
+        pstart = start, pend = end, ppriority = namePriority, tgtags = tags, pclosed = closed, pstatus = nameStatus,
+        pchildren = tasksIn ON CHANGE {DIALOG dialogTasks OBJECTS t = tg; }
     PROPERTIES(tg) PANEL moveUp, moveDown, gdelete = DELETE
 
     FILTERS [FILTER tasks.t](tg)
@@ -79,8 +92,8 @@ DESIGN tasks {
                         MOVE PROPERTY(ppriority);
                         MOVE PROPERTY(tgtags);
                         MOVE PROPERTY(pclosed);
+                        MOVE PROPERTY(pchildren);
                     }
-                    //MOVE PROPERTY(pchildren);
                 }
                 NEW actions1 {
                     alignment = STRETCH;

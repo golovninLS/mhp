@@ -44,7 +44,7 @@ changeAmount(Bill b){
             }
         ELSE{
             in(BillLine l, defaultTax()) <- TRUE WHERE bill(l) = b;
-            taxAmount(defaultTax(), BillLine l) <- round2([((X / (1 + Y / 100)) - X) * -1](a, value(defaultTax()))) WHERE bill(l) = b;;
+            taxAmount(defaultTax(), BillLine l) <- round2([((X / (1 + Y / 100)) - X) * -1](a, value(defaultTax()))) WHERE bill(l) = b;
             untaxedAmount(BillLine l) <- a (-) taxAmount(defaultTax(), l) WHERE bill(l) = b;
         }
     }
