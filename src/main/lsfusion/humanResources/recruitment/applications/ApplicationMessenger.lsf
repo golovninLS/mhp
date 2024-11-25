@@ -1,0 +1,100 @@
+MODULE ApplicationMessenger;
+
+REQUIRE Messenger, Application;
+
+NAMESPACE HumanResources;
+
+EXTEND CLASS Messenger : StaticObject;
+
+applicationsAccountMessenger = DATA Messenger.Account ();
+nameMessengerApplicationsAccount 'Account messenger for applications' = name(applicationsAccountMessenger());
+
+EXTEND FORM options PROPERTIES nameMessengerApplicationsAccount();
+
+DESIGN options {
+    commons {
+        MOVE PROPERTY(nameMessengerApplicationsAccount());
+    }
+}
+
+ignoredApplication 'Ignored' = DATA BOOLEAN (Message);
+
+application = DATA Application (Message) INDEXED;
+countMessages (Application a) = GROUP SUM 1 IF application(Message e) = a;
+
+openApplication '{Application}' (Message e) {
+    NEWSESSION {
+        SHOW application OBJECTS a = application(e) DOCKED;
+    }
+}
+
+processedApplication (Message e) = ignoredApplication(e) OR application(e);
+readyApplication (Message e) = account(chat(e)) = applicationsAccountMessenger() AND NOT processedApplication(e) MATERIALIZED INDEXED;
+
+countReadyApplicationMessenger = GROUP SUM 1 IF readyApplication(Message e);
+
+
+createApllicationList ABSTRACT LIST (Message);
+
+
+createApplication 'Create' (Message e) {
+    NEWSESSION {
+        NEW a = Application {
+            ignoredApplication(e) <- NULL;
+            application(e) <- a;
+            description(a) <- message(e);
+            createApllicationList(e);
+            SHOW application OBJECTS a = a DOCKED;
+        }
+    }
+}
+
+EXTEND FORM applications
+    OBJECTS m = Message
+    PROPERTIES(m) READONLY from, dateTime, 
+        message    
+    PROPERTIES(m) ignoredApplication ON CHANGE { NEWSESSION { INPUT b = ignoredApplication(m) CHANGE; APPLY; } }
+    PROPERTIES(m) openApplication GRID DISABLEIF NOT application(m)
+    PROPERTIES(m) TOOLBAR
+    createApplication SHOWIF NOT application(m)
+    FILTERS account(chat(m)) = applicationsAccountMessenger()
+
+    FILTERGROUP toProcess
+        FILTER 'Ready' readyApplication(m) 'F8' DEFAULT
+;
+
+DESIGN applications {
+    tabbedPane {
+        NEW messenger {
+            caption = badged('Messenger', countReadyApplicationMessenger());
+            showIf = applicationsAccountMessenger();
+            NEW emailPane {
+                fill = 1;
+                horizontal = TRUE;
+                MOVE BOX(m);
+                NEW emailDetails {
+                    fill = 1;
+                }
+            }
+        }
+    }
+}
+
+EXTEND FORM application
+    OBJECTS mm = Message
+    PROPERTIES(mm) READONLY from, dateTime, message 
+    FILTERS application(mm) = a
+;
+
+DESIGN application {
+    details {
+        NEW messenger {
+            caption = badged('Messenger', countMessages(a));
+            NEW messengerPane {
+                fill = 1;
+                horizontal = TRUE;
+                MOVE BOX(mm);
+            }
+        }
+    }
+}
