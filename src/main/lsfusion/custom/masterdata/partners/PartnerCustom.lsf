@@ -1,0 +1,42 @@
+MODULE PartnerCustom;
+
+REQUIRE Partner, CountryP, RegonDaneSzukajPodmity;
+
+NAMESPACE MasterData;
+
+country = DATA Country (Partner);
+nameCountry 'Страна' (Partner p) = name(country(p));
+
+nip 'NIP' = DATA STRING (Partner);
+comment 'Comment' = DATA TEXT (Partner) CHARWIDTH 30;
+
+getPartnerData 'Получить данные по NIP' (Partner p) {
+    nip() <- nip(p);
+    daneSzukajPodmioty();
+    IF nazwa() THEN {
+        country(p) <- country('PL');
+        name(p) <- ISTRING[92](nazwa());
+        city(p) <- ISTRING[50](miejscowosc());
+        state(p) <- ISTRING[50](wojewodztwo());
+        zip(p) <- ISTRING[10](kodPocztowy());
+        address(p) <- ISTRING[150](ulica());
+    }
+}
+
+EXTEND FORM partner
+    PROPERTIES (p) nameCountry, nip, comment, getPartnerData PANEL
+;
+
+DESIGN partner {
+    headerColumn1 {
+        MOVE PROPERTY (nip(p)) FIRST;
+        MOVE PROPERTY (nameCountry(p)) AFTER PROPERTY (address(p));
+    }
+    headerColumn2 {
+        MOVE PROPERTY (comment(p)) FIRST;
+    }
+    headerColumn3 {
+        MOVE PROPERTY (getPartnerData(p));
+    }
+}
+
