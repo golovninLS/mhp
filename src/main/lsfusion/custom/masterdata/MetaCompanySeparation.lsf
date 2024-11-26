@@ -165,7 +165,11 @@ DESIGN projects {
 @setCompanySeparationDiffProps(timesheetSupervisorMobile, , company, timesheetProject);
 
 //отчёт по проекту
-@setCompanySeparationDiffProps(projectLedgerReport, l, company, project);
+//@setCompanySeparationDiffProps(projectLedgerReport, l, company, project){
+//    EXTEND FORM projectLedgerReport
+//        FILTERS access(currentUser(), company(project(l)))
+//    ;
+//};
 
 //Заказы обедов
 @setCompanySeparationDiffProps(Lunch.orders, o, company, project);

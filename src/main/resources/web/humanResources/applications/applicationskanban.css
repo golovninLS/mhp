@@ -1,0 +1,41 @@
+.applications-kanban {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+}
+
+.applications-kanban-status {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    align-self: stretch;
+    min-width: 15em;
+}
+
+.applications-kanban-status-header {
+      display: flex;
+      flex-direction: column;
+      padding: 0.25em;
+      text-align: center;
+}
+
+.applications-kanban-status-name {
+    align-self: center;
+    flex: 1.0;
+    margin-bottom: 0;
+}
+
+.applications-kanban-status-body {
+    height: 100%;
+}
+
+.applications-kanban-card {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+
+    cursor: pointer;
+}
+
+.applications-kanban-card-tag {
+    margin-left: 0.125rem;
+    margin-right: 0.125rem;
+}

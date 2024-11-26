@@ -16,7 +16,7 @@ username = DATA LOCAL STRING(INTEGER);
 title = DATA LOCAL STRING(INTEGER);
 is_bot = DATA LOCAL STRING(INTEGER);
 text = DATA LOCAL STRING(INTEGER);
-message_id = DATA LOCAL NUMERIC(INTEGER);
+message_id = DATA LOCAL LONG(INTEGER);
 
 FORM getUpdates FORMEXTID 'null'
     OBJECTS result = INTEGER
@@ -26,8 +26,8 @@ FORM getUpdates FORMEXTID 'null'
     FILTERS imported(result)
 ;
 
-id = DATA NUMERIC (Message);
-message (Chat c, NUMERIC n) = GROUP MAX Message m IF chat(m) = c AND id(m) = n;
+id = DATA LONG (Message);
+message (Chat c, LONG n) = GROUP MAX Message m IF chat(m) = c AND id(m) = n;
 
 getUpdates 'Получить чаты' (Messenger.Account a){
     IF isTelegram(a) THEN {
@@ -67,4 +67,35 @@ EXTEND FORM messengers
 ;
 getUpdates 'Получить все чаты '(){
     FOR isTelegram(Messenger.Account a) DO getUpdates(a);
+}
+
+processMessage ABSTRACT LIST (Message);
+
+getTextMessage(Messenger.Account a, LONG id, Chat chat){
+    IF isTelegram(a) THEN {
+        IF NOT message(chat, id) THEN{
+        LOCAL response = FILE();
+        EXTERNAL HTTP GET 
+            'https://api.telegram.org/bot' + token(a) + '/forwardMessage?' + CONCAT '&',
+            'chat_id=315306021',
+            'message_id=' + id,
+            'from_chat_id=' + id(chat)
+             TO response;
+        LOCAL result = JSON();
+        LOCAL text = STRING ();
+        IMPORT JSON FROM response() TO() result = result;
+        IMPORT JSON FROM result() TO () text = text;
+        IF text() THEN{
+            NEW m = Message{
+                id(m) <- id;
+                chat(m) <- chat;
+                message(m) <- text();
+                processMessage(m);
+            }
+           APPLY;
+        } ELSE {
+            MESSAGE 'Текста нет';
+        }
+    }
+        }
 }

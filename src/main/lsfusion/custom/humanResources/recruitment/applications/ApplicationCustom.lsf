@@ -1,0 +1,470 @@
+MODULE ApplicationCustom;
+
+REQUIRE ApplicationMessenger, ApplicationRefuse, ApplicationHire, TelegramCustom, ApplicationInterview, Speciality;
+
+NAMESPACE HumanResources;
+
+channelComunication 'Как связаться' = DATA STRING[100] (Application);
+textPosition 'Специальность(из запроса)' = DATA STRING[100] (Application);
+currentViza 'Виза' = DATA STRING[100] (Application);
+
+mainSpeciality = DATA Speciality (Application);
+nameMainSpeciality 'Основная специальность' (Application a) = name(mainSpeciality(a));
+
+processMessage(Message m)+{
+    FOR iterate(INTEGER i, 1, wordCount(message(m), '\n')) AND STRING s = getWord(message(m), '\n', i) DO{
+        IF isSubstring(s, 'Упал лид') THEN NEW a = Application {
+            description(a) <- message(m);
+            subject(a) <- replace(replace(s, 'Упал лид |', ''), '|', '');
+            application(m) <- a;
+        }
+        FOR Application a = application(m) DO{
+            CASE
+                WHEN isSubstring(s, 'Имя:') THEN firstName(a) <- replace(s, 'Имя:', '');
+
+                WHEN isSubstring(s, 'Как связаться:') THEN channelComunication(a) <- replace(s, 'Как связаться:', '');
+                WHEN isSubstring(s, 'Канал связи:') THEN channelComunication(a) <- replace(s, 'Канал связи:', '');
+
+                WHEN isSubstring(s, 'Специальность:') THEN textPosition(a) <- replace(s, 'Специальность:', '');
+                WHEN isSubstring(s, 'Подразделение:') THEN textPosition(a) <- replace(s, 'Подразделение:', '');
+
+                WHEN isSubstring(s, 'Телефон:') THEN phone(a) <- replace(s, 'Телефон:', '');
+
+                WHEN isSubstring(s, 'Виза:') THEN currentViza(a) <- replace(s, 'Виза:', '');
+        }
+    }
+    APPLY;
+}
+
+chatRecruters = DATA Messenger.Chat ();
+nameCharRecruters 'Чат рекрутинга' = name(chatRecruters());
+
+EXTEND FORM options
+    PROPERTIES () nameCharRecruters
+;
+DESIGN options{
+    commons{
+        MOVE PROPERTY (nameCharRecruters());
+    }
+}
+maxIdCharRecruters = GROUP MAX id(Message m) IF chat(m) =  chatRecruters();
+overMaxIdCharRecruters = OVERRIDE maxIdCharRecruters(), 0;
+
+getNewMessagesRecruters 'Получить новые сообщения'(){
+    FOR iterate(INTEGER i,overMaxIdCharRecruters(), overMaxIdCharRecruters() (+) 10) AND Chat c = chatRecruters() DO{
+        TRY getTextMessage(account(c), i, c);
+    }
+}
+
+EXTEND FORM applications
+    PROPERTIES (a) READONLY channelComunication, textPosition, currentViza
+;
+
+EXTEND FORM application
+    PROPERTIES (a) channelComunication, textPosition, currentViza
+;
+
+DESIGN application{
+    main{
+        MOVE PROPERTY (textPosition(a));
+        MOVE PROPERTY (currentViza(a));
+    }
+    contact{
+        MOVE PROPERTY (channelComunication(a));
+    }
+}
+
+//статусы
+useCustomStatus = ABSTRACT BOOLEAN ();
+useCustomStatus() += TRUE;
+
+dataStatus = DATA ApplicationStatus (Application);
+status(Application o) += WHEN useCustomStatus() AND dataStatus(o) THEN dataStatus(o);
+
+changeStatus ABSTRACT LIST (Application, ApplicationStatus);
+AFTER changeStatus (Application o, ApplicationStatus s) DO{
+    APPLY;
+    IF canceled() THEN RETURN;
+}
+captionStatus = ABSTRACT CASE STRING (Application);
+
+DESIGN application{
+    details{
+        NEW history{
+            caption = 'History';
+        }
+    }
+}
+showStatusRule = ABSTRACT CASE BOOLEAN (Application, ApplicationStatus);
+
+deadline (Application a) = ABSTRACT CASE STRING (Application);
+
+stat = ABSTRACT CASE HTML (ApplicationStatus);
+countAll(ApplicationStatus s) = GROUP SUM 1 IF status(Application a) = s;
+badged (ApplicationStatus s) =  badged(name(s), countAll(s));
+
+applicationsStatuses () = JSON FROM id = ApplicationStatus s, name = badged(s), stat(s) WHERE s IS ApplicationStatus AND NOT s = ApplicationStatus.interview AND NOT closed(s);
+
+dateTimeContacted 'Время контакта' = DATA DATETIME (Interview);
+nextContactDate 'Дата следующего контакта' (Application a) = DATE(dateTime(lastInterview(a))) IF NOT dateTimeContacted(lastInterview(a));
+captionContact (Application a) = STRING('Позвонить ' + toChar(nextContactDate(a), 'dd.MM.yy'));
+
+setNextContactDate 'Назначить дату следующего контакта' (Application a){
+    DIALOG dialogDate OBJECTS d INPUT d DO IF d THEN {
+        IF nextContactDate(a) THEN{
+            FOR Interview i = lastInterview(a) DO{
+                dateTime(i) <- DATETIME(d);
+            }
+        } ELSE NEW i = Interview {
+            application(i) <- a;
+            dateTime(i) <- DATETIME(d);
+            in(i, currentUser()) <- TRUE;
+        }
+        APPLY;
+    }
+}
+
+FORM dialogComment 'Коммментарий о контакте'
+    OBJECTS s = Interview PANEL
+    PROPERTIES(s) summary
+;
+
+DESIGN dialogComment {
+    NEW string BEFORE TOOLBARBOX {
+        fill = 1;
+        MOVE PROPERTY (summary(s)) {
+            fill = 1;
+            font = 'bold 64';
+            caption = '';
+            notNull = TRUE;
+        }
+    }
+}
+
+contacted 'Отчет о контакте' (Application a){
+    FOR Interview i = lastInterview(a) AND nextContactDate(a) DO{
+        DIALOG dialogComment OBJECTS s = i  DO{
+            dateTimeContacted(i) <- currentDateTime();
+        }
+    } ELSE NEW i = Interview{
+        application(i) <- a;
+        dateTime(i) <- currentDateTime();
+        in(i, currentUser()) <- TRUE;
+        DIALOG dialogComment OBJECTS s = i DO{
+            dateTimeContacted(i) <- currentDateTime();
+        }
+    }
+    APPLY;
+}
+
+showHire (Application a) = showStatusRule(a, ApplicationStatus.hired);
+showRefused (Application a) = showStatusRule(a, ApplicationStatus.refused);
+
+FORM applicationKanban 'Канбан анкет'
+    OBJECTS tt = Application CUSTOM 'applicationsKanban'
+    HEADER JSON FROM statuses = applicationsStatuses()
+    PROPERTIES(tt) subject, status,
+        firstName,
+        deadline,
+        textPosition,
+        phone,
+        currentViza,
+        channelComunication,
+        captionContact,
+        nextContactDate ORDER
+    PROPERTIES  order = IF nextContactDate(tt) = currentDate() THEN 1 ELSE 0 ORDER DESC 
+
+    PROPERTIES(tt) READONLY PANEL pnameSubject = subject, pfirstName = firstName, plastName = lastName, pphone = phone
+    PROPERTIES (tt) PANEL psummary = summary, ptextPosition = textPosition, pnameMainSpeciality = nameMainSpeciality,
+        edit = EDIT, hire SHOWIF showHire(tt), refuse SHOWIF showRefused(tt)
+
+    FILTERS opened(tt)
+
+    OBJECTS c = Interview LAST
+    PROPERTIES 'Дата ' = DATE(dateTime(c)) READONLY ORDER DESC, 'Время контакта' = dateTimeContacted(c) READONLY
+    PROPERTIES csummary 'Отчет' = HTML(summary(c)) READONLY 
+    FILTERS application(c) = tt
+    
+    PROPERTIES (tt) setNextContactDate, contacted
+
+;
+
+DESIGN applicationKanban {
+    OBJECTS {
+        caption = 'Kanban';
+        MOVE GRID(tt){
+            height = 200;
+            fill = 1;
+            NEW statusPane{
+                fill = 1;
+                custom = '';
+                class = 'btn-group';
+            }
+            NEW panel{
+                horizontal = TRUE;
+                fill = 1;
+                NEW info{
+                    MOVE PROPERTY(pnameSubject) { alignment = STRETCH; }
+                    MOVE PROPERTY(plastName) { alignment = STRETCH; }
+                    MOVE PROPERTY(pfirstName) { alignment = STRETCH; }
+                    MOVE PROPERTY(pphone) { alignment = STRETCH; }
+                    MOVE PROPERTY(psummary) { alignment = STRETCH; }
+                    MOVE PROPERTY(ptextPosition) { alignment = STRETCH; }
+                    MOVE PROPERTY(pnameMainSpeciality) { alignment = STRETCH; }
+                    NEW panelActions {
+                        horizontal = TRUE;
+                        MOVE PROPERTY(edit) { fill = 1; }
+                        alignment = STRETCH;
+                        MOVE PROPERTY (hire(tt)){
+                            valueClass = 'btn-outline-success';
+                        }
+                        MOVE PROPERTY (refuse(tt)){
+                            valueClass = 'btn-danger';
+                        }
+                    }
+                    REMOVE BOX(tt);
+                }
+                NEW contacts{
+                    NEW contactActions{
+                        fill = 1;
+                        horizontal = TRUE;
+                        MOVE PROPERTY (setNextContactDate(tt)){
+                            valueClass = 'btn-outline-success';
+                        }
+                        MOVE PROPERTY (contacted(tt)){
+                            valueClass = 'btn-outline-success';
+                        }
+                    }
+                    NEW detailsContact{
+                        fill = 1;
+                        showIf = countInterview(tt);
+                        MOVE BOX (c){
+                            caption = 'Контакты';
+                        }
+                        REMOVE TOOLBARSYSTEM (c);
+                    }
+
+                }
+            }
+        }
+    }
+}
+
+
+META defineStatusApplication(name, caption, nameCompleted, captionComplete)
+    EXTEND CLASS ApplicationStatus{
+        name caption
+    }
+    name caption = DATA DATE (Application);
+    name##Status caption (Application a) = TRUE IF name(a);
+
+    nameCompleted captionComplete = DATA DATE (Application);
+    maxDuration###name 'Максимальный срок '##caption = DATA INTEGER ();
+    
+    expired###name (Application a) = name(a) AND maxDuration###name() AND NOT nameCompleted(a) AND (sum(name(a), maxDuration###name()) < currentDate());
+    
+    status(Application i) += WHEN name(i) AND NOT refused(i) AND NOT hired(i) AND interview(i) THEN ApplicationStatus.##name;
+
+    validDate###name ''##caption##' крайний срок' (Application a) = IF name(a) AND NOT nameCompleted(a) AND maxDuration###name() THEN sum(name(a), maxDuration###name());
+    captionValidDate###name ''##caption##' крайний срок' (Application a) = 'Крайний срок ' + toChar(validDate###name(a), 'dd.MM.yy');
+
+    deadline(Application a) += WHEN status(a) = ApplicationStatus.##name AND validDate###name(a) THEN STRING ('Крайний срок ' + toChar(validDate###name(a), 'dd.MM.yy'));
+
+    countAll###name = GROUP SUM 1 IF status(Application aa) = ApplicationStatus.##name MATERIALIZED;
+    countExpired###name = GROUP SUM 1 IF status(Application aa) = ApplicationStatus.##name AND name(aa) AND expired###name(aa) ;
+    
+    captionStatusStat###name = badged('Просрочены', countExpired###name()) IF countExpired###name();
+    
+    stat(ApplicationStatus s) += WHEN s = ApplicationStatus.##name THEN captionStatusStat###name();
+
+    EXTEND FORM options
+        PROPERTIES maxDuration###name()
+    ;
+    DESIGN options{
+        commons{
+            MOVE PROPERTY (maxDuration###name());
+        }
+    }
+        
+    begin###name caption (Application a){
+        IF nameCompleted(a) THEN {
+            MESSAGE ''##caption##' уже завершен';
+            RETURN;
+        } ELSE {
+            IF name(a) THEN{
+                ASK ''##caption##' уже начат ' + toChar(name(a), 'dd.MM.yy') + '. Уверены что хотите начать сначала?' DO{
+                    name(a) <- currentDate();
+                }
+            } ELSE{
+                name(a) <- currentDate();
+            }
+        }
+    }
+
+    complete###name captionComplete (Application a){
+        IF nameCompleted(a) THEN {
+            MESSAGE ''##caption##' уже завершен';
+            RETURN;
+        }
+        IF name(a) THEN{
+            IF expired###name(a) THEN{
+                ASK ''##caption##' просрочен. Крайний срок истек ' + toChar(validDate###name(a), 'dd.MM.yy') + 
+                    '. Вы уверены, что хотите завершить просроченный процесс' DO{
+                    nameCompleted(a) <- currentDate();
+                }
+            } ELSE{
+                nameCompleted(a) <- currentDate();
+            }
+        } ELSE {
+            MESSAGE ''##caption##' не заполнена дата начала, начните процесс прежде чем завершить!';
+        }
+    }
+    
+    EXTEND FORM application
+        PROPERTIES name(a), nameCompleted(a), name##Status(a) READONLY
+    ;
+        
+    captionStatus###name (Application a) = CASE 
+        WHEN name(a) AND NOT nameCompleted(a) THEN caption + ' c ' + toChar(name(a), 'dd.MM.yy')  
+        WHEN name(a) AND nameCompleted(a) THEN caption + ' c ' + toChar(name(a), 'dd.MM.yy') + ' по ' + toChar(nameCompleted(a), 'dd.MM.yy')
+        ELSE caption
+    ;
+        
+    DESIGN application{
+        statusGroup{
+            MOVE PROPERTY(name##Status(a)) BEFORE PROPERTY (interview(a)){
+                valueClass = 'btn-check';
+                captionClass = 'btn btn-outline-primary btn-arrow-right';
+            } 
+        }
+        details{
+            history{
+                NEW name##Status{
+                    horizontal = TRUE;
+                    MOVE PROPERTY (name(a));
+                    MOVE PROPERTY (nameCompleted(a));
+                }
+            }
+        }
+    }
+    EXTEND FORM applicationKanban
+        PROPERTIES (tt) PANEL name##Status HEADER captionStatus###name(tt)
+    ;
+    DESIGN applicationKanban{
+        statusPane{
+            MOVE PROPERTY(name##Status(tt)){
+                valueHeight = -1;
+                valueClass = 'btn-check';
+                captionClass = 'btn btn-outline-primary btn-arrow-right';
+            }
+        }
+    }
+        
+    EXTEND FORM applicationKanban
+        PROPERTIES (tt) begin###name SHOWIF showStatusRule(tt, ApplicationStatus.##name) AND NOT name(tt), 
+            complete###name SHOWIF status(tt) = ApplicationStatus.##name AND name(tt) AND NOT nameCompleted(tt)
+    ;
+    
+    DESIGN applicationKanban{
+        panelActions{
+            MOVE PROPERTY (begin###name(tt)) {
+                valueClass = 'btn-warning';
+            }
+            MOVE PROPERTY (complete###name(tt)){
+                valueClass = 'btn-success';
+            }
+        }
+    }
+    changeStatus (Application o, ApplicationStatus s) +{
+        IF s = ApplicationStatus.##name THEN {
+            IF NOT name(o) THEN{
+        begin###name(o);
+            } ELSE{
+                complete###name(o);
+            }
+        }
+    }
+END
+
+@defineStatusApplication(collectDocuments, 'Сбор документов', collectedDocuments, 'Документы собраны');
+@defineStatusApplication(oswiadczenie, 'Oświadczenie', oswiadczenied, 'Oświadczenie получено');
+@defineStatusApplication(zezwolenie, 'Zezwolenie', zezwolenieCollected, 'Zezwolenie получено');
+
+@defineStatusApplication(vizaCollect, 'Виза', vizaCollected, 'Виза получена');
+
+
+changeStatus (Application o, ApplicationStatus s) +{
+    IF s = ApplicationStatus.hired THEN  {
+        dataStatus(o) <- NULL;
+        hire(o);
+        APPLY;
+    }
+    IF s = ApplicationStatus.refused THEN {
+        dataStatus(o) <- NULL;
+        refuse(o);
+        APPLY;
+    }
+}
+
+showStatusRule(Application o, ApplicationStatus s) += WHEN status(o) = ApplicationStatus.new AND 
+    (s = ApplicationStatus.collectDocuments OR s = ApplicationStatus.refused) THEN TRUE
+;
+
+showStatusRule(Application o, ApplicationStatus s) += WHEN status(o) = ApplicationStatus.collectDocuments AND (NOT collectDocuments(o) OR collectedDocuments(o)) AND
+    (s = ApplicationStatus.oswiadczenie OR s = ApplicationStatus.zezwolenie OR s = ApplicationStatus.refused OR s = ApplicationStatus.hired) THEN TRUE;
+
+showStatusRule(Application o, ApplicationStatus s) += WHEN status(o) = ApplicationStatus.oswiadczenie AND (NOT oswiadczenie(o) OR oswiadczenied(o)) AND
+    (s = ApplicationStatus.vizaCollect) THEN TRUE;
+
+showStatusRule(Application o, ApplicationStatus s) += WHEN status(o) = ApplicationStatus.zezwolenie AND (NOT zezwolenie(o) OR zezwolenieCollected(o)) AND
+    (s = ApplicationStatus.vizaCollect) THEN TRUE;
+
+showStatusRule(Application o, ApplicationStatus s) += WHEN status(o) = ApplicationStatus.vizaCollect AND (NOT vizaCollect(o) OR vizaCollected(o)) AND
+    (s = ApplicationStatus.hired OR s = ApplicationStatus.refused) THEN TRUE;
+
+
+
+EXTEND FORM application
+    OBJECTS s = ApplicationStatus
+    PROPERTIES setNextContactDate(a), contacted(a) 
+    FILTERS showStatusRule(a, s)
+    
+    PROPERTIES (i) dateTimeContacted READONLY 
+;
+
+
+DESIGN application{
+    statusActions{
+        NEW contactAction{
+            horizontal = TRUE;
+            MOVE PROPERTY (setNextContactDate(a));
+            MOVE PROPERTY (contacted(a));
+        }
+    }
+    interview{
+        caption = badged('Контакты', countInterview(a));
+        PROPERTY (dateTime(i)){
+            caption = 'Планируемая дата';
+        }
+    }
+    REMOVE primaryActions;
+    REMOVE PROPERTY (interview(a));
+}
+
+afterHiredList(Application a, Employee e) +{
+    mainSpeciality(e) <- mainSpeciality(a);
+}
+//
+
+onWebClientInit() + {
+    onWebClientInit('applicationskanban.js') <- 1;
+    onWebClientInit('applicationskanban.css') <- 1;
+}
+
+NAVIGATOR {
+    humanResources{
+        dashboards{
+            NEW applicationKanban;
+        }
+    }
+}
