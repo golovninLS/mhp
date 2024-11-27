@@ -7,33 +7,54 @@ NAMESPACE HumanResources;
 channelComunication 'Как связаться' = DATA STRING[100] (Application);
 textPosition 'Специальность(из запроса)' = DATA STRING[100] (Application);
 currentViza 'Виза' = DATA STRING[100] (Application);
+companyName 'Компания' = DATA STRING[100] (Application);
+countryName 'Страна' = DATA STRING[50] (Application);
 
 mainSpeciality = DATA Speciality (Application);
 nameMainSpeciality 'Основная специальность' (Application a) = name(mainSpeciality(a));
 
 processMessage(Message m)+{
-    FOR iterate(INTEGER i, 1, wordCount(message(m), '\n')) AND STRING s = getWord(message(m), '\n', i) DO{
+    FOR iterate(INTEGER i, 1, wordCount(message(m), '\n')) AND STRING s = getWord(message(m), '\n', i) NOINLINE DO{
         IF isSubstring(s, 'Упал лид') THEN NEW a = Application {
             description(a) <- message(m);
             subject(a) <- replace(replace(s, 'Упал лид |', ''), '|', '');
             application(m) <- a;
         }
+        IF isSubstring(s, 'Компания:') AND NOT application(m) THEN NEW a = Application {
+            description(a) <- message(m);
+            application(m) <- a;
+        }
         FOR Application a = application(m) DO{
             CASE
                 WHEN isSubstring(s, 'Имя:') THEN firstName(a) <- replace(s, 'Имя:', '');
+                WHEN isSubstring(s, 'Компания:') THEN companyName(a) <- replace(s, 'Компания:', '');
+                WHEN isSubstring(s, 'Страна:') THEN countryName(a) <- replace(s, 'Страна:', '');
 
                 WHEN isSubstring(s, 'Как связаться:') THEN channelComunication(a) <- replace(s, 'Как связаться:', '');
                 WHEN isSubstring(s, 'Канал связи:') THEN channelComunication(a) <- replace(s, 'Канал связи:', '');
 
                 WHEN isSubstring(s, 'Специальность:') THEN textPosition(a) <- replace(s, 'Специальность:', '');
                 WHEN isSubstring(s, 'Подразделение:') THEN textPosition(a) <- replace(s, 'Подразделение:', '');
+                WHEN isSubstring(s, 'Направление:') THEN {
+                    textPosition(a) <- replace(s, 'Направление:', '');
+                }
 
                 WHEN isSubstring(s, 'Телефон:') THEN phone(a) <- replace(s, 'Телефон:', '');
+                WHEN isSubstring(s, 'Номер:') THEN phone(a) <- replace(s, 'Номер:', '');
 
                 WHEN isSubstring(s, 'Виза:') THEN currentViza(a) <- replace(s, 'Виза:', '');
         }
     }
     APPLY;
+}
+
+WHEN SET (Application a IS Application) AND NOT subject(a) DO{
+    subject(a) <- CONCAT ' ', company(a), countryName(a), textPosition(a);
+}
+speciality(STRING name) = GROUP MAX Speciality s BY name(s);
+
+WHEN SETCHANGED(textPosition(Application a)) AND NOT mainSpeciality(a) AND Speciality s = speciality(textPosition(a)) DO{
+    mainSpeciality(a) <- s;
 }
 
 chatRecruters = DATA Messenger.Chat ();
@@ -98,12 +119,14 @@ DESIGN application{
 showStatusRule = ABSTRACT CASE BOOLEAN (Application, ApplicationStatus);
 
 deadline (Application a) = ABSTRACT CASE STRING (Application);
-
+order = ABSTRACT CASE INTEGER (ApplicationStatus);
 stat = ABSTRACT CASE HTML (ApplicationStatus);
 countAll(ApplicationStatus s) = GROUP SUM 1 IF status(Application a) = s;
-badged (ApplicationStatus s) =  badged(name(s), countAll(s));
+overName = ABSTRACT CASE STRING (ApplicationStatus);
 
-applicationsStatuses () = JSON FROM id = ApplicationStatus s, name = badged(s), stat(s) WHERE s IS ApplicationStatus AND NOT s = ApplicationStatus.interview AND NOT closed(s);
+badged (ApplicationStatus s) =  badged((OVERRIDE overName(s), name(s)), countAll(s));
+
+applicationsStatuses () = JSON FROM id = ApplicationStatus s, name = badged(s), stat(s) WHERE s IS ApplicationStatus AND NOT closed(s) ORDER order(s);
 
 dateTimeContacted 'Время контакта' = DATA DATETIME (Interview);
 nextContactDate 'Дата следующего контакта' (Application a) = DATE(dateTime(lastInterview(a))) IF NOT dateTimeContacted(lastInterview(a));
@@ -171,10 +194,11 @@ FORM applicationKanban 'Канбан анкет'
         currentViza,
         channelComunication,
         captionContact,
-        nextContactDate ORDER
+        nextContactDate ORDER,
+        dateTime ORDER DESC 
     PROPERTIES  order = IF nextContactDate(tt) = currentDate() THEN 1 ELSE 0 ORDER DESC 
 
-    PROPERTIES(tt) READONLY PANEL pnameSubject = subject, pfirstName = firstName, plastName = lastName, pphone = phone
+    PROPERTIES(tt) READONLY PANEL pnameSubject = subject, pfirstName = firstName, pdateTime = dateTime, plastName = lastName, pphone = phone
     PROPERTIES (tt) PANEL psummary = summary, ptextPosition = textPosition, pnameMainSpeciality = nameMainSpeciality,
         edit = EDIT, hire SHOWIF showHire(tt), refuse SHOWIF showRefused(tt)
 
@@ -204,6 +228,7 @@ DESIGN applicationKanban {
                 horizontal = TRUE;
                 fill = 1;
                 NEW info{
+                    MOVE PROPERTY(pdateTime) { alignment = STRETCH; caption = 'Дата обращения'; }
                     MOVE PROPERTY(pnameSubject) { alignment = STRETCH; }
                     MOVE PROPERTY(plastName) { alignment = STRETCH; }
                     MOVE PROPERTY(pfirstName) { alignment = STRETCH; }
@@ -250,8 +275,13 @@ DESIGN applicationKanban {
     }
 }
 
+//
+overName(ApplicationStatus s) += WHEN s = ApplicationStatus.interview THEN 'Следующий контакт';
+order(ApplicationStatus s) += WHEN s = ApplicationStatus.interview THEN 2;
+order(ApplicationStatus s) += WHEN s = ApplicationStatus.new THEN 1;
 
-META defineStatusApplication(name, caption, nameCompleted, captionComplete)
+
+META defineStatusApplication(name, caption, nameCompleted, captionComplete, ord)
     EXTEND CLASS ApplicationStatus{
         name caption
     }
@@ -264,7 +294,8 @@ META defineStatusApplication(name, caption, nameCompleted, captionComplete)
     expired###name (Application a) = name(a) AND maxDuration###name() AND NOT nameCompleted(a) AND (sum(name(a), maxDuration###name()) < currentDate());
     
     status(Application i) += WHEN name(i) AND NOT refused(i) AND NOT hired(i) AND interview(i) THEN ApplicationStatus.##name;
-
+    order(ApplicationStatus s) += WHEN s = ApplicationStatus.##name THEN ord;
+    
     validDate###name ''##caption##' крайний срок' (Application a) = IF name(a) AND NOT nameCompleted(a) AND maxDuration###name() THEN sum(name(a), maxDuration###name());
     captionValidDate###name ''##caption##' крайний срок' (Application a) = 'Крайний срок ' + toChar(validDate###name(a), 'dd.MM.yy');
 
@@ -386,11 +417,11 @@ META defineStatusApplication(name, caption, nameCompleted, captionComplete)
     }
 END
 
-@defineStatusApplication(collectDocuments, 'Сбор документов', collectedDocuments, 'Документы собраны');
-@defineStatusApplication(oswiadczenie, 'Oświadczenie', oswiadczenied, 'Oświadczenie получено');
-@defineStatusApplication(zezwolenie, 'Zezwolenie', zezwolenieCollected, 'Zezwolenie получено');
+@defineStatusApplication(collectDocuments, 'Сбор документов', collectedDocuments, 'Документы собраны', 3);
+@defineStatusApplication(oswiadczenie, 'Oświadczenie', oswiadczenied, 'Oświadczenie получено', 4);
+@defineStatusApplication(zezwolenie, 'Zezwolenie', zezwolenieCollected, 'Zezwolenie получено', 5);
 
-@defineStatusApplication(vizaCollect, 'Виза', vizaCollected, 'Виза получена');
+@defineStatusApplication(vizaCollect, 'Виза', vizaCollected, 'Виза получена', 6);
 
 
 changeStatus (Application o, ApplicationStatus s) +{
@@ -407,7 +438,10 @@ changeStatus (Application o, ApplicationStatus s) +{
 }
 
 showStatusRule(Application o, ApplicationStatus s) += WHEN status(o) = ApplicationStatus.new AND 
-    (s = ApplicationStatus.collectDocuments OR s = ApplicationStatus.refused) THEN TRUE
+    ((s = ApplicationStatus.collectDocuments AND countInterview(o))OR s = ApplicationStatus.refused) THEN TRUE
+;
+showStatusRule(Application o, ApplicationStatus s) += WHEN status(o) = ApplicationStatus.interview AND
+    ((s = ApplicationStatus.collectDocuments AND countInterview(o)) OR s = ApplicationStatus.refused) THEN TRUE
 ;
 
 showStatusRule(Application o, ApplicationStatus s) += WHEN status(o) = ApplicationStatus.collectDocuments AND (NOT collectDocuments(o) OR collectedDocuments(o)) AND

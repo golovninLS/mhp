@@ -1,6 +1,6 @@
 MODULE PartnerCustom;
 
-REQUIRE Partner, CountryP, RegonDaneSzukajPodmity;
+REQUIRE PartnerGeo, CountryP, RegonDaneSzukajPodmity;
 
 NAMESPACE MasterData;
 
@@ -29,14 +29,15 @@ EXTEND FORM partner
 
 DESIGN partner {
     headerColumn1 {
-        MOVE PROPERTY (nip(p)) FIRST;
+        NEW nip FIRST{
+            MOVE PROPERTY (nip(p)) FIRST;
+            MOVE PROPERTY (getPartnerData(p));
+        }
         MOVE PROPERTY (nameCountry(p)) AFTER PROPERTY (address(p));
     }
     headerColumn2 {
         MOVE PROPERTY (comment(p)) FIRST;
     }
-    headerColumn3 {
-        MOVE PROPERTY (getPartnerData(p));
-    }
+    REMOVE geo;
 }
 

@@ -35,7 +35,7 @@ deadline(Task t) += end(t);
 
 WHEN LOCAL SET(Task t IS Task) AND NOT id(t) DO id(t) <- STRING(t);
 WHEN LOCAL SETCHANGED(Task t IS Task) AND NOT order(t) DO order(t) <- [GROUP MAX order(Task tt)]() (+) 1;
-WHEN LOCAL SETCHANGED(Task t IS Task) AND NOT name(t) DO name(t) <- 'Task ' + order(t);
+//WHEN LOCAL SETCHANGED(Task t IS Task) AND NOT name(t) DO name(t) <- 'Task ' + order(t);
 WHEN LOCAL SETCHANGED(Task t IS Task) AND NOT start(t) DO start(t) <- currentDate();
 WHEN LOCAL SETCHANGED(Task t IS Task) AND NOT end(t) DO end(t) <- currentDate();
 
