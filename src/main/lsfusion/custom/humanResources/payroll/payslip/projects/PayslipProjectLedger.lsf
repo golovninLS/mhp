@@ -6,6 +6,10 @@ NAMESPACE Payroll;
 
 EXTEND CLASS PayslipLedger : ProjectLedger;
 
+skipLedger 'Skip ledger' = DATA BOOLEAN (PayslipCategory);
+EXTEND FORM payslipCategory PROPERTIES(c) skipLedger;
+EXTEND FORM payslipCategories PROPERTIES(c) READONLY skipLedger;
+
 active (PayslipLedger l) += l IS PayslipLedger AND NOT deduction(l) AND NOT skipLedger(category(l)) AND NOT inner(project(l));
 
 project (PayslipLedger l) += project(l);
