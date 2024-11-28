@@ -183,9 +183,15 @@ contacted 'Отчет о контакте' (Application a){
 showHire (Application a) = showStatusRule(a, ApplicationStatus.hired);
 showRefused (Application a) = showStatusRule(a, ApplicationStatus.refused);
 
+countHired = GROUP SUM 1 IF status(Application a) = ApplicationStatus.hired MATERIALIZED;
+countRefused = GROUP SUM 1 IF status(Application a) = ApplicationStatus.refused MATERIALIZED;
+
+nameButtonHired = JSON FROM name = badged('Нанять', countHired());
+nameButtonRefused = JSON FROM name = badged('Отказать', countRefused());
+
 FORM applicationKanban 'Канбан анкет'
     OBJECTS tt = Application CUSTOM 'applicationsKanban'
-    HEADER JSON FROM statuses = applicationsStatuses()
+    HEADER JSON FROM statuses = applicationsStatuses(), nameHired = nameButtonHired(), nameRefused = nameButtonRefused()
     PROPERTIES(tt) subject, status,
         firstName,
         deadline,
@@ -195,8 +201,8 @@ FORM applicationKanban 'Канбан анкет'
         channelComunication,
         captionContact,
         nextContactDate ORDER,
-        dateTime ORDER DESC 
-    PROPERTIES  order = IF nextContactDate(tt) = currentDate() THEN 1 ELSE 0 ORDER DESC 
+        dateTime ORDER DESC
+    PROPERTIES order = IF nextContactDate(tt) = currentDate() THEN 1 ELSE 0 ORDER DESC 
 
     PROPERTIES(tt) READONLY PANEL pnameSubject = subject, pfirstName = firstName, pdateTime = dateTime, plastName = lastName, pphone = phone
     PROPERTIES (tt) PANEL psummary = summary, ptextPosition = textPosition, pnameMainSpeciality = nameMainSpeciality,
@@ -210,7 +216,6 @@ FORM applicationKanban 'Канбан анкет'
     FILTERS application(c) = tt
     
     PROPERTIES (tt) setNextContactDate, contacted
-
 ;
 
 DESIGN applicationKanban {

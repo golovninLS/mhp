@@ -8,23 +8,52 @@ function applicationsKanbanReorder(controller, elements) {
 function applicationsKanban() {
     return {
         render: function (element, controller) {
+            let mainField = document.createElement("div")
+            mainField.classList.add("mainField");
+            element.appendChild(mainField);
+            element.mainField = mainField;
+
             let kanban = document.createElement("div")
             kanban.classList.add("applications-kanban");
-
-            element.appendChild(kanban);
-
+            mainField.appendChild(kanban);
             element.kanban = kanban;
+
+            let actionContainer = document.createElement("div");
+            actionContainer.classList.add("kanban-action-container");
+            mainField.appendChild(actionContainer);
+
+            let declineButton = document.createElement("div");
+            declineButton.classList.add("btn", "btn-danger", "me-2");
+            declineButton.classList.add("actionButton");
+            actionContainer.appendChild(declineButton);
+
+            let acceptButton = document.createElement("div");
+            acceptButton.classList.add("btn", "btn-success");
+            acceptButton.classList.add("actionButton");
+            actionContainer.appendChild(acceptButton);
+
+            element.actionContainer = actionContainer;
+            element.acceptButton = acceptButton;
+            element.declineButton = declineButton;
         },
         update: function (element, controller, list, options) {
-//            if (element.drake)
-//                element.drake.destroy();
-//            element.drake = dragula();
+            if (element.drake) element.drake.destroy();
+             element.drake = dragula({
+                 copy: false,
+                 revertOnSpill: true,
+                 accepts: function (el, target) {
+                     return target === element.acceptButton || target === element.declineButton;
+                 }
+             });
 
             while (element.kanban.lastElementChild) {
                 element.kanban.removeChild(element.kanban.lastElementChild);
             }
 
             if (options == null || !options.statuses) return;
+
+            element.acceptButton.innerHTML = options.nameHired.name;
+            element.declineButton.innerHTML = options.nameRefused.name;
 
             for (const status of options.statuses) {
                 let statusDiv = document.createElement("div")
@@ -133,12 +162,34 @@ function applicationsKanban() {
                     }
 
                 statusDiv.appendChild(statusBody);
-
                 statusBody.status = status;
-//                element.drake.containers.push(statusBody);
-
                 element.kanban.appendChild(statusDiv);
+
+                element.drake.containers.push(statusBody);
             }
+
+            element.drake.containers.push(element.acceptButton);
+            element.drake.containers.push(element.declineButton);
+
+            element.drake.on("drag", function (el) {
+                element.actionContainer.classList.add("visible");
+            });
+
+            element.drake.on("dragend", function () {
+                element.actionContainer.classList.remove("visible");
+            });
+
+            element.drake.on("drop", function (el, target, source) {
+                const id = el.applications["#__key"].e.a;
+                if (target === element.acceptButton) {
+                    controller.changeProperty("hire", el.applications);
+                    source.appendChild(el);
+                } else
+                if (target === element.declineButton) {
+                    controller.changeProperty("refuse", el.applications);
+                    source.appendChild(el);
+                }
+            });
 
 //            element.drake.on("drop", function(el, target, source, sibling) {
 ////                if (el.applications.status !== target.status.id.toString())
@@ -148,8 +199,7 @@ function applicationsKanban() {
 
         },
         clear: function (element) {
-//            if (element.drake)
-//                element.drake.destroy();
+            if (element.drake) element.drake.destroy();
         }
     }
 }
