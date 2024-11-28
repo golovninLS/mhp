@@ -1,6 +1,7 @@
 MODULE HumanResources;
 
 REQUIRE Application, ApplicationRefuse, ApplicationHire,
-        ApplicationEmail, ApplicationMessenger, ApplicationPosition;
+        ApplicationEmail, ApplicationPosition, ApplicationMessenger,
+        Payslip, PayslipLedger, PayslipBatch, PayslipLineBatch;
 
 

@@ -48,7 +48,7 @@ EXTEND FORM payslip
 DESIGN payslip {
     details {
         MOVE BOX(pl) {
-            caption = 'Salary Computation';
+            caption = 'Salary computation';
         }
     }
 }
@@ -58,7 +58,7 @@ EXTEND FORM payslips
 ;
 
 META definePayslipDetail (prop, caption)
-    CLASS Payslip###prop 'Payslip '##caption : PayslipLedger;
+    CLASS Payslip###prop caption : PayslipLedger;
     
     payslip 'Payslip' = DATA Payslip (Payslip###prop) NONULL DELETE INDEXED;
     

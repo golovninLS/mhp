@@ -25,7 +25,7 @@ EXTEND FORM payslipCategory
     PROPERTIES(c) isTimeEntry
 ;
 
-@definePayslipDetail(timeEntry, 'line');
+@definePayslipDetail(timeEntry, 'Payslip line');
 
 project = DATA Project (PayslipTimeEntry);
 project (PayslipTimeEntry pe) += project(pe);

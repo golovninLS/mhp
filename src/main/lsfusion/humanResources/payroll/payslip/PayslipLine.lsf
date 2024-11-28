@@ -4,7 +4,7 @@ REQUIRE PayslipLedger;
 
 NAMESPACE Payroll;
 
-@definePayslipDetail(line, 'line');
+@definePayslipDetail(line, 'Payslip line');
 
 line (Payslip p, PayslipCategory c) = GROUP MIN PayslipLine l IF payslip(l) = p AND category(l) = c;
 
@@ -20,3 +20,18 @@ newLine 'Add' (Payslip p) {
 EXTEND FORM payslip
     PROPERTIES(p) newLine DRAW pl TOOLBAR
 ;
+
+clone ABSTRACT LIST (PayslipLine, PayslipLine);
+clone (PayslipLine to, PayslipLine from) + {
+    category(to) <- category(from);
+    quantity(to) <- quantity(from);
+    amount(to) <- amount(from);
+    description(to) <- description(from);
+}
+
+clone (Payslip to, Payslip from) +{
+    FOR payslip(PayslipLine l) = from INLINE NEW nl = PayslipLine DO {
+        payslip(nl) <- to;
+        clone(nl, l);
+    }
+}

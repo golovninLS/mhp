@@ -72,3 +72,32 @@ NAVIGATOR {
         NEW payslips;
     }
 }
+
+// copy
+clone ABSTRACT LIST (Payslip, Payslip);
+clone (Payslip to, Payslip from) + {
+    period(to) <- period(from);
+    employee(to) <- employee(from);
+    company(to) <- company(from);
+}
+
+copy 'Copy' (Payslip p) {
+    APPLY;
+    IF canceled() THEN RETURN;
+
+    NEWSESSION {
+        NEW np = Payslip {
+            clone(np, p);
+
+            SHOW payslip OBJECTS p = np  DOCKED;
+        }
+    }
+}
+
+EXTEND FORM payslip PROPERTIES copy(p);
+
+DESIGN payslip {
+    actions {
+        MOVE PROPERTY(copy(p));
+    }
+}
