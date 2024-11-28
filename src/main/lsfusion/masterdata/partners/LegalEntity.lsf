@@ -16,7 +16,7 @@ website 'Web site' = DATA ISTRING[30](LegalEntity);
 EXTEND CLASS LegalEntity : Partner;
 
 name (LegalEntity l) += name(l);
-fullName (LegalEntity l) += fullName(l);
+fullName (LegalEntity l) += dataFullName(l);
 
 EXTEND CLASS PartnerType {
     legalEntity 'Legal entity'

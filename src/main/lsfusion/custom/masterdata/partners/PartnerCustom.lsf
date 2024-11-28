@@ -15,7 +15,7 @@ getPartnerData 'Получить данные по NIP' (Partner p) {
     daneSzukajPodmioty();
     IF nazwa() THEN {
         country(p) <- country('PL');
-        name(p) <- ISTRING[92](nazwa());
+        name(p) <- OVERRIDE name(p), ISTRING[92](nazwa());
         city(p) <- ISTRING[50](miejscowosc());
         state(p) <- ISTRING[50](wojewodztwo());
         zip(p) <- ISTRING[10](kodPocztowy());
@@ -41,3 +41,10 @@ DESIGN partner {
     REMOVE geo;
 }
 
+WHEN LOCAL FORMS partner SETCHANGED(name(Partner p)) AND NOT fullName(p) DO {
+    fullName(p) <- name(p);
+}
+
+WHEN LOCAL FORMS partner DROPCHANGED( fullName(Partner p)) AND NOT fullName(p) AND name(p) DO {
+    fullName(p) <- name(p);
+}
