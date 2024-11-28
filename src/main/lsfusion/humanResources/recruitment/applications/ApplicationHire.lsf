@@ -43,7 +43,6 @@ hire 'Hire' (Application a) {
             legalEntity(e) <- company(a);
             
             employee(a) <- e;
-            afterHiredList(a, e);
             
             fill(e, a);
             

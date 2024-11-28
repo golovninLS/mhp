@@ -490,7 +490,7 @@ DESIGN application{
     REMOVE PROPERTY (interview(a));
 }
 
-afterHiredList(Application a, Employee e) +{
+fill(Employee e, Application a) +{
     mainSpeciality(e) <- mainSpeciality(a);
 }
 //
