@@ -21,7 +21,7 @@ nameEmployee 'Employee' (Application a) = name(employee(a));
 
 application = GROUP AGGR Application a BY employee(a);
 
-afterHiredList ABSTRACT LIST (Application, Employee);
+fill ABSTRACT LIST (Employee, Application);
 
 hire 'Hire' (Application a) {
     APPLY;
@@ -43,7 +43,8 @@ hire 'Hire' (Application a) {
             legalEntity(e) <- company(a);
             
             employee(a) <- e;
-            afterHiredList(a, e);
+            
+            fill(e, a);
             
             SHOW employee OBJECTS e = e DOCKED; 
         }
