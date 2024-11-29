@@ -179,3 +179,7 @@ NAVIGATOR {
         }
     }
 }
+
+DESIGN bill {
+    REMOVE debts;
+}

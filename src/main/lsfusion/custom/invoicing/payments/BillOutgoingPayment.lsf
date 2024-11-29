@@ -1,0 +1,61 @@
+MODULE BillOutgoingPayment;
+
+REQUIRE BillCustom, OutgoingPayment, PaymentCustom, BillPayment;
+
+NAMESPACE Invoicing;
+
+FORM newOutgoingPayment 'Outgoing payment'
+    OBJECTS o = OutgoingPayment PANEL
+    PROPERTIES(o) nameCompanyAccount, dateTime
+    FILTERS holder(companyAccount(o)) = company(o)
+    FILTERS currency(companyAccount(o)) = currency(o)
+;
+
+DESIGN newOutgoingPayment {
+    BOX(o) {
+        horizontal = FALSE;
+        lines = 1;
+        size = (70, 100);
+    }
+}
+
+payForBill 'Register Payment' (Bill b) {
+    NEW o = OutgoingPayment {
+        ready(o) <- TRUE;
+
+        partner(o) <- vendor(b);
+        company(o) <- company(b);
+        currency(o) <- currency(b);
+        amount(o) <- untaxedAmount(b);
+        type(o) <- defaultOutgoingPaymentType();
+        dateTime(o) <- currentDateTime();
+
+        SHOW newOutgoingPayment OBJECTS o = o FLOAT;
+        paid(b, o) <- left(b, o) (+) paid(b, o);
+    }
+
+    IF canceled() THEN RETURN;
+}
+
+EXTEND FORM bill
+    PROPERTIES(b) payForBill SHOWIF status(b) = BillStatus.ready
+
+    OBJECTS od = OutgoingDebt
+    PROPERTIES(od) READONLY dateTime, number, class, type, amount
+    FILTERS paid(b, od), active(od)
+;
+
+DESIGN bill {
+    primaryActions {
+        MOVE PROPERTY(payForBill(b)) { valueClass = 'btn-primary'; }
+    }
+}
+DESIGN bill {
+    REMOVE PROPERTY (registerPayment(b));
+    details {
+        NEW payments {
+            caption = 'Outgoing payment';
+            MOVE BOX(od);
+        }
+    }
+}
