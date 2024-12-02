@@ -49,11 +49,11 @@ processMessage(Message m)+{
 }
 
 WHEN SET (Application a IS Application) AND NOT subject(a) DO{
-    subject(a) <- CONCAT ' ', company(a), countryName(a), textPosition(a);
+    subject(a) <- CONCAT ' ', companyName(a), countryName(a), textPosition(a);
 }
-speciality(STRING name) = GROUP MAX Speciality s BY name(s);
+speciality(STRING name) = GROUP MAX Speciality s BY lower(name(s));
 
-WHEN SETCHANGED(textPosition(Application a)) AND NOT mainSpeciality(a) AND Speciality s = speciality(textPosition(a)) DO{
+WHEN SETCHANGED(textPosition(Application a)) AND NOT mainSpeciality(a) AND Speciality s = speciality(lower(textPosition(a))) DO{
     mainSpeciality(a) <- s;
 }
 
@@ -196,6 +196,7 @@ FORM applicationKanban 'Канбан анкет'
         firstName,
         deadline,
         textPosition,
+        companyName,
         phone,
         currentViza,
         channelComunication,

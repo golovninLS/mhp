@@ -66,11 +66,11 @@ refuse 'Refuse' (Application a) {
             refused(a) <- TRUE; 
             APPLY;
             
-            IF NOT canceled() AND emailTemplate(o) THEN
-                EMAIL
-                    SUBJECT subject(a)
-                    TO email(a)
-                    BODY emailTemplate(o);
+//            IF NOT canceled() AND emailTemplate(o) THEN
+//                EMAIL
+//                    SUBJECT subject(a)
+//                    TO email(a)
+//                    BODY emailTemplate(o);
         }
     }
     
