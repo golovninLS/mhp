@@ -1,6 +1,6 @@
 MODULE ApplicationCustom;
 
-REQUIRE ApplicationMessenger, ApplicationRefuse, ApplicationHire, TelegramCustom, ApplicationInterview, Speciality;
+REQUIRE ApplicationMessenger, ApplicationRefuse, ApplicationHire, TelegramCustom, ApplicationInterview, Speciality, Color;
 
 NAMESPACE HumanResources;
 
@@ -12,6 +12,18 @@ countryName 'Страна' = DATA STRING[50] (Application);
 
 mainSpeciality = DATA Speciality (Application);
 nameMainSpeciality 'Основная специальность' (Application a) = name(mainSpeciality(a));
+
+phoneTrim (Application a) = trim(phone(a));
+firstApplication = 
+    GROUP LAST Application a ORDER DESC dateTime(a) BY phoneTrim(a);
+
+firstApplication (Application a) = firstApplication(phoneTrim(a));
+
+isFirstApplication (Application a) =a = firstApplication(a);
+
+background (Application a) = IF NOT isFirstApplication(a) THEN Color.danger;
+
+idBackground(Application a) = id(background(a));
 
 processMessage(Message m)+{
     FOR iterate(INTEGER i, 1, wordCount(message(m), '\n')) AND STRING s = getWord(message(m), '\n', i) NOINLINE DO{
@@ -39,8 +51,8 @@ processMessage(Message m)+{
                     textPosition(a) <- replace(s, 'Направление:', '');
                 }
 
-                WHEN isSubstring(s, 'Телефон:') THEN phone(a) <- replace(s, 'Телефон:', '');
-                WHEN isSubstring(s, 'Номер:') THEN phone(a) <- replace(s, 'Номер:', '');
+                WHEN isSubstring(s, 'Телефон:') THEN phone(a) <- trim(replace(s, 'Телефон:', ''));
+                WHEN isSubstring(s, 'Номер:') THEN phone(a) <- trim(replace(s, 'Номер:', ''));
 
                 WHEN isSubstring(s, 'Виза:') THEN currentViza(a) <- replace(s, 'Виза:', '');
         }
@@ -189,6 +201,22 @@ countRefused = GROUP SUM 1 IF status(Application a) = ApplicationStatus.refused 
 nameButtonHired = JSON FROM name = badged('Нанять', countHired());
 nameButtonRefused = JSON FROM name = badged('Отказать', countRefused());
 
+captinonApplication 'Главное обращение' (Application a) =  
+    STRING(
+        CONCAT '', subject(a), 
+        ' от ' + toChar(DATE(dateTime(a)), 'dd.MM.yy')
+    );
+
+captionMainApplication 'Первое обращение' (Application a) =captinonApplication(firstApplication(a));
+
+phoneFilter 'Телефон' = DATA LOCAL NESTED STRING ();
+nameFilter 'Имя' = DATA LOCAL NESTED STRING ();
+
+dropFilters 'X' (){
+    phoneFilter() <- NULL;
+    nameFilter() <- NULL;
+}
+
 FORM applicationKanban 'Канбан анкет'
     OBJECTS tt = Application CUSTOM 'applicationsKanban'
     HEADER JSON FROM statuses = applicationsStatuses(), nameHired = nameButtonHired(), nameRefused = nameButtonRefused()
@@ -201,14 +229,18 @@ FORM applicationKanban 'Канбан анкет'
         currentViza,
         channelComunication,
         captionContact,
+        idBackground,
         nextContactDate ORDER,
         dateTime ORDER DESC
     PROPERTIES order = IF nextContactDate(tt) = currentDate() THEN 1 ELSE 0 ORDER DESC 
 
     PROPERTIES(tt) READONLY PANEL pnameSubject = subject, pfirstName = firstName, pdateTime = dateTime, plastName = lastName, pphone = phone
-    PROPERTIES (tt) PANEL psummary = summary, ptextPosition = textPosition, pnameMainSpeciality = nameMainSpeciality,
+    PROPERTIES (tt) PANEL psummary = summary, captionMainApplication SHOWIF NOT isFirstApplication(tt) ON CHANGE {
+        SHOW application OBJECTS a = tt;
+    },
+    ptextPosition = textPosition, pnameMainSpeciality = nameMainSpeciality,
         edit = EDIT, hire SHOWIF showHire(tt), refuse SHOWIF showRefused(tt)
-
+    
     FILTERS opened(tt)
 
     OBJECTS c = Interview LAST
@@ -217,11 +249,21 @@ FORM applicationKanban 'Канбан анкет'
     FILTERS application(c) = tt
     
     PROPERTIES (tt) setNextContactDate, contacted
+    
+    PROPERTIES () phoneFilter, nameFilter, dropFilters 
+    FILTERS isISubstring(phoneTrim(tt), phoneFilter()) OR NOT phoneFilter()
+    FILTERS isISubstring(firstName(tt), nameFilter()) OR NOT nameFilter()
 ;
 
 DESIGN applicationKanban {
     OBJECTS {
-        caption = 'Kanban';
+        NEW filters{
+            alignment = CENTER;
+            horizontal = TRUE;
+            MOVE PROPERTY (phoneFilter());
+            MOVE PROPERTY (nameFilter());
+            MOVE PROPERTY (dropFilters());
+        }
         MOVE GRID(tt){
             height = 200;
             fill = 1;
@@ -236,6 +278,7 @@ DESIGN applicationKanban {
                 NEW info{
                     MOVE PROPERTY(pdateTime) { alignment = STRETCH; caption = 'Дата обращения'; }
                     MOVE PROPERTY(pnameSubject) { alignment = STRETCH; }
+                    MOVE PROPERTY(captionMainApplication(tt)) { alignment = STRETCH; }
                     MOVE PROPERTY(plastName) { alignment = STRETCH; }
                     MOVE PROPERTY(pfirstName) { alignment = STRETCH; }
                     MOVE PROPERTY(pphone) { alignment = STRETCH; }
