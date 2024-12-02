@@ -6,27 +6,27 @@ NAMESPACE Invoicing;
 
 FORM newOutgoingPayment 'Outgoing payment'
     OBJECTS o = OutgoingPayment PANEL
-    PROPERTIES(o) nameCompanyAccount, dateTime
-    FILTERS holder(companyAccount(o)) = company(o)
-    FILTERS currency(companyAccount(o)) = currency(o)
+    PROPERTIES(o) nameCompanyAccount, dateTime, nameCompany, nameCurrency
 ;
 
 DESIGN newOutgoingPayment {
     BOX(o) {
         horizontal = FALSE;
         lines = 1;
-        size = (70, 100);
+        size = (50, 50);
     }
 }
 
 payForBill 'Register Payment' (Bill b) {
     NEW o = OutgoingPayment {
+        IF canceled() THEN RETURN;
+
         ready(o) <- TRUE;
 
         partner(o) <- vendor(b);
         company(o) <- company(b);
         currency(o) <- currency(b);
-        amount(o) <- untaxedAmount(b);
+        amount(o) <- amount(b);
         type(o) <- defaultOutgoingPaymentType();
         dateTime(o) <- currentDateTime();
 
@@ -50,6 +50,7 @@ DESIGN bill {
         MOVE PROPERTY(payForBill(b)) { valueClass = 'btn-primary'; }
     }
 }
+
 DESIGN bill {
     REMOVE PROPERTY (registerPayment(b));
     details {
@@ -59,3 +60,6 @@ DESIGN bill {
         }
     }
 }
+
+CONSTRAINT currency(OutgoingPayment o) AND currency(companyAccount(o)) != currency(o) CHECKED BY companyAccount[OutgoingPayment] MESSAGE '';
+CONSTRAINT company(OutgoingPayment o) AND holder(companyAccount(o)) != company(o) CHECKED BY companyAccount[OutgoingPayment] MESSAGE '';
