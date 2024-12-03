@@ -1,0 +1,81 @@
+MODULE Notification;
+
+REQUIRE EmployeeCustom, Bill, Employee;
+
+NAMESPACE Integration;
+
+CLASS Notification 'Notifications';
+
+CLASS NotificationType 'Notification type' {
+    bill 'Bill change',
+    task 'Task'
+}
+
+type = DATA NotificationType (Notification) MATERIALIZED NONULL;
+name 'Notification type' (NotificationType m) = staticCaption(m) IF m IS NotificationType;
+
+template 'Template' = DATA TEXT (NotificationType);
+
+FORM templates 'Notification templates'
+    OBJECTS nt = NotificationType
+    PROPERTIES (nt) name READONLY, template
+;
+
+DESIGN templates {
+    alignment = STRETCH;
+    PROPERTY (name(nt)) { charWidth = 10; }
+    PROPERTY (template(nt)) {
+        tooltip = 'Шаблоны для счёта:
+        [nameProjectConcat] - название проекта;
+        [nameVendor] - поставщик;
+        [note] - примечание;
+        [dueDate] - оплатить до;
+        [nameStatus] - статус;
+        [prevNameStatus] - предыдущий статус;
+        [amount] - brutto;
+        [paid] - оплачено.
+        Шаблоны для задач:
+        [nameProject] - проект;
+        [nameAuthor] - автор;
+        [nameAssignedTo] - назначена на;
+        [nameStatus] - статус;
+        [namePriority] - приоритет;
+        [deadline] - срок исполнения.
+        ';
+    }
+}
+
+NAVIGATOR {
+    masterData {
+        NEW templates LAST;
+    }
+}
+
+billTemplateInitialized = TRUE IF template(NotificationType.bill);
+taskTemplateInitialized = TRUE IF template(NotificationType.task);
+
+onStarted() + {
+    IF NOT billTemplateInitialized() THEN {
+        template(NotificationType.bill) <- 'Изменение статуса фактуры:\nСтатус фактуры №[number] изменился с "[prevNameStatus]" на "[nameStatus]".';
+        APPLY;
+    }
+    IF NOT taskTemplateInitialized() THEN {
+        template(NotificationType.task) <-
+        'Задача «[name]» в рамках проекта [nameProject] назначена на [nameAssignedTo].\nПриоритет: [namePriority].\nСрок выполнения: [deadline].\nТекущий статус: [nameStatus].\nАвтор задачи: [nameAuthor].';
+        APPLY;
+    }
+}
+
+EXTEND FORM employee
+    OBJECTS nt = NotificationType
+    PROPERTIES(nt) name READONLY
+;
+
+DESIGN employee {
+    details {
+        NEW notifications {
+            caption = 'Notifications';
+            alignment = STRETCH;
+        }
+    }
+}

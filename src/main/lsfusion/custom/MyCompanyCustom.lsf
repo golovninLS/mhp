@@ -95,8 +95,10 @@ REQUIRE Eval, ProcessMonitor, Backup,
         BillLunch, ProjectBillCustom, EmployeeTimesheet,
 
         ProjectFileFolder, TaskCustom, RabbitMQ,
-        
-        TelegramCustom, TelegramNotification, Mailing, ScrapProject, ScrapProjectLedger, InvoiceCustom, AccomodationHistory, PaymentCustom, ProjectGanttChart,
+
+        TelegramCustom, Notification, TelegramNotification, EmailNotification, BillNotification, TaskNotification,
+
+        Mailing, ScrapProject, ScrapProjectLedger, InvoiceCustom, AccomodationHistory, PaymentCustom, ProjectGanttChart,
 
         MetaCompanySeparation, HumanResources, ApplicationInterview, PayslipBatchCustom, ApplicationCustom, PartnerCustom, BillOutgoingPayment
 ;

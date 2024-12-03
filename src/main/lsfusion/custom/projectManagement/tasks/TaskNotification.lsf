@@ -1,0 +1,56 @@
+MODULE TaskNotification;
+
+REQUIRE EmailNotification, TelegramNotification, TaskCustom;
+
+NAMESPACE ProjectManagement;
+
+messageNotification(Task t) =
+    replace(replace(replace(replace(replace(replace(replace(template(NotificationType.task), '[name]', OVERRIDE name(t), ''),
+        '[nameProject]', OVERRIDE nameProject(t), '-'),
+        '[nameAuthor]', OVERRIDE nameAuthor(t), '-'),
+        '[nameAssignedTo]', OVERRIDE nameAssignedTo(t), '-'),
+        '[nameStatus]', OVERRIDE nameStatus(t), '-'),
+        '[namePriority]', OVERRIDE namePriority(t), '-'),
+        '[deadline]', OVERRIDE STRING(deadline(t)), '-');
+
+WHEN (SETCHANGED(Task t IS Task) OR SETCHANGED(assignedTo(t))) AND chat(assignedTo(t)) AND in(chat(assignedTo(t)), NotificationType.task) DO {
+    sendMessage(chat(assignedTo(t)), messageNotification(t));
+}
+
+statusNotReady (Task t) = TRUE IF (status(t) != taskStatus('done') AND status(t) != taskStatus('closed'));
+nameTaskProject (Task t) = CONCAT ' — ', '• ' + name(t), (OVERRIDE nameProject(t), 'проект не указан');
+deadlineToChar (Task t) = toChar(deadline(t), 'dd.mm.yyyy');
+
+//назначены мне
+overdueTasks (Employee e) = '🔴 Просроченные:\n' + (GROUP CONCAT (nameTaskProject(Task t) + ' — ' + deadlineToChar(t))
+    IF assignedTo(t) = e AND deadline(t) < currentDate() AND statusNotReady(t), '\n' ORDER t);
+deadlineTodayTasks (Employee e) = '⚠️ Дедлайн сегодня:\n' + (GROUP CONCAT nameTaskProject(Task t)
+    IF assignedTo(t) = e AND deadline(t) = currentDate() AND statusNotReady(t), '\n' ORDER t);
+assignedForMe (Employee e) = 'Назначены мне:\n' + CONCAT '\n', overdueTasks(e), deadlineTodayTasks(e);
+
+//мои задачи
+overdueTasksMine (Employee e) = '🔴 Просроченные:\n' + (GROUP CONCAT (CONCAT ' — ', nameTaskProject (Task t), 'исполнитель', nameAssignedTo(t), deadlineToChar(t))
+    IF author(t) = e AND deadline(t) < currentDate() AND statusNotReady(t), '\n' ORDER t);
+deadlineTodayTasksMine (Employee e) = '⚠️ Дедлайн сегодня:\n' + (GROUP CONCAT (CONCAT ' — ', nameTaskProject (Task t), 'исполнитель', nameAssignedTo(t))
+    IF author(t) = e AND deadline(t) = currentDate() AND statusNotReady(t), '\n' ORDER t);
+createdByMe (Employee e) = 'Мои задачи:\n' + CONCAT '\n', overdueTasksMine(e), deadlineTodayTasksMine(e);
+
+//задачи проекта
+overdueTasksProject (Employee e) = '🔴 Просроченные:\n' + (GROUP CONCAT (CONCAT ' — ', nameTaskProject (Task t), deadlineToChar(t))
+    IF in(project(t), e) AND NOT assignedTo(t) AND deadline(t) < currentDate() AND statusNotReady(t), '\n' ORDER t);
+deadlineTodayTasksProject (Employee e) = '⚠️ Дедлайн сегодня:\n' + (GROUP CONCAT (CONCAT ' — ', nameTaskProject (Task t), deadlineToChar(t))
+    IF in(project(t), e) AND NOT assignedTo(t) AND deadline(t) = currentDate() AND statusNotReady(t), '\n' ORDER t);
+projectTasks (Employee e) = 'Задачи проекта:\n' + CONCAT '\n', overdueTasksProject(e), deadlineTodayTasksProject(e);
+
+tasksReportMessage (Chat c) = CONCAT '\n\n', assignedForMe(employee(c)), createdByMe(employee(c)), projectTasks(employee(c));
+tasksReportMessageEmail(Chat c) = replace(tasksReportMessage(c), '\n', '<br>');
+
+sendTaskNotificationTelegram () {
+    timeoutHttp() <- 20000;
+    FOR Chat c IS Chat AND employee(c) DO TRY {
+        sendMessage(c, tasksReportMessage(c));
+    } CATCH {
+        MESSAGE 'Сообщение не было отправлено для ' + nameEmployee(c);
+        MESSAGE System.messageCaughtException();
+    }
+}

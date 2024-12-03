@@ -1,0 +1,43 @@
+MODULE BillNotification;
+
+REQUIRE TelegramNotification, Debt, AccountBillProject;
+
+NAMESPACE Integration;
+
+notify 'Уведомлять' = DATA BOOLEAN (BillStatus);
+
+EXTEND FORM Invoicing.options
+    OBJECTS ns = BillStatus
+    PROPERTIES (ns) name READONLY, notify
+;
+
+DESIGN Invoicing.options {
+    tabbedPane {
+        NEW notification {
+            caption = 'Notifications';
+            MOVE BOX (ns);
+        }
+    }
+}
+
+messageNotification(Bill b) =
+    replace(replace(replace(replace(replace(replace(replace(replace(replace(template(NotificationType.bill), '[number]', OVERRIDE number(b), ''),
+        '[nameProjectConcat]', OVERRIDE nameProjectConcat(b), ''),
+        '[nameVendor]', OVERRIDE nameVendor(b), ''),
+        '[note]', OVERRIDE note(b), ''),
+        '[dueDate]', OVERRIDE STRING(dueDate(b)), ''),
+        '[nameStatus]', OVERRIDE nameStatus(b), ''),
+        '[prevNameStatus]', OVERRIDE PREV(nameStatus(b)), ''),
+        '[amount]', OVERRIDE STRING(amount(b)), ''),
+        '[paid]', OVERRIDE STRING(paid(b)), '');
+
+WHEN SETCHANGED(status(Bill b)) AND notify(status(b)) DO {
+    TRY {
+        LOCAL message = STRING ();
+        message() <- messageNotification(b);
+        notifyUser(NotificationType.bill, message());
+    }
+        CATCH {
+        logToFile('telegram', messageCaughtException());
+    }
+}

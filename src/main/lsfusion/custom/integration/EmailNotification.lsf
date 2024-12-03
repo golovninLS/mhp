@@ -1,0 +1,11 @@
+MODULE EmailNotification;
+
+REQUIRE Notification;
+
+NAMESPACE Integration;
+
+in 'Уведомлять по email' = DATA BOOLEAN (Employee, NotificationType) CHARWIDTH 12;
+
+EXTEND FORM employee
+    PROPERTIES (e, nt) in FIRST READONLYIF nt = NotificationType.bill
+;
