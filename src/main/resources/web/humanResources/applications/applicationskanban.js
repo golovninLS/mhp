@@ -1,7 +1,7 @@
 function applicationsKanbanReorder(controller, elements) {
     for (let i = 0; i < elements.length; i++) {
-        if (elements[i].applications.currentOrder !== i) {
-            controller.changeProperty("currentOrder", elements[i].applications, i);
+        if (elements[i].applications.order !== i) {
+            controller.changeProperty("order", elements[i].applications, i);
         }
     }
 }
@@ -161,6 +161,7 @@ function applicationsKanban() {
 
                 statusDiv.appendChild(statusBody);
                 statusBody.status = status;
+                element.statusBody = statusBody;
                 element.kanban.appendChild(statusDiv);
 
                 element.drake.containers.push(statusBody);
@@ -187,11 +188,9 @@ function applicationsKanban() {
                     controller.changeProperty("refuse", el.applications);
                     source.appendChild(el);
                 }
-                if (target === element.statusBody) {
-                    if (el.applications.status !== target.status.id.toString())
-                        controller.changeProperty("status", el.applications, target.status.id);
-                        applicationsKanbanReorder(controller, target.children);
-                }
+                if (el.applications.status !== target.status.id.toString())
+                    controller.changeProperty("status", el.applications, target.status.id);
+                applicationsKanbanReorder(controller, target.children);
             });
         },
         clear: function (element) {
