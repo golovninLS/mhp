@@ -40,10 +40,7 @@ function applicationsKanban() {
             if (element.drake) element.drake.destroy();
              element.drake = dragula({
                  copy: false,
-                 revertOnSpill: true,
-                 accepts: function (el, target) {
-                     return target === element.acceptButton || target === element.declineButton;
-                 }
+                 revertOnSpill: true
              });
 
             while (element.kanban.lastElementChild) {
@@ -190,14 +187,12 @@ function applicationsKanban() {
                     controller.changeProperty("refuse", el.applications);
                     source.appendChild(el);
                 }
+                if (target === element.statusBody) {
+                    if (el.applications.status !== target.status.id.toString())
+                        controller.changeProperty("status", el.applications, target.status.id);
+                        applicationsKanbanReorder(controller, target.children);
+                }
             });
-
-//            element.drake.on("drop", function(el, target, source, sibling) {
-////                if (el.applications.status !== target.status.id.toString())
-////                    controller.changeProperty("status", el.applications, target.status.id);
-////                applicationsKanbanReorder(controller, target.children);
-//            });
-
         },
         clear: function (element) {
             if (element.drake) element.drake.destroy();
