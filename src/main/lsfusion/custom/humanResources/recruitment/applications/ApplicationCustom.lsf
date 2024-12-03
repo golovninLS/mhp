@@ -502,6 +502,9 @@ changeStatus (Application o, ApplicationStatus s) +{
         refuse(o);
         APPLY;
     }
+    IF s = ApplicationStatus.interview THEN{
+        setNextContactDate(o);
+    }
 }
 
 showStatusRule(Application o, ApplicationStatus s) += WHEN status(o) = ApplicationStatus.new AND 

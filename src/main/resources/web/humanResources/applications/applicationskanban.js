@@ -187,10 +187,12 @@ function applicationsKanban() {
                 if (target === element.declineButton) {
                     controller.changeProperty("refuse", el.applications);
                     source.appendChild(el);
-                }
-                if (el.applications.status !== target.status.id.toString())
+                } else
+                if (el.applications.status !== target.status.id.toString()){
                     controller.changeProperty("status", el.applications, target.status.id);
-                applicationsKanbanReorder(controller, target.children);
+                    applicationsKanbanReorder(controller, target.children);
+                }
+
             });
         },
         clear: function (element) {
