@@ -45,7 +45,7 @@ projectTasks (Employee e) = 'Задачи проекта:\n' + CONCAT '\n', over
 tasksReportMessage (Chat c) = CONCAT '\n\n', assignedForMe(employee(c)), createdByMe(employee(c)), projectTasks(employee(c));
 tasksReportMessageEmail(Chat c) = replace(tasksReportMessage(c), '\n', '<br>');
 
-sendTaskNotificationTelegram () {
+sendTaskNotificationsTelegram () {
     timeoutHttp() <- 20000;
     FOR Chat c IS Chat AND employee(c) DO TRY {
         sendMessage(c, tasksReportMessage(c));
