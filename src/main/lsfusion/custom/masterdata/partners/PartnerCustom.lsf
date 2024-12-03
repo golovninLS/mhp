@@ -19,7 +19,7 @@ getPartnerData 'Получить данные по NIP' (Partner p) {
         city(p) <- ISTRING[50](miejscowosc());
         state(p) <- ISTRING[50](wojewodztwo());
         zip(p) <- ISTRING[10](kodPocztowy());
-        address(p) <- ISTRING[150](CONCAT ',', ulica(), nrNieruchomosci());
+        address(p) <- ISTRING[150](CONCAT ' ', ulica(), nrNieruchomosci());
     }
 }
 
