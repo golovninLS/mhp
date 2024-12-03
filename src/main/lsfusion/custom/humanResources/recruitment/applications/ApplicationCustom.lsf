@@ -473,6 +473,7 @@ META defineStatusApplication(name, caption, nameCompleted, captionComplete, ord)
     }
     changeStatus (Application o, ApplicationStatus s) +{
         IF s = ApplicationStatus.##name THEN {
+            IF NOT interview(o) THEN contacted(o); 
             IF NOT name(o) THEN{
                 begin###name(o);
             } ELSE{
