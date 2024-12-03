@@ -96,8 +96,8 @@ function applicationsKanban() {
                         let applicationsCard = document.createElement("div");
                         applicationsCard.classList.add("applications-kanban-card");
                         applicationsCard.classList.add("card");
-                        if (applications.idColorPriority)
-                            applicationsCard.classList.add("text-bg-" + applications.idColorPriority);
+                        if (applications.idBackground)
+                            applicationsCard.classList.add("text-bg-" + applications.idBackground);
 
                         applicationsCard.addEventListener("click", function() {
                             controller.changeObject(applications, true, applicationsCard);

@@ -54,3 +54,37 @@ sendTaskNotificationTelegram () {
         MESSAGE System.messageCaughtException();
     }
 }
+
+sendTaskNotificationsEmail () {
+    timeoutHttp() <- 20000;
+    FOR Employee e IS Employee AND email[Partner](e) DO TRY {
+        stringToFile(tasksReportMessageEmail(chat(e)));
+        EMAIL
+            SUBJECT ('Отчёт по задачам')
+            TO email[Partner](e)
+            BODY resultFile();
+        MESSAGE 'Отчёт по задачам был отправлен' NOWAIT;
+    } CATCH {
+        MESSAGE 'Сообщение не было отправлено для ' + name(e);
+        MESSAGE System.messageCaughtException();
+    }
+}
+
+sendMessageAboutAssignedTask (Employee e, STRING s) {
+    timeoutHttp() <- 20000;
+    IF email[Partner](e) THEN TRY {
+        stringToFile(s);
+        EMAIL
+            SUBJECT ('Назначена новая задача')
+            TO email[Partner](e)
+            BODY resultFile();
+        MESSAGE 'Уведомление о назначении новой задачи было отправлено' NOWAIT;
+    } CATCH {
+        MESSAGE 'Сообщение не было отправлено для ' + name(e);
+        MESSAGE System.messageCaughtException();
+    }
+}
+
+WHEN (SETCHANGED(Task t IS Task) OR SETCHANGED(assignedTo(t))) AND in(assignedTo(t), NotificationType.task) DO {
+    sendMessageAboutAssignedTask(assignedTo(t), messageNotification(t));
+}
