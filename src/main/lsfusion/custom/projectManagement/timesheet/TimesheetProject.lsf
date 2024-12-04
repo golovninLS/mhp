@@ -1,0 +1,378 @@
+MODULE TimesheetProject;
+
+REQUIRE TimesheetSupervisorCustom, TimesheetSupervisorLunch, TimesheetSupervisorAccomodation, TimesheetSupervisorPayslip, TimesheetSupervisorTotal;
+
+PRIORITY MasterData;
+
+NAMESPACE ProjectManagement;
+
+hoursTimesheet 'Hours' (INTERVAL[DATE] i, Project p) = hours(p, i);
+
+EXTEND FORM project
+    EVENTS ON INIT {
+        timesheetProject() <- p;
+    }
+    
+    OBJECTS dates = INTERVAL[DATE] PANEL NULL
+    PROPERTIES dates '' = VALUE(dates)
+    PROPERTIES prevInterval '<' = { SEEK project.dates = Utils.prevMonthInterval(dates); },
+        nextInterval '>' = { SEEK project.dates = Utils.nextMonthInterval(dates); }
+
+    PROPERTIES() ProjectManagement.nameTimesheetTimeEntryType SELECT 'buttonGroup',
+        ProjectManagement.nameTimesheetTimeEntryHours SHOWIF ProjectManagement.timesheetTimeEntryType()
+            AND ProjectManagement.countHours(ProjectManagement.timesheetTimeEntryType()) SELECT 'buttonGroup'
+
+    PROPERTIES READONLY timesheethours = ProjectManagement.hoursTimesheet(dates, p)
+
+    OBJECTS d = DATE
+    FILTERS Time.iterate(d, Time.from(dates), Time.to(dates))
+
+    OBJECTS e = MasterData.Employee
+    PROPERTIES(e) READONLY MasterData.firstName, MasterData.lastName, MasterData.namePosition, ProjectManagement.rolesTimesheet
+    PROPERTIES ProjectManagement.hoursTimesheet(d, e) WAIT COLUMNS (d) HEADER Time.extractDay(d) BACKGROUND ProjectManagement.backgroundHoursTimesheet(d, e)
+    ON CHANGE {
+        FOR ProjectManagement.TimeEntryType et = ProjectManagement.timesheetTimeEntryType() DO {
+            IF NOT ProjectManagement.timesheetTimeEntryHours() THEN {
+                INPUT n = ProjectManagement.hoursTimesheet(d, e) DO {
+                    ProjectManagement.changeSaveTimesheetHours(d, e, et, n, NULL, ProjectManagement.autoSaveTimesheetHours());
+                }
+            } ELSE
+                ProjectManagement.changeSaveTimesheetHours(d, e, et, ProjectManagement.hours(ProjectManagement.timesheetTimeEntryHours()), ProjectManagement.timesheetTimeEntryHours(), ProjectManagement.autoSaveTimesheetHours());
+        } ELSE
+        SHOW ProjectManagement.timesheetSupervisorDateEmployee OBJECTS i = Time.interval(d, d), e = e FLOAT;
+    } ON CONTEXTMENU ProjectManagement.copyHours(d) ON CONTEXTMENU ProjectManagement.clearHours(d) FOOTER ProjectManagement.hours(d, p)
+    FILTERS ProjectManagement.assigned(p, e, dates) OR ProjectManagement.hours(e, p, dates) OR
+        (NOT ProjectManagement.countAssignments(p))
+
+    EVENTS ON INIT {
+        ProjectManagement.timesheetTimeEntryType() <- ProjectManagement.defaultTimeEntryType();
+        SEEK project.dates = Time.interval(Time.firstDayOfMonth(Time.currentDate()), Time.lastDayOfMonth(Time.currentDate()));
+    }
+
+    OBJECTS pep = (pm = ProjectManagement.Project, ep = MasterData.Employee)
+    PROPERTIES READONLY name 'Project' = ProjectManagement.name(pm)
+    PROPERTIES(ep) READONLY ON CONTEXTMENU ProjectManagement.clearTimeEntry(pm, ep, dates) MasterData.firstName, MasterData.lastName, MasterData.namePosition, ProjectManagement.rolesTimesheet
+    PROPERTIES ProjectManagement.descriptionTimesheet(d, ep, pm) WAIT COLUMNS (d) HEADER Time.extractDay(d) BACKGROUND ProjectManagement.backgroundHoursTimesheet(d, ep, pm)
+    ON CHANGE {
+        FOR ProjectManagement.TimeEntryType et = ProjectManagement.timesheetTimeEntryType() AND (pm OR NOT ProjectManagement.project(ProjectManagement.timeEntry(d, ep, ProjectManagement.timesheetTimeEntryType()))) DO {
+            IF NOT ProjectManagement.timesheetTimeEntryHours() THEN {
+                INPUT n = ProjectManagement.hoursTimesheet(d, ep) DO {
+                    ProjectManagement.changeSaveTimesheetHours(d, ep, pm, et, n, NULL, ProjectManagement.autoSaveTimesheetHours());
+                }
+            } ELSE
+                ProjectManagement.changeSaveTimesheetHours(d, ep, pm, et, ProjectManagement.hours(ProjectManagement.timesheetTimeEntryHours()), ProjectManagement.timesheetTimeEntryHours(), ProjectManagement.autoSaveTimesheetHours());
+        } ELSE
+        SHOW ProjectManagement.timesheetSupervisorDateEmployee OBJECTS i = Time.interval(d, d), e = ep FLOAT;
+    } ON CONTEXTMENU ProjectManagement.copyHours(d, pm) ON CONTEXTMENU ProjectManagement.clearHours(d, pm) ON CONTEXTMENU ProjectManagement.startVacation(ep, pm, dates, d) ON CONTEXTMENU ProjectManagement.endVaction(ep, pm, dates, d)
+    ON CONTEXTMENU ProjectManagement.delete(ep, pm, d)
+    FOOTER hoursTimesheet(d, pm)
+    FILTERS ProjectManagement.assigned(pm, ep, dates) OR ProjectManagement.timeEntry(ep, pm, dates) OR (NOT ProjectManagement.countAssignments(pm) AND NOT ProjectManagement.countAssignments(Authentication.currentUser()))
+    FILTERS pm == p
+
+    FILTERGROUP onlyFilledTimeEntry
+        FILTER 'Только заполненные' ProjectManagement.countTimeEntryType(pm, ep, dates)
+
+    FILTERS ProjectManagement.in(pm, Authentication.currentUser()) OR ProjectManagement.showAllProjects(Authentication.currentUser())
+
+    //обеды
+    PROPERTIES datesLunch '' = VALUE(dates)
+    PROPERTIES prevIntervalLunch '<' = { SEEK project.dates = Utils.prevMonthInterval(dates); },
+        nextIntervalLunch '>' = { SEEK project.dates = Utils.nextMonthInterval(dates); }
+
+    PROPERTIES ProjectManagement.nameTimesheetLunchProduct()
+    PROPERTIES READONLY timesheethoursLunch = ProjectManagement.hoursTimesheet(dates, p)
+
+    OBJECTS pel = (pl = ProjectManagement.Project, el = MasterData.Employee)
+    PROPERTIES READONLY nameProjectLunch 'Project' = ProjectManagement.name(pl)
+    PROPERTIES(el) READONLY MasterData.firstName, MasterData.lastName, MasterData.namePosition, ProjectManagement.rolesTimesheet
+    FILTERS ProjectManagement.in(pl, Authentication.currentUser()) OR ProjectManagement.showAllProjects(Authentication.currentUser())
+
+    PROPERTIES ProjectManagement.symbolProductOrder(d, el, pl) WAIT COLUMNS (d) HEADER Time.extractDay(d) BACKGROUND ProjectManagement.backgroundHoursTimesheet(d, el)
+    ON CHANGE {
+        FOR Lunch.Product lp = ProjectManagement.timesheetLunchProduct() DO
+            NEWSESSION {
+                FOR Lunch.Order o = Lunch.order(d, el) DO {
+                    IF Lunch.product(o) = lp THEN
+                        DELETE o;
+                    ELSE
+                        Lunch.product(o) <- lp;
+                } ELSE {
+                    NEW o = Lunch.Order {
+                        Lunch.date(o) <- d;
+                        Lunch.employee(o) <- el;
+                        Lunch.project(o) <- pl;
+                        Lunch.product(o) <- lp;
+                    }
+                }
+                APPLY;
+            }
+            ELSE
+        SHOW ProjectManagement.timesheetSupervisorDateEmployeeLuncheOrders OBJECTS i = Time.interval(d, d), e = el FLOAT;
+    } ON CONTEXTMENU ProjectManagement.clearLunch(d) ON CONTEXTMENU ProjectManagement.fillLunch(d)
+    ON CONTEXTMENU ProjectManagement.clearLunch(pl, el) ON CONTEXTMENU ProjectManagement.fillLunch(pl, el)
+    ON CONTEXTMENU ProjectManagement.copyLunch(d)
+    FOOTER lunchesT(d, pl)
+
+    FILTERS ProjectManagement.assigned(pl, el, dates) OR ProjectManagement.hours(el, pl, dates) OR (NOT ProjectManagement.countAssignments(pl) AND NOT ProjectManagement.countAssignments(Authentication.currentUser()))
+    FILTERS pl == p
+    FILTERS ProjectManagement.in(pl, ProjectManagement.timesheetLunchProduct()) OR NOT ProjectManagement.timesheetLunchProduct()
+
+    FILTERGROUP onlyFilledLunch
+        FILTER 'Только заполненные' ProjectManagement.countLunchProduct(pl, el, dates)
+
+    PROPERTIES Lunch.countLunches(el, pl, dates) BEFORE symbolProductOrder(d, el, pl)
+
+    //размещение
+    PROPERTIES datesAccomodation '' = VALUE(dates)
+    PROPERTIES prevIntervalAccomodation '<' = { SEEK project.dates = Utils.prevMonthInterval(dates); },
+        nextIntervalAccomodation '>' = { SEEK project.dates = Utils.nextMonthInterval(dates); }
+
+    PROPERTIES ProjectManagement.nameTimesheetAccomodation()
+    PROPERTIES READONLY timesheethoursAccomodation = ProjectManagement.hoursTimesheet(dates, p)
+
+    OBJECTS pea = (paa = ProjectManagement.Project, ea = MasterData.Employee)
+    PROPERTIES READONLY nameProjectAccomodation 'Project' = ProjectManagement.name(paa)
+    PROPERTIES(ea) READONLY MasterData.firstName, MasterData.lastName, MasterData.namePosition, ProjectManagement.rolesTimesheet
+
+    PROPERTIES ProjectManagement.symbolAccomodationOrder(d, ea, paa) WAIT COLUMNS (d) HEADER Time.extractDay(d) BACKGROUND ProjectManagement.backgroundHoursTimesheet(d, ea)
+    ON CHANGE {
+        IF ProjectManagement.timesheetAccomodation() THEN {
+            NEWSESSION {
+                IF Accomodation.accomodation(Accomodation.order(d, ea)) = ProjectManagement.timesheetAccomodation() THEN {
+                    Accomodation.endDate(Accomodation.order(d, ea)) <- d;
+                } ELSE IF Accomodation.accomodation(Accomodation.order(Time.subtract(d, 1), ea)) = ProjectManagement.timesheetAccomodation() AND Accomodation.accomodation(Accomodation.nextOrder(d, ea)) != ProjectManagement.timesheetAccomodation() THEN {
+                    Accomodation.endDate(Accomodation.order(Time.subtract(d, 1), ea)) <- Accomodation.startDate(Accomodation.nextOrder(d, ea));
+                } ELSE IF Accomodation.accomodation(Accomodation.order(Time.subtract(d, 1), ea)) = ProjectManagement.timesheetAccomodation() AND NOT Accomodation.accomodation(Accomodation.nextOrder(d, ea)) THEN {
+                    Accomodation.endDate(Accomodation.order(Time.subtract(d, 1), ea)) <- NULL;
+                } ELSE IF Accomodation.accomodation(Accomodation.nextOrder(d, ea)) = ProjectManagement.timesheetAccomodation() THEN {
+                    Accomodation.startDate(Accomodation.nextOrder(d, ea)) <- d;
+                } ELSE IF Accomodation.accomodation(Accomodation.nextOrder(d, ea)) THEN {
+                    NEW o = Accomodation.Order {
+                        Accomodation.startDate(o) <- d;
+                        Accomodation.employee(o) <- ea;
+                        ProjectManagement.project(o) <- paa;
+                        Accomodation.accomodation(o) <- ProjectManagement.timesheetAccomodation();
+                        Accomodation.endDate(o) <- Accomodation.startDate(Accomodation.nextOrder(d, ea));
+                    }
+                } ELSE {
+                    NEW o = Accomodation.Order {
+                        Accomodation.startDate(o) <- d;
+                        Accomodation.employee(o) <- ea;
+                        Accomodation.accomodation(o) <- ProjectManagement.timesheetAccomodation();
+                        ProjectManagement.project(o) <- paa;
+                    }
+                }
+                APPLY;
+            }
+        } ELSE
+            SHOW ProjectManagement.timesheetSupervisorDateEmployeeAccomodationOrders OBJECTS i = Time.interval(d, d), e = ea FLOAT;
+    } ON CONTEXTMENU ProjectManagement.checkIn(d, ea) ON CONTEXTMENU ProjectManagement.checkOut(d, ea) ON CONTEXTMENU ProjectManagement.delete(d, ea)
+    FOOTER accomodationsT(d, paa)
+
+    FILTERS ProjectManagement.assigned(paa, ea, dates) OR ProjectManagement.hours(ea, paa, dates) OR (NOT ProjectManagement.countAssignments(paa) AND NOT ProjectManagement.countAssignments(Authentication.currentUser()))
+    FILTERS paa == p
+    FILTERS ProjectManagement.in(paa, ProjectManagement.timesheetAccomodation()) OR NOT ProjectManagement.timesheetAccomodation()
+    FILTERS ProjectManagement.in(paa, Authentication.currentUser()) OR ProjectManagement.showAllProjects(Authentication.currentUser())
+
+    FILTERGROUP onlyFilledAccomodation
+        FILTER 'Только заполненные' ProjectManagement.countSymbols(ea, paa, dates)
+
+    PROPERTIES ProjectManagement.countAccomodation(ea, paa, dates) BEFORE symbolAccomodationOrder(d, ea, paa)
+
+    //тотал
+    PROPERTIES datesTotal '' = VALUE(dates)
+    PROPERTIES prevIntervalTotal '<' = { SEEK project.dates = prevMonthInterval(dates); },
+        nextIntervalTotal '>' = { SEEK project.dates = nextMonthInterval(dates); }
+
+    PROPERTIES closeProject(p, dates) SHOWIF from(dates) > managerTimesheetCloseDate(p) OR NOT managerTimesheetCloseDate(p)
+    PROPERTIES READONLY timesheethoursTotal = hoursTimesheet(dates, p)
+
+    OBJECTS tee = (tp = Project, et = Employee)
+    PROPERTIES READONLY nameProjectTotal 'Project' = name(tp)
+
+    PROPERTIES(et) READONLY firstName, lastName, namePosition, rolesTimesheet
+
+    PROPERTIES timesheetHoursProject(et, tp, dates), rateSalary(et, tp, dates) ON CHANGE {changeRateSalary(et, tp, dates, autoSaveTimesheetHours());},
+        timesheetSalaryProject(et, tp, dates) ON CHANGE {
+            SHOW timesheetSupervisorDateEmployee OBJECTS i = dates, e = et FLOAT;
+        }
+
+    PROPERTIES salary(et, tp, dates) ON CHANGE {
+        SHOW timesheetSupervisorDateEmployee OBJECTS i = dates, e = et FLOAT;
+    }, lunches(et, tp, dates) ON CHANGE {
+        SHOW Lunch.ordersDateEmployee OBJECTS i = dates, e = et FLOAT;
+    }, accomodation(et, tp, dates) ON CHANGE {
+        SHOW Accomodation.ordersDateEmployee OBJECTS i = dates, e = et FLOAT;
+    }, lunchCompensation(et, tp, dates)
+
+    FILTERS assigned(tp, et, dates) OR (NOT countAssignments(p) AND NOT countAssignments(currentUser()))
+    FILTERS tp == p
+    FILTERGROUP onlyFilledTotal
+        FILTER 'Только заполненные'
+        salary(et, tp, dates) OR lunches(et, tp, dates) OR accomodation(et, tp, dates) OR lunchCompensation(et, tp, dates)
+            AND (hours(et, tp, dates) OR countLunches(et, tp, dates) OR countAccomodation(et, tp, dates))
+    FILTERS in(tp, currentUser()) OR showAllProjects(currentUser())
+
+    //payroll
+    PROPERTIES datesPayroll '' = VALUE(dates)
+    PROPERTIES prevIntervalPayroll '<' = { SEEK project.dates = prevMonthInterval(dates); },
+        nextIntervalPayroll '>' = { SEEK project.dates = nextMonthInterval(dates); }
+
+    OBJECTS pc = PayslipCategory
+    PROPERTIES(pc) index
+    ORDERS index(pc)
+
+    PROPERTIES nameTimesheetCompany(), generatePayslips(dates) SHOWIF timesheetCompany()
+
+    OBJECTS prr = Project
+    FILTERS prr = p
+    FILTERS in(prr, Authentication.currentUser()) OR showAllProjects(currentUser())
+
+    OBJECTS payslip = Payslip
+    PROPERTIES(payslip) READONLY number, startDate, endDate, firstNameEmployee, lastNameEmployee, namePositionEmployee, nameCompany, netWage
+    PROPERTIES(payslip) NEWSESSION EDIT
+    FILTERS in(prr, payslip) OR showAllProjects(currentUser())
+
+    PROPERTIES(payslip, pc) total COLUMNS 'total' (pc) HEADER name(pc) READONLYIF readonly(pc) ON CHANGE {
+        NEWSESSION {
+            changeTotal(payslip, pc);
+            APPLY;
+        }
+    }
+
+    PROPERTIES(payslip, pc) 'Total (project)' = totalTimesheet COLUMNS 'total' (pc)
+    HEADER name(pc) + '(' + 'Project' + ')' READONLYIF readonly(pc) SHOWIF splitByProject(pc)
+
+    ON CHANGE {
+        NEWSESSION {
+            changeTotal(payslip, pc, prr);
+            APPLY;
+        }
+    }
+
+    FILTERS [FILTER project.e](employee(payslip)),
+        startDate(payslip) >= from(dates) AND startDate(payslip) <= to(dates),
+        company(payslip) = timesheetCompany() OR NOT timesheetCompany()
+
+    OBJECTS pcT = PayslipCategory
+    PROPERTIES (et, pcT, dates) totalTimesheet DRAW payslip COLUMNS 'totalSection' (pcT) GRID
+    HEADER name(pcT) + '(' + name(prr) + ')' READONLYIF readonly(pcT)
+    SHOWIF splitByProject(pcT) FOOTER totalTimesheet(pcT, dates)
+
+    ON CHANGE {
+        NEWSESSION {
+            changeTotal(payslipTimesheet(et, dates), pcT, prr);
+            APPLY;
+        }
+    }
+    PROPERTIES READONLY totalTimesheet(et, tp, dates) LAST FOOTER totalTimesheet(dates, tp)
+;
+
+DESIGN project {
+    details {
+        NEW timesheetProject LAST {
+            caption = 'Timesheet';
+            NEW tabbedPane {
+                tabbed = TRUE;
+                fill = 1;
+                NEW timesheet {
+                    caption = 'Timesheet';
+                    NEW edit {
+                        horizontal = TRUE;
+                        MOVE PROPERTY(prevInterval);
+                        MOVE PROPERTY(dates);
+                        MOVE PROPERTY(nextInterval);
+                        MOVE PROPERTY(timesheethours);
+
+                        MOVE PROPERTY(nameTimesheetTimeEntryType()) {
+                            caption = '';
+                            placeholder = 'Type';
+                        }
+                        MOVE PROPERTY(nameTimesheetTimeEntryHours()) {
+                            caption = '';
+                            placeholder = 'Hours';
+                        }
+                        MOVE PROPERTY(closeProject(p, dates));
+                        MOVE FILTERGROUP(onlyFilledTimeEntry);
+                    }
+                    REMOVE BOX(e);
+                    MOVE BOX(pep) {
+                        caption = '';
+                        PROPERTY(descriptionTimesheet(d, ep, pm)) {
+                            charWidth = 3;
+                        }
+                    }
+                    REMOVE TOOLBARSYSTEM(pep);
+                }
+                NEW lunch {
+                    caption = 'Lunches';
+                    NEW fltr {
+                        horizontal = TRUE;
+                        MOVE PROPERTY(prevIntervalLunch);
+                        MOVE PROPERTY(datesLunch);
+                        MOVE PROPERTY(nextIntervalLunch);
+                        MOVE PROPERTY(timesheethoursLunch);
+                        MOVE PROPERTY(nameTimesheetLunchProduct()) { alignment = START; }
+                        MOVE FILTERGROUP(onlyFilledLunch);
+                    }
+                    MOVE BOX(pel) {
+                        caption = '';
+                    }
+                    REMOVE TOOLBARSYSTEM(pel);
+                }
+                NEW accomodation {
+                    caption = 'Accomodation order';
+                    NEW fltr2 {
+                        horizontal = TRUE;
+                        MOVE PROPERTY(prevIntervalAccomodation);
+                        MOVE PROPERTY(datesAccomodation);
+                        MOVE PROPERTY(nextIntervalAccomodation);
+                        MOVE PROPERTY(timesheethoursAccomodation);
+                        MOVE PROPERTY(nameTimesheetAccomodation()) { alignment = START; }
+                        MOVE FILTERGROUP(onlyFilledAccomodation);
+                    }
+                    MOVE BOX(pea) {
+                        caption = '';
+                        PROPERTY(symbolAccomodationOrder(d, ea, paa)) {
+                            charWidth = 2;
+                            //                valueTooltip = timeEntries(d, e);
+                        }
+                    }
+                    REMOVE TOOLBARSYSTEM(pea);
+                }
+                NEW total {
+                    caption = 'Total';
+                    NEW fltr3 {
+                        horizontal = TRUE;
+                        MOVE PROPERTY(prevIntervalTotal);
+                        MOVE PROPERTY(datesTotal);
+                        MOVE PROPERTY(nextIntervalTotal);
+                        MOVE PROPERTY(timesheethoursTotal);
+                        MOVE FILTERGROUP(onlyFilledTotal);
+                    }
+                    MOVE BOX(tee) {
+                        caption = '';
+                    }
+                    REMOVE TOOLBARSYSTEM(tee);
+                }
+                NEW payslip {
+                    caption = 'Payslip';
+                    REMOVE BOX(pc);
+                    REMOVE BOX(prr);
+                    NEW payslipHeader {
+                        horizontal = TRUE;
+                        MOVE PROPERTY(prevIntervalPayroll);
+                        MOVE PROPERTY(datesPayroll);
+                        MOVE PROPERTY(nextIntervalPayroll);
+                        MOVE PROPERTY(nameTimesheetCompany());
+                        MOVE PROPERTY(generatePayslips(dates));
+                    }
+                    MOVE BOX(payslip) {
+                        caption = '';
+                    }
+                    REMOVE TOOLBARSYSTEM(payslip);
+                }
+            }
+        }
+    }
+}
