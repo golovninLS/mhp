@@ -25,8 +25,8 @@ showAllTasks 'Показывать все задачи' = DATA BOOLEAN (CustomUs
 EXTEND FORM tasks
     EXTEND FILTERGROUP my
         FILTER 'My tasks + Assigned to me' author(t) = currentUser() OR assignedTo(t) = currentUser() 'F7' DEFAULT 
-    FILTERS (author(t) = currentUser() OR assignedTo(t) = currentUser()) OR showAllTasks(currentUser())
-    FILTERS (author(tt) = currentUser() OR assignedTo(tt) = currentUser()) OR showAllTasks(currentUser())
+    FILTERS (author(t) = currentUser() OR assignedTo(t) = currentUser()) OR showAllTasks(currentUser()) OR in(project(t), currentUser())
+    FILTERS (author(tt) = currentUser() OR assignedTo(tt) = currentUser()) OR showAllTasks(currentUser()) OR in(project(t), currentUser());
 ;
 
 EXTEND FORM customUsers
@@ -175,4 +175,10 @@ DESIGN task {
     params {
         MOVE PROPERTY(startDate(t)) BEFORE PROPERTY (deadline(t));
     }
+}
+
+countOpenTasks = GROUP SUM 1 IF (assignedTo(Task t) = currentUser() OR in(project(t), currentUser())) AND NOT closed(t);
+
+NAVIGATOR {
+    MOVE tasks HEADER badged('Tasks', countOpenTasks());
 }

@@ -284,3 +284,10 @@ EXTEND FORM timesheetSupervisor
 EXTEND FORM projects
     FILTERS in(p, currentUser()) OR showAllProjects(currentUser())
 ;
+
+EXTEND FORM dialogProjects
+    FILTERS in(p, currentUser()) OR showAllProjects(currentUser())
+    FILTERGROUP active
+        FILTER 'Opened' NOT archived(p) AND NOT closed(p) DEFAULT
+        FILTER 'Closed' archived(p) OR closed(p)
+;

@@ -15,13 +15,13 @@ access (CustomUser u, Company c) = IF showAllCompaniesData(u) THEN TRUE ELSE in(
 //фильтрация форм
 META setCompanySeparation (form, obj, prop)
     EXTEND FORM form
-        FILTERS access(currentUser(), prop(obj))
+        FILTERS access(currentUser(), prop(obj)) OR NOT prop(obj)
     ;
 END
 
 META setCompanySeparationDiffProps (form, obj, propOuter, propInner)
     EXTEND FORM form
-        FILTERS access(currentUser(), propOuter(propInner(obj)))
+        FILTERS access(currentUser(), propOuter(propInner(obj))) OR NOT propInner(obj)
     ;
 END
 
@@ -32,9 +32,6 @@ META setCompanySeparationDiffPropsDiff (form, obj, propOuter, prop1, prop2)
             OR (access(currentUser(), propOuter(prop2(obj))) AND NOT propOuter(prop1(obj)))
     ;
 END
-
-//проекты
-@setCompanySeparation(projects, p, company);
 
 //сотрудники
 @setCompanySeparation(employeesCustom, e, legalEntity);
