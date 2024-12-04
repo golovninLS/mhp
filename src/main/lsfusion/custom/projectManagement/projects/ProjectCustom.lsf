@@ -173,7 +173,7 @@ DESIGN projects {
 }
 
 projectStatus 'Статус проекта' (Project p, INTERVAL[DATE] d) = IF managerTimesheetCloseDate(p) <= to(d) THEN 'Closed' ELSE 'Opened';
-backgroundProject (Project p, INTERVAL[DATE] d) = IF managerTimesheetCloseDate(p) <= to(d) THEN #ccffcc ELSE #ffffff;
+backgroundProject (Project p, INTERVAL[DATE] d) = IF NOT managerTimesheetCloseDate(p) <= to(d) THEN #ccffcc ELSE #ffffff;
 
 EXTEND FORM projects
     PROPERTIES (p, dates) projectStatus AFTER managerTimesheetCloseDate(p)
