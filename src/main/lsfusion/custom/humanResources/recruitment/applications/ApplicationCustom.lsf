@@ -25,6 +25,8 @@ background (Application a) = IF NOT isFirstApplication(a) THEN Color.danger;
 
 idBackground(Application a) = id(background(a));
 
+source = DATA STRING (Application);
+
 processMessage(Message m)+{
     FOR iterate(INTEGER i, 1, wordCount(message(m), '\n')) AND STRING s = getWord(message(m), '\n', i) NOINLINE DO{
         IF isSubstring(s, 'Упал лид') THEN NEW a = Application {
@@ -41,6 +43,7 @@ processMessage(Message m)+{
                 WHEN isSubstring(s, 'Имя:') THEN firstName(a) <- replace(s, 'Имя:', '');
                 WHEN isSubstring(s, 'Компания:') THEN companyName(a) <- replace(s, 'Компания:', '');
                 WHEN isSubstring(s, 'Страна:') THEN countryName(a) <- replace(s, 'Страна:', '');
+                WHEN isSubstring(s, 'Источник :') THEN source(a) <- replace(s, 'Источник :', '');
 
                 WHEN isSubstring(s, 'Как связаться:') THEN channelComunication(a) <- replace(s, 'Как связаться:', '');
                 WHEN isSubstring(s, 'Канал связи:') THEN channelComunication(a) <- replace(s, 'Канал связи:', '');
@@ -60,9 +63,10 @@ processMessage(Message m)+{
     APPLY;
 }
 
-WHEN SET (Application a IS Application) AND NOT subject(a) DO{
+WHEN SET (Application a IS Application) DO{
     subject(a) <- CONCAT ' ', companyName(a), countryName(a), textPosition(a);
 }
+
 speciality(STRING name) = GROUP MAX Speciality s BY lower(name(s));
 
 WHEN SETCHANGED(textPosition(Application a)) AND NOT mainSpeciality(a) AND Speciality s = speciality(lower(textPosition(a))) DO{
@@ -238,7 +242,7 @@ FORM applicationKanban 'Канбан анкет'
         textPosition,
         companyName,
         phone,
-                       
+        source,
         currentViza,
         channelComunication,
         captionContact,
