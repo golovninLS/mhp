@@ -44,3 +44,8 @@ DESIGN projects {
     PROPERTY(countTimeEntry(p)) { hide = TRUE; }
     PROPERTY(hoursTimeEntry(p)) { hide = TRUE; }
 }
+
+DESIGN projects {
+    PROPERTY (countTimeEntryCustom(p, dates)) { background = backgroundProject(p, dates); }
+    PROPERTY (hoursTimeEntryCustom(p, dates)) { background = backgroundProject(p, dates); }
+}

@@ -171,3 +171,33 @@ EXTEND FORM projects PROPERTIES(p) READONLY managersIn AFTER nameType(p);
 DESIGN projects {
     PROPERTY (nameManager(p)) { hide = TRUE; };
 }
+
+projectStatus 'Статус проекта' (Project p, INTERVAL[DATE] d) = IF managerTimesheetCloseDate(p) <= to(d) THEN 'Closed' ELSE 'Opened';
+backgroundProject (Project p, INTERVAL[DATE] d) = IF managerTimesheetCloseDate(p) <= to(d) THEN #ccffcc ELSE #ffffff;
+
+EXTEND FORM projects
+    PROPERTIES (p, dates) projectStatus AFTER managerTimesheetCloseDate(p)
+;
+
+DESIGN projects {
+    PROPERTY (nameManager(p)) { hide = TRUE; }
+    REMOVE PROPERTY (nameManager(p));
+    PROPERTY (managerTimesheetCloseDate(p)) { background = backgroundProject(p, dates); }
+    PROPERTY (projectStatus(p, dates)) { background = backgroundProject(p, dates); }
+    PROPERTY (nameCity(p)) { background = backgroundProject(p, dates); }
+    PROPERTY (name(p)) { background = backgroundProject(p, dates); }
+    PROPERTY (qtyEmployee(p)) { background = backgroundProject(p, dates); }
+    PROPERTY (nameType(p)) { background = backgroundProject(p, dates); }
+    PROPERTY (projectRevenue(p, dates)) { background = backgroundProject(p, dates); }
+    PROPERTY (hoursTimeEntry(p)) { background = backgroundProject(p, dates); }
+    PROPERTY (countTimeEntry(p)) { background = backgroundProject(p, dates); }
+    PROPERTY (sumProfit(p, dates)) { background = backgroundProject(p, dates); }
+    PROPERTY (sumExpense(p, dates)) { background = backgroundProject(p, dates); }
+    PROPERTY (balance(p, dates)) { background = backgroundProject(p, dates); }
+    PROPERTY (number(p)) { background = backgroundProject(p, dates); }
+    PROPERTY (startDate(p)) { background = backgroundProject(p, dates); }
+    PROPERTY (endDate(p)) { background = backgroundProject(p, dates); }
+    PROPERTY (namePartner(p)) { background = backgroundProject(p, dates); }
+    PROPERTY (managersIn(p)) { background = backgroundProject(p, dates); }
+    PROPERTY (nameCompany(p)) { background = backgroundProject(p, dates); }
+}

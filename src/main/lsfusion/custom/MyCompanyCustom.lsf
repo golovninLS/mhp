@@ -100,7 +100,7 @@ REQUIRE Eval, ProcessMonitor, Backup,
 
         Mailing, ScrapProject, ScrapProjectLedger, InvoiceCustom, AccomodationHistory, PaymentCustom, ProjectGanttChart,
 
-        MetaCompanySeparation, HumanResources, ApplicationInterview, PayslipBatchCustom, ApplicationCustom, PartnerCustom, BillOutgoingPayment
+        MetaCompanySeparation, HumanResources, ApplicationInterview, PayslipBatchCustom, ApplicationCustom, PartnerCustom, BillOutgoingPayment, ProjectTaskCustom
 ;
 
 onStarted()+{

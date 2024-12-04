@@ -1,0 +1,9 @@
+MODULE ProjectTaskCustom;
+
+REQUIRE ProjectTask, ProjectCustom;
+
+NAMESPACE ProjectManagement;
+
+DESIGN projects {
+    PROPERTY (countOpenedTask(p)) { background = backgroundProject(p, dates); }
+}
