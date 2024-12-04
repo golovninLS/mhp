@@ -131,7 +131,8 @@ function applicationsKanban() {
                         let applicationsContentCaption = document.createElement("li");
                         applicationsContentCaption.classList.add("applications-kanban-card-assigned-to");
                         applicationsContentCaption.classList.add("list-group-item");
-                        applicationsContentCaption.innerHTML = (applications.textPosition ? ("<div class=\"text-secondary\">Компания: </div>" + "<div>" + applications.companyName + "</div>") : "") +
+                        applicationsContentCaption.innerHTML = (applications.textPosition ? ("<div class=\"text-secondary\">Источник: </div>" + "<div>" + applications.source + "</div>") : "") +
+                                                               (applications.textPosition ? ("<div class=\"text-secondary\">Компания: </div>" + "<div>" + applications.companyName + "</div>") : "") +
                                                                (applications.textPosition ? ("<div class=\"text-secondary\">Специализация: </div>" + "<div>" + applications.textPosition + "</div>") : "") +
                                                                (applications.currentViza ? ("<div class=\"text-secondary\">Виза: </div>" + "<div>" + applications.currentViza + "</div>") : "") +
                                                                (applications.phone ? ("<div class=\"text-secondary\">Телефон</div>" + "<div>" + applications.phone + "</div>") : "") +
