@@ -89,6 +89,7 @@ getTextMessage(Messenger.Account a, LONG id, Chat chat){
             NEW m = Message{
                 id(m) <- id;
                 chat(m) <- chat;
+                dateTime(m) <- currentDateTime();
                 message(m) <- text();
                 processMessage(m);
             }
