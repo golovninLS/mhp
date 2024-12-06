@@ -1,0 +1,140 @@
+MODULE ApplicationReport;
+
+REQUIRE ApplicationCustom;
+
+NAMESPACE HumanResources;
+
+CLASS ApplicationSource 'Источник';
+nameSource 'Источник' = DATA STRING (ApplicationSource);
+source = GROUP AGGR ApplicationSource as BY nameSource(as);
+
+WHEN SET(source(Application a)) AND NOT source(source(a)) DO {
+    NEW as = ApplicationSource {
+        nameSource(as) <- source(a);
+    }
+    APPLY;
+}
+
+amountApplicationsByPeriod 'Общее количество анкет за период' (INTERVAL[DATE] i) = GROUP SUM 1 IF DATE(dateTime(Application a)) >= from(i) AND DATE(dateTime(a)) <= to(i);
+amountContactsByPeriod 'Общее количество контактов за период' (INTERVAL[DATE] i) = GROUP SUM 1 IF DATE(dateTime(Interview a)) >= from(i) AND DATE(dateTime(a)) <= to(i);
+
+amountApplicationsByPeriodCompany 'Общее количество анкет по компаниям за период ' (INTERVAL[DATE] i, Company c) = GROUP SUM 1 IF DATE(dateTime(Application a)) >= from(i)
+    AND DATE(dateTime(a)) <= to(i)
+    AND isISubstring(companyName(a), STRING[100](getWord(name(c), ' ', 1)));
+amountContactsByPeriodEmployee 'Общее количество контактов по сотрудникам за период' (INTERVAL[DATE] i, Employee e) = GROUP SUM 1 IF DATE(dateTime(Interview a)) >= from(i)
+    AND DATE(dateTime(a)) <= to(i) AND in(a, e);
+
+amountApplicationsBySource 'Общее количество анкет по источникам за период' (INTERVAL[DATE] i, ApplicationSource as) = GROUP SUM 1 IF source(Application a) = nameSource(as)
+    AND DATE(dateTime(a)) >= from(i) AND DATE(dateTime(a)) <= to(i);
+
+amountApplicationsToday 'Новых анкет за сегодня' = GROUP SUM 1 IF DATE(dateTime(Application a)) = currentDate();
+amountContactsToday 'Контакты за сегодня' = GROUP SUM 1 IF DATE(dateTime(Interview i)) = currentDate();
+
+FORM applicationReportDashboard 'Отчёт по анкетам'
+    OBJECTS dates = INTERVAL[DATE] PANEL NULL
+    PROPERTIES dates '' = VALUE(dates)
+
+    OBJECTS d = DATE
+    FILTERS iterate(d, from(dates), to(dates))
+
+    //метрики
+    PROPERTIES (dates) READONLY amountApplicationsByPeriod, amountContactsByPeriod
+    PROPERTIES () amountApplicationsToday, amountContactsToday
+
+    //круговая кол-во анкет по компаниям
+    OBJECTS a = Application
+
+    OBJECTS c 'Компания' = Company PIVOT 'Multiple Pie Chart' NOSETTINGS
+    PROPERTIES READONLY 'Компания' = name(c)
+    PROPERTIES amountApplicationsByPeriodCompany(dates, c) MEASURE
+    PIVOT COLUMNS dates
+    PIVOT ROWS name(c)
+    FILTERS amountApplicationsByPeriodCompany(dates, c) > 0
+
+    OBJECTS aa = Application
+
+    OBJECTS cc = Company
+    PROPERTIES amountApplicationsByPeriodCompany(dates, cc) HEADER name(cc) COLUMNS name(cc) PANEL DRAW cc
+    FILTERS amountApplicationsByPeriodCompany(dates, cc) > 0
+
+    //круговая кол-во анкет по источникам
+    OBJECTS as 'Источник' = ApplicationSource PIVOT 'Multiple Pie Chart' NOSETTINGS
+    PROPERTIES READONLY nameSource(as)
+    PROPERTIES amountApplicationsBySource(dates, as) MEASURE
+    PIVOT COLUMNS dates
+    PIVOT ROWS nameSource(as)
+    FILTERS amountApplicationsBySource(dates, as) > 0
+
+    OBJECTS as1 = ApplicationSource
+    PROPERTIES amountApplicationsBySource(dates, as1) HEADER nameSource(as1) COLUMNS nameSource(as1) PANEL DRAW as1
+    FILTERS amountApplicationsBySource(dates, as1) > 0
+
+    //кол-во контактов по сотрудникам
+    OBJECTS a1 = Application
+
+    OBJECTS e = Employee PIVOT 'Bar Chart' NOSETTINGS
+    PROPERTIES READONLY 'Сотрудник' = name(e)
+    PROPERTIES amountContactsByPeriodEmployee(dates, e) MEASURE
+    PIVOT COLUMNS dates
+    PIVOT ROWS name(e)
+    FILTERS amountContactsByPeriodEmployee(dates, e) > 0
+
+    OBJECTS aa1 = Application
+
+    OBJECTS e1 = Employee
+    PROPERTIES amountContactsByPeriodEmployee(dates, e1) HEADER name(e1) COLUMNS name(e1) PANEL DRAW e1
+    FILTERS amountContactsByPeriodEmployee(dates, e1) > 0
+;
+
+DESIGN applicationReportDashboard {
+    OBJECTS {
+        horizontal = FALSE;
+        NEW header {
+            horizontal = TRUE;
+            MOVE PROPERTY (dates) { caption = 'Интервал'; fill = 1; defaultComponent = TRUE; };
+        }
+        NEW circle {
+            horizontal = TRUE;
+            fill = 1;
+            NEW box1 {
+                horizontal = FALSE;
+                MOVE PROPERTY (amountApplicationsToday()) { fontSize = 14; fontStyle = 'bold'; };
+                MOVE PROPERTY (amountContactsToday()) { fontSize = 14; fontStyle = 'bold'; };
+                MOVE PROPERTY (amountApplicationsByPeriod(dates)) { fontSize = 14; fontStyle = 'bold'; };
+                MOVE PROPERTY (amountContactsByPeriod(dates)) { fontSize = 14; fontStyle = 'bold'; };
+            }
+            NEW box2 {
+                fill = 1;
+                horizontal = FALSE;
+                MOVE BOX (cc) { caption = 'Общее количество анкет по компаниям за период'; };
+                MOVE BOX (c) { caption = ''; };
+                PROPERTY (amountApplicationsByPeriodCompany(dates, cc)) { fontSize = 14; fontStyle = 'bold'; };
+                REMOVE TOOLBARBOX(c);
+            }
+            NEW box3 {
+                fill = 1;
+                horizontal = FALSE;
+                MOVE BOX (as1) { caption = 'Общее количество анкет по источникам за период'; }
+                MOVE BOX (as) { caption = ''; };
+                PROPERTY (amountApplicationsBySource(dates, as1)) { fontSize = 14; fontStyle = 'bold'; };
+                REMOVE TOOLBARBOX(as);
+            }
+        }
+        NEW bar {
+            fill = 1;
+            horizontal = FALSE;
+            MOVE BOX (e1) { caption = 'Общее количество контактов по сотрудникам за период'; };
+            MOVE BOX (e) { caption = ''; };
+            PROPERTY (amountContactsByPeriodEmployee(dates, e1)) { fontSize = 14; fontStyle = 'bold'; };
+            REMOVE TOOLBARBOX(e);
+        }
+    }
+}
+
+NAVIGATOR {
+    humanResources {
+        NEW FOLDER reports 'Reporting' BEFORE settings {
+            NEW applicationReportDashboard;
+        }
+    }
+}
