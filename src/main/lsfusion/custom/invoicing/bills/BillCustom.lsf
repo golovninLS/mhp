@@ -186,3 +186,16 @@ DESIGN bill {
 }
 
 WHEN SETCHANGED(status(Bill b)) AND done(b) DO paymentDate(b) <- currentDate();
+
+mpp 'MPP' = DATA BOOLEAN (Bill);
+
+EXTEND FORM bill PROPERTIES(b) mpp;
+EXTEND FORM bills PROPERTIES(b) READONLY mpp;
+
+DESIGN bill {
+    header {
+        NEW options {
+            MOVE PROPERTY (mpp(b));
+        }
+    }
+}

@@ -4,17 +4,35 @@ REQUIRE BillCustom, OutgoingPayment, PaymentCustom, BillPayment;
 
 NAMESPACE Invoicing;
 
+netto 'Netto' = DATA NUMERIC[14,2] (OutgoingPayment);
+vat 'VAT' = DATA NUMERIC[14,2] (OutgoingPayment);
+brutto 'Brutto' = DATA NUMERIC[14,2] (OutgoingPayment);
+
 FORM newOutgoingPayment 'Outgoing payment'
     OBJECTS o = OutgoingPayment PANEL
-    PROPERTIES(o) nameCompanyAccount, dateTime, nameCompany, nameCurrency
+    PROPERTIES(o) nameCompanyAccount, dateTime, nameCompany, nameCurrency, netto, vat, brutto
 ;
 
 DESIGN newOutgoingPayment {
-    BOX(o) {
-        horizontal = FALSE;
-        lines = 1;
-        size = (50, 50);
+    NEW body {
+        horizontal = TRUE;
+        NEW header {
+            horizontal = FALSE;
+            MOVE PROPERTY(nameCompanyAccount(o));
+            MOVE PROPERTY(dateTime(o));
+            MOVE PROPERTY(nameCompany(o));
+            MOVE PROPERTY(nameCurrency(o));
+        }
+        NEW amounts {
+            horizontal = FALSE;
+            MOVE PROPERTY(netto(o));
+            MOVE PROPERTY(vat(o));
+            MOVE PROPERTY(brutto(o));
+        }
     }
+    MOVE TOOLBAR;
+    MOVE TOOLBARBOX;
+    REMOVE TOOLBARSYSTEM(o);
 }
 
 payForBill 'Register Payment' (Bill b) {
@@ -26,11 +44,11 @@ payForBill 'Register Payment' (Bill b) {
         partner(o) <- vendor(b);
         company(o) <- company(b);
         currency(o) <- currency(b);
-        amount(o) <- amount(b);
         type(o) <- defaultOutgoingPaymentType();
         dateTime(o) <- currentDateTime();
 
         SHOW newOutgoingPayment OBJECTS o = o FLOAT;
+        amount(o) <- OVERRIDE brutto(o), (vat(o) (+) netto(o));
         paid(b, o) <- left(b, o) (+) paid(b, o);
     }
 
