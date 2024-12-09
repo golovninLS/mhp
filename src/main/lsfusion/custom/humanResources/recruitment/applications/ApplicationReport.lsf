@@ -34,6 +34,9 @@ FORM applicationReportDashboard 'Отчёт по анкетам'
     OBJECTS dates = INTERVAL[DATE] PANEL NULL
     PROPERTIES dates '' = VALUE(dates)
 
+    EVENTS ON INIT{
+        SEEK applicationReportDashboard.dates = interval(firstDayOfMonth(currentDate()), lastDayOfMonth(currentDate()));
+    }
     OBJECTS d = DATE
     FILTERS iterate(d, from(dates), to(dates))
 
@@ -84,6 +87,7 @@ FORM applicationReportDashboard 'Отчёт по анкетам'
     OBJECTS e1 = Employee
     PROPERTIES amountContactsByPeriodEmployee(dates, e1) HEADER name(e1) COLUMNS name(e1) PANEL DRAW e1
     FILTERS amountContactsByPeriodEmployee(dates, e1) > 0
+
 ;
 
 DESIGN applicationReportDashboard {
