@@ -1,0 +1,66 @@
+MODULE ApplicationTask;
+
+REQUIRE ApplicationCustom, TaskCustom;
+
+NAMESPACE HumanResources;
+
+interviewTask = DATA Task (Interview);
+taskApplication = DATA Application (Task);
+hasTask (Interview i) = GROUP SUM 1 IF interviewTask(i);
+interviewer (Interview i) = GROUP MAX Employee e IF in(i, e);
+amountSecondsInterview (Interview i) = secondsBetweenDates(dateTimeToDateTime(DATE(dateTime(i)), interviewTime(i)), currentDateTime());
+
+assignTaskToInterview() {
+    FOR Interview i IS Interview AND NOT hasTask(i) AND DATE(dateTime(i)) = currentDate()
+        AND amountSecondsInterview(i) > 0 AND amountSecondsInterview(i) <= 900 DO {
+        NEW t = Task {
+            status(t) <- defaultTaskStatus();
+            assignedTo(t) <- interviewer(i);
+            name(t) <- CONCAT ' ', 'Напоминание о контакте в ' + toChar(interviewTime(i), 'HH24:MI');
+            deadline(t) <- DATE(dateTime(i));
+            interviewTask(i) <- t;
+            taskApplication(t) <- application(i);
+            type(t) <- taskType('interview');
+            description(t) <- CONCAT '\n', 'Дата и время: ' + toChar(dateTime(i), 'dd.mm.yyyy') + ' ' + toChar(interviewTime(i), 'HH24:MI'),
+                'Кандидат: ' + firstName(application(i)), 'Телефон: ' + phone(application(i)), 'Должность: ' + (OVERRIDE subject(application(i)), namePosition(application(i))),
+                'Доступность: ' + toChar(availability(application(i)), 'dd.mm.yyyy'), 'Как связаться: ' + channelComunication(application(i)),
+                'Компания: ' + companyName(application(i));
+            APPLY;
+        }
+    }
+}
+
+WHEN SET (summary(Interview i)) AND hasTask(i) DO {
+    status(interviewTask(i)) <- taskStatus('closed');
+    APPLY;
+}
+
+openApplication '{Application}' (Task t) {
+    NEWSESSION {
+        SHOW application OBJECTS a = taskApplication(t) DOCKED;
+    }
+}
+
+applicationStatus 'Статус' (Task t) = imagedNameStatus(taskApplication(t)) CHARWIDTH 20;
+
+EXTEND FORM task PROPERTIES(t) openApplication, applicationStatus READONLY;
+
+DESIGN task {
+    header {
+        NEW application {
+            showIf = taskApplication(t);
+            caption = 'Анкета';
+            horizontal = TRUE;
+            MOVE PROPERTY (openApplication(t));
+            MOVE PROPERTY (applicationStatus(t));
+        }
+    }
+}
+
+onStarted() + {
+    IF NOT taskType('interview') THEN NEW t = TaskType {
+        name(t) <- 'Собеседование';
+        id(t) <- 'interview';
+        APPLY;
+    }
+}

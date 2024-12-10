@@ -148,15 +148,37 @@ dateTimeContacted 'Время контакта' = DATA DATETIME (Interview);
 nextContactDate 'Дата следующего контакта' (Application a) = DATE(dateTime(lastInterview(a))) IF NOT dateTimeContacted(lastInterview(a));
 captionContact (Application a) = STRING('Позвонить ' + toChar(nextContactDate(a), 'dd.MM.yy'));
 
+EXTEND FORM dialogDate
+    OBJECTS t = TIME PANEL
+    PROPERTIES(t) objValue2 = VALUE
+;
+
+DESIGN dialogDate {
+    date {
+        fill = 1;
+        MOVE PROPERTY (objValue2) {
+            fill = 1;
+            caption = 'Введите время';
+            font = 'bold 64';
+            panelCaptionVertical = TRUE;
+        }
+    }
+}
+
+interviewTime 'Планируемое время' = DATA TIME (Interview) CHARWIDTH 15;
+EXTEND FORM application PROPERTIES(i) interviewTime AFTER dateTime(i);
+
 setNextContactDate 'Назначить дату следующего контакта' (Application a){
-    DIALOG dialogDate OBJECTS d INPUT d DO IF d THEN {
-        IF nextContactDate(a) THEN{
-            FOR Interview i = lastInterview(a) DO{
+    DIALOG dialogDate OBJECTS d INPUT d, t INPUT t DO IF d THEN {
+        IF nextContactDate(a) THEN {
+            FOR Interview i = lastInterview(a) DO {
                 dateTime(i) <- DATETIME(d);
+                interviewTime(i) <- t;
             }
         } ELSE NEW i = Interview {
             application(i) <- a;
             dateTime(i) <- DATETIME(d);
+            interviewTime(i) <- t;
             in(i, currentUser()) <- TRUE;
         }
         APPLY;
@@ -575,4 +597,9 @@ NAVIGATOR {
             NEW applicationKanban;
         }
     }
+}
+
+DESIGN application {
+    PROPERTY (dateTime(i)) { charWidth = 15; }
+    PROPERTY (dateTimeContacted(i)) { charWidth = 15; }
 }
