@@ -271,6 +271,7 @@ EXTEND FORM project
 DESIGN project {
     details {
         NEW timesheetProject LAST {
+            showIf = in(p, currentUser()) OR showAllProjects(currentUser());
             caption = 'Timesheet';
             NEW tabbedPane {
                 tabbed = TRUE;
@@ -335,7 +336,6 @@ DESIGN project {
                         caption = '';
                         PROPERTY(symbolAccomodationOrder(d, ea, paa)) {
                             charWidth = 2;
-                            //                valueTooltip = timeEntries(d, e);
                         }
                     }
                     REMOVE TOOLBARSYSTEM(pea);
