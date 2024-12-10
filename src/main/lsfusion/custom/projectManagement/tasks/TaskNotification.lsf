@@ -42,13 +42,15 @@ deadlineTodayTasksProject (Employee e) = '⚠️ Дедлайн сегодня:\
     IF in(project(t), e) AND NOT assignedTo(t) AND deadline(t) = currentDate() AND statusNotReady(t), '\n' ORDER t);
 projectTasks (Employee e) = 'Задачи проекта:\n' + CONCAT '\n', overdueTasksProject(e), deadlineTodayTasksProject(e);
 
-tasksReportMessage (Chat c) = CONCAT '\n\n', assignedForMe(employee(c)), createdByMe(employee(c)), projectTasks(employee(c));
-tasksReportMessageEmail(Chat c) = replace(tasksReportMessage(c), '\n', '<br>');
+tasksReportMessage (Employee e) = CONCAT '\n\n', assignedForMe(e), createdByMe(e), projectTasks(e);
+tasksReportMessageEmail(Employee e) = replace(tasksReportMessage(e), '\n', '<br>');
+
+tasksExist (Employee e) = GROUP SUM 1 IF assignedForMe(e) OR createdByMe(e) OR projectTasks(e);
 
 sendTaskNotificationsTelegram () {
     timeoutHttp() <- 20000;
-    FOR Chat c IS Chat AND employee(c) DO TRY {
-        sendMessage(c, tasksReportMessage(c));
+    FOR Chat c IS Chat AND employee(c) AND tasksExist(employee(c)) DO TRY {
+        sendMessage(c, tasksReportMessage(employee(c)));
     } CATCH {
         MESSAGE 'Сообщение не было отправлено для ' + nameEmployee(c);
         MESSAGE System.messageCaughtException();
@@ -57,8 +59,8 @@ sendTaskNotificationsTelegram () {
 
 sendTaskNotificationsEmail () {
     timeoutHttp() <- 20000;
-    FOR Employee e IS Employee AND email[Partner](e) DO TRY {
-        stringToFile(tasksReportMessageEmail(chat(e)));
+    FOR Employee e IS Employee AND email[Partner](e) AND tasksExist(e) DO TRY {
+        stringToFile(tasksReportMessageEmail(e));
         EMAIL
             SUBJECT ('Отчёт по задачам')
             TO email[Partner](e)
