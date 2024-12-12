@@ -6,11 +6,72 @@ NAMESPACE Invoicing;
 
 netto 'Netto' = DATA NUMERIC[14,2] (OutgoingPayment);
 vat 'VAT' = DATA NUMERIC[14,2] (OutgoingPayment);
-brutto 'Brutto' = DATA NUMERIC[14,2] (OutgoingPayment);
+brutto 'Brutto' (OutgoingPayment o) = netto(o) (+) vat(o);
+
+EXTEND FORM outgoingPayment
+    PROPERTIES (p) vat, netto, brutto
+;
+
+DESIGN outgoingPayment {
+    header {
+        NEW payment AFTER params {
+            horizontal = TRUE;
+            MOVE PROPERTY(netto(p));
+            MOVE PROPERTY(vat(p));
+            MOVE PROPERTY(brutto(p));
+            REMOVE PROPERTY(amount(p));
+        }
+    }
+}
+
+//netto
+netto 'Netto' = ABSTRACT NUMERIC[14,2] (Debt);
+paidNetto 'Оплачено (netto)' = DATA NUMERIC[14,2] (IncomingDebt, OutgoingDebt);
+netto (OutgoingPayment p) += netto(p);
+netto (Bill b) += untaxedAmount(b);
+
+paidNetto 'Оплачено (netto)' (OutgoingDebt od) = GROUP SUM paidNetto(IncomingDebt id, od) IF active(id) MATERIALIZED;
+paidNetto 'Оплачено (netto)' (IncomingDebt id) = GROUP SUM paidNetto(id, OutgoingDebt od) IF active(id) MATERIALIZED;
+paidNetto 'Оплачено (netto)' (Debt d) = MULTI paidNetto[IncomingDebt](d), paidNetto[OutgoingDebt](d);
+
+leftNetto 'Осталось (netto)' (OutgoingDebt od) = netto[Bill](od) (-) paidNetto(od);
+leftNetto 'Осталось (netto)' (IncomingDebt id) = netto[Bill](id) (-) paidNetto(id);
+leftNetto 'Осталось (netto)' (Debt d) = MULTI leftNetto[IncomingDebt](d), leftNetto[OutgoingDebt](d);
+
+leftNetto 'Осталось (netto)' (IncomingDebt id, OutgoingDebt od) = min(leftNetto(id), leftNetto(od));
+
+WHEN SETCHANGED(netto(IncomingDebt id)) AND netto(id) < paidNetto(id, OutgoingDebt od) DO
+    paidNetto(id, od) <- netto(id);
+WHEN SETCHANGED(netto(OutgoingDebt od)) AND netto(od) < paidNetto(IncomingDebt id, od) DO
+    paidNetto(id, od) <- netto(od);
+
+//vat
+vat 'VAT' = ABSTRACT NUMERIC[14,2] (Debt);
+vat (OutgoingPayment p) += vat(p);
+vat (Bill b) += taxAmount(b);
+
+paidVat 'Оплачено (VAT)' = DATA NUMERIC[14,2] (IncomingDebt, OutgoingDebt);
+
+paidVat 'Оплачено (VAT)' (OutgoingDebt od) = GROUP SUM paidVat(IncomingDebt id, od) IF active(id) MATERIALIZED;
+paidVat 'Оплачено (VAT)' (IncomingDebt id) = GROUP SUM paidVat(id, OutgoingDebt od) IF active(id) MATERIALIZED;
+paidVat 'Оплачено (VAT)' (Debt d) = MULTI paidVat[IncomingDebt](d), paidVat[OutgoingDebt](d);
+
+leftVat 'Осталось (VAT)' (OutgoingDebt od) = vat[Bill](od) (-) paidVat(od);
+leftVat 'Осталось (VAT)' (IncomingDebt id) = vat[Bill](id) (-) paidVat(id);
+leftVat 'Осталось (VAT)' (Debt d) = MULTI leftVat[IncomingDebt](d), leftVat[OutgoingDebt](d);
+
+leftVat 'Осталось (VAT)' (IncomingDebt id, OutgoingDebt od) = min(leftVat(id), leftVat(od));
+
+WHEN SETCHANGED(vat(IncomingDebt id)) AND vat(id) < paidVat(id, OutgoingDebt od) DO
+    paidVat(id, od) <- vat(id);
+WHEN SETCHANGED(vat(OutgoingDebt od)) AND vat(od) < paidVat(IncomingDebt id, od) DO
+    paidVat(id, od) <- vat(od);
 
 FORM newOutgoingPayment 'Outgoing payment'
     OBJECTS o = OutgoingPayment PANEL
-    PROPERTIES(o) nameCompanyAccount, dateTime, nameCompany, nameCurrency, netto, vat, brutto
+    PROPERTIES(o) nameCompanyAccount, dateTime, nameCompany, nameCurrency, netto, vat, brutto READONLY
+    
+    EVENTS ON CLOSE { CANCEL NESTED; }
 ;
 
 DESIGN newOutgoingPayment {
@@ -38,20 +99,25 @@ DESIGN newOutgoingPayment {
 payForBill 'Register Payment' (Bill b) {
     NEW o = OutgoingPayment {
         IF canceled() THEN RETURN;
-
         ready(o) <- TRUE;
-
-        partner(o) <- vendor(b);
-        company(o) <- company(b);
-        currency(o) <- currency(b);
+        fill(o, b);
+        
         type(o) <- defaultOutgoingPaymentType();
         dateTime(o) <- currentDateTime();
 
+        netto(o) <- leftNetto(b);
+        vat(o) <- leftVat(b); 
+        
         SHOW newOutgoingPayment OBJECTS o = o FLOAT;
-        amount(o) <- OVERRIDE brutto(o), (vat(o) (+) netto(o));
-        paid(b, o) <- left(b, o) (+) paid(b, o);
-    }
 
+        paidNetto(b, o) <- netto(o);
+        paidVat(b, o) <- vat(o);
+        amount(o) <- brutto(o);
+
+        paid(b, o) <- left(b, o) (+) paid(b, o);
+        paidNetto(b, o) <- leftNetto(b, o) (+) paidNetto(b, o);
+        paidVat(b, o) <- leftVat(b, o) (+) paidVat(b, o);
+    }
     IF canceled() THEN RETURN;
 }
 
@@ -59,7 +125,8 @@ EXTEND FORM bill
     PROPERTIES(b) payForBill SHOWIF status(b) = BillStatus.ready
 
     OBJECTS od = OutgoingDebt
-    PROPERTIES(od) READONLY dateTime, number, class, type, amount
+
+    PROPERTIES(od) READONLY dateTime, number, class, type, netto, vat, amount
     FILTERS paid(b, od), active(od)
 ;
 
@@ -67,6 +134,7 @@ DESIGN bill {
     primaryActions {
         MOVE PROPERTY(payForBill(b)) { valueClass = 'btn-primary'; }
     }
+    PROPERTY (amount(od)) {caption = 'Brutto'; };
 }
 
 DESIGN bill {
@@ -79,5 +147,17 @@ DESIGN bill {
     }
 }
 
+EXTEND FORM bills
+    PROPERTIES (b) READONLY leftNetto, leftVat, 'Осталось (brutto)' = left, paidNetto, paidVat
+    PROPERTIES (b) payForBill GRID READONLYIF done(b)
+;
+
 CONSTRAINT currency(OutgoingPayment o) AND currency(companyAccount(o)) != currency(o) CHECKED BY companyAccount[OutgoingPayment] MESSAGE '';
 CONSTRAINT company(OutgoingPayment o) AND holder(companyAccount(o)) != company(o) CHECKED BY companyAccount[OutgoingPayment] MESSAGE '';
+
+CONSTRAINT SETCHANGED (paidNetto(Bill b)) AND paidNetto(b) > untaxedAmount(b) MESSAGE 'Превышена задолженность по netto';
+CONSTRAINT SETCHANGED (paidVat(Bill b)) AND paidVat(b) > taxAmount(b) MESSAGE 'Превышена задолженность по VAT';
+
+CONSTRAINT SETCHANGED (paid(Bill b)) AND paid(b) > amount(b) MESSAGE 'Превышена задолженность по brutto';
+
+WHEN SETCHANGED(brutto(OutgoingPayment op)) DO { amount(op) <- brutto(op); APPLY; }
