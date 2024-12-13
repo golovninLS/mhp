@@ -32,6 +32,8 @@ WHEN SET (Employee e IS Employee) AND NOT (location(e)) DO NEW l = Location{
 }
 
 locationEmployee = GROUP AGGR Employee e BY location(e);
+uniqueNameLocation = GROUP AGGR Location l BY name(l);
+
 onHand 'On hand'  (Employee e, Product p)  = onHand(location(e), p);
 onHand 'On hand'  (Employee e, Lot l)  = onHand(location(e), l);
 onHand 'On hand' (Employee e) = GROUP SUM 1 IF onHand(e, Product p);
@@ -75,3 +77,20 @@ DESIGN employee {
     inventory { showIf = GROUP SUM 1 IF has(currentUser(), UserRole role) AND showInventory(role);}
     BOX(TREE locations) { showIf = GROUP SUM 1 IF has(currentUser(), UserRole role) AND showLocations(role);}
 }
+
+employeeLocation (Location l) = GROUP MAX Employee e IF location(e) = l;
+nameEmployeeLocation 'Сотрудник' (Location l) = name(employeeLocation(l));
+
+EXTEND FORM locations
+    PROPERTIES (l) nameEmployeeLocation AFTER name(l)
+    PROPERTIES (lt) nameEmployeeLocation AFTER name(lt)
+;
+
+WHEN SETCHANGED(archived(Employee e)) AND NOT onHand(e) DO {
+    archived(location(e)) <- TRUE;
+}
+
+EXTEND FORM dialogLocations
+    PROPERTIES (l) READONLY nameEmployeeLocation AFTER name(l), nameCompany
+    PROPERTIES (lt) READONLY nameEmployeeLocation AFTER name(lt), nameCompany
+;
