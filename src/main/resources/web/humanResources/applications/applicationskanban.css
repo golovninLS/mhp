@@ -108,3 +108,8 @@
     margin-top: 0.5em !important;
     padding-top: 0.25em;
 }
+
+.companies {
+    display: flex;
+    flex-direction: column;
+}

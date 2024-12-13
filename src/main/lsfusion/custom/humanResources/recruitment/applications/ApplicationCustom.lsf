@@ -21,7 +21,9 @@ firstApplication (Application a) = firstApplication(phoneTrim(a));
 
 isFirstApplication (Application a) =a = firstApplication(a);
 
-background (Application a) = IF NOT isFirstApplication(a) THEN Color.danger;
+background (Application a) = CASE 
+    WHEN status(a) = ApplicationStatus.hired THEN Color.success 
+    WHEN NOT isFirstApplication(a) THEN Color.danger;
 
 idBackground(Application a) = id(background(a));
 
@@ -142,7 +144,7 @@ overName = ABSTRACT CASE STRING (ApplicationStatus);
 
 badged (ApplicationStatus s) =  badged((OVERRIDE overName(s), name(s)), countAll(s));
 
-applicationsStatuses () = JSON FROM id = ApplicationStatus s, name = badged(s), stat(s) WHERE s IS ApplicationStatus AND NOT closed(s) ORDER order(s);
+applicationsStatuses () = JSON FROM id = ApplicationStatus s, nameStatus = name(s), name = badged(s), stat(s) WHERE s IS ApplicationStatus AND NOT s = ApplicationStatus.refused ORDER order(s);
 
 dateTimeContacted 'Время контакта' = DATA DATETIME (Interview);
 nextContactDate 'Дата следующего контакта' (Application a) = DATE(dateTime(lastInterview(a))) IF NOT dateTimeContacted(lastInterview(a));
@@ -237,6 +239,7 @@ captionMainApplication 'Первое обращение' (Application a) =captin
 
 phoneFilter 'Телефон' = DATA LOCAL NESTED STRING ();
 nameFilter 'Имя' = DATA LOCAL NESTED STRING ();
+companyFilter 'Компания' = DATA LOCAL NESTED STRING ();
 
 dropFilters 'X' (){
     phoneFilter() <- NULL;
@@ -248,11 +251,29 @@ orderDate (Application a) = CASE
     ELSE dateTime(a)
 ;
 
+order(ApplicationStatus s) += WHEN s = ApplicationStatus.hired THEN 7;
 
+countHiredMhp = GROUP SUM 1 IF status(Application aa) = ApplicationStatus.hired AND legalEntity(employee(aa)) = partner('mhp');
+countHiredSahaty = GROUP SUM 1 IF status(Application aa) = ApplicationStatus.hired AND legalEntity(employee(aa)) = partner('КН000016');
+
+captionStatusStatHiredMhp = JSON FROM amount = badged('MHP', OVERRIDE countHiredMhp(), 0) ;
+captionStatusStatHiredSahaty = JSON FROM amount = badged('Sahaty', OVERRIDE countHiredSahaty(), 0);
+
+applicationEmployee = DATA Employee (Application);
+
+openEmployee 'Открыть сотрудника' (Application a) {
+    NEWSESSION {
+        SHOW employee OBJECTS e = employee(a) DOCKED;
+    }
+}
+
+companyEmployee (Application a) = IF status(a) = ApplicationStatus.hired AND legalEntity(employee(a)) = partner('mhp') THEN 1
+    ELSE IF status(a) = ApplicationStatus.hired AND legalEntity(employee(a)) = partner('КН000016') THEN 2;
 
 FORM applicationKanban 'Канбан анкет'
     OBJECTS tt = Application CUSTOM 'applicationsKanban'
-    HEADER JSON FROM statuses = applicationsStatuses(), nameHired = nameButtonHired(), nameRefused = nameButtonRefused()
+    HEADER JSON FROM statuses = applicationsStatuses(), nameHired = nameButtonHired(), nameRefused = nameButtonRefused(),
+    mhp = captionStatusStatHiredMhp(), sah = captionStatusStatHiredSahaty()
     PROPERTIES(tt) subject, status ON CHANGE {
         INPUT l = LONG DO
             FOR LONG(ApplicationStatus ts AS ApplicationStatus) = l DO{
@@ -270,20 +291,22 @@ FORM applicationKanban 'Канбан анкет'
         captionContact,
         idBackground,
         nextContactDate,
-        dateTime
+        dateTime,
+        companyEmployee
         PROPERTIES orderDate(tt)
     PROPERTIES order = IF nextContactDate(tt) = currentDate() THEN 1 ELSE 0 ORDER DESC
     
     ORDERS status(tt), orderDate(tt) DESC
-    
+
     PROPERTIES(tt) READONLY PANEL pnameSubject = subject, pfirstName = firstName, pdateTime = dateTime, plastName = lastName, pphone = phone
+
     PROPERTIES (tt) PANEL psummary = summary, captionMainApplication SHOWIF NOT isFirstApplication(tt) ON CHANGE {
         SHOW application OBJECTS a = tt;
     },
-    ptextPosition = textPosition, pnameMainSpeciality = nameMainSpeciality,
-        edit = EDIT, hire SHOWIF showHire(tt), refuse SHOWIF showRefused(tt)
-    
-    FILTERS opened(tt)
+    ptextPosition = textPosition, pnameMainSpeciality = nameMainSpeciality, pcompanyName = companyName,
+    edit = EDIT, hire SHOWIF showHire(tt), refuse SHOWIF showRefused(tt), openEmployee LAST
+
+    FILTERS opened(tt) OR status(tt) = ApplicationStatus.hired
 
     OBJECTS c = Interview LAST
     PROPERTIES 'Дата ' = DATE(dateTime(c)) READONLY ORDER DESC, 'Время контакта' = dateTimeContacted(c) READONLY
@@ -291,8 +314,9 @@ FORM applicationKanban 'Канбан анкет'
     FILTERS application(c) = tt
     
     PROPERTIES (tt) setNextContactDate, contacted
-    
-    PROPERTIES () phoneFilter, nameFilter, dropFilters 
+
+    PROPERTIES () phoneFilter, nameFilter, companyFilter, dropFilters
+    FILTERS (IF status(tt) = ApplicationStatus.hired THEN isISubstring(nameLegalEntity(employee(tt)), companyFilter()) ELSE isISubstring(companyName(tt), companyFilter())) OR NOT companyFilter()
     FILTERS isISubstring(phoneTrim(tt), phoneFilter()) OR NOT phoneFilter()
     FILTERS isISubstring(firstName(tt), nameFilter()) OR NOT nameFilter()
 ;
@@ -304,6 +328,7 @@ DESIGN applicationKanban {
             horizontal = TRUE;
             MOVE PROPERTY (phoneFilter());
             MOVE PROPERTY (nameFilter());
+            MOVE PROPERTY (companyFilter());
             MOVE PROPERTY (dropFilters());
         }
         MOVE GRID(tt){
@@ -320,6 +345,7 @@ DESIGN applicationKanban {
                 NEW info{
                     MOVE PROPERTY(pdateTime) { alignment = STRETCH; caption = 'Дата обращения'; }
                     MOVE PROPERTY(pnameSubject) { alignment = STRETCH; }
+                    MOVE PROPERTY(pcompanyName) { alignment = STRETCH; }
                     MOVE PROPERTY(captionMainApplication(tt)) { alignment = STRETCH; }
                     MOVE PROPERTY(plastName) { alignment = STRETCH; }
                     MOVE PROPERTY(pfirstName) { alignment = STRETCH; }
@@ -337,10 +363,14 @@ DESIGN applicationKanban {
                         MOVE PROPERTY (refuse(tt)){
                             valueClass = 'btn-danger';
                         }
+                        MOVE PROPERTY (openEmployee(tt)){
+                            valueClass = 'btn-info';
+                        }
                     }
                     REMOVE BOX(tt);
                 }
                 NEW contacts{
+                    fill = 1;
                     NEW contactActions{
                         fill = 1;
                         horizontal = TRUE;
@@ -352,14 +382,13 @@ DESIGN applicationKanban {
                         }
                     }
                     NEW detailsContact{
-                        fill = 1;
+                        fill = 10;
                         showIf = countInterview(tt);
                         MOVE BOX (c){
                             caption = 'Контакты';
                         }
                         REMOVE TOOLBARSYSTEM (c);
                     }
-
                 }
             }
         }
