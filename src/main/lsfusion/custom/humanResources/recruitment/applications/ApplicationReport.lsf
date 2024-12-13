@@ -110,16 +110,16 @@ DESIGN applicationReportDashboard {
             NEW box2 {
                 fill = 1;
                 horizontal = FALSE;
-                MOVE BOX (cc) { caption = 'Общее количество анкет по компаниям за период'; };
-                MOVE BOX (c) { caption = ''; };
+                MOVE BOX (cc) { caption = 'Общее количество анкет по компаниям за период'; fill = 1; };
+                MOVE BOX (c) { caption = ''; fill = 20; };
                 PROPERTY (amountApplicationsByPeriodCompany(dates, cc)) { fontSize = 14; fontStyle = 'bold'; };
                 REMOVE TOOLBARBOX(c);
             }
             NEW box3 {
                 fill = 1;
                 horizontal = FALSE;
-                MOVE BOX (as1) { caption = 'Общее количество анкет по источникам за период'; }
-                MOVE BOX (as) { caption = ''; };
+                MOVE BOX (as1) { caption = 'Общее количество анкет по источникам за период';  fill = 1; };
+                MOVE BOX (as) { caption = ''; fill = 20; };
                 PROPERTY (amountApplicationsBySource(dates, as1)) { fontSize = 14; fontStyle = 'bold'; };
                 REMOVE TOOLBARBOX(as);
             }
@@ -127,8 +127,8 @@ DESIGN applicationReportDashboard {
         NEW bar {
             fill = 1;
             horizontal = FALSE;
-            MOVE BOX (e1) { caption = 'Общее количество контактов по сотрудникам за период'; };
-            MOVE BOX (e) { caption = ''; };
+            MOVE BOX (e1) { caption = 'Общее количество контактов по сотрудникам за период'; fill = 1; };
+            MOVE BOX (e) { caption = ''; fill = 20; };
             PROPERTY (amountContactsByPeriodEmployee(dates, e1)) { fontSize = 14; fontStyle = 'bold'; };
             REMOVE TOOLBARBOX(e);
         }
