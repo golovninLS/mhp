@@ -1,6 +1,6 @@
 function applicationsKanbanReorder(controller, elements) {
     for (let i = 0; i < elements.length; i++) {
-    if (elements[i].applications && elements[i].applications.order !== undefined && elements[i].applications.order !== i) {
+        if (elements[i].applications && elements[i].applications.order !== undefined && elements[i].applications.order !== i) {
             controller.changeProperty("order", elements[i].applications, i);
         }
     }
@@ -72,15 +72,56 @@ function createApplicationsCard(applications) {
     return applicationsCard;
 }
 
+function createCompanyContainer(name, options) {
+    let statusDiv = document.createElement("div");
+    statusDiv.classList.add("applications-kanban-status");
+    statusDiv.classList.add("border-start");
+
+    let statusHeader = document.createElement("div");
+    statusHeader.classList.add("applications-kanban-status-header");
+    statusDiv.appendChild(statusHeader);
+
+    let statusName = document.createElement("div");
+    statusName.classList.add("applications-kanban-status-name");
+    statusName.classList.add("h5");
+
+    let statusBody = document.createElement("div");
+    statusBody.classList.add("applications-kanban-status-body");
+
+    if (name == 'mhp') {
+        statusName.innerHTML = options.mhp.amount;
+        statusHeader.appendChild(statusName);
+
+        let mhpBody = document.createElement("div");
+        mhpBody.classList.add("companies");
+        statusBody.appendChild(mhpBody);
+        statusBody.mhpBody = mhpBody;
+
+    } else {
+        statusName.innerHTML = options.sah.amount;
+        statusHeader.appendChild(statusName);
+
+        let sahBody = document.createElement("div");
+        sahBody.classList.add("companies");
+        statusBody.appendChild(sahBody);
+        statusBody.sahBody = sahBody;
+    }
+
+    statusDiv.appendChild(statusBody);
+    statusDiv.statusBody = statusBody;
+
+    return statusDiv;
+}
+
 function applicationsKanban() {
     return {
         render: function (element, controller) {
-            let mainField = document.createElement("div")
+            let mainField = document.createElement("div");
             mainField.classList.add("mainField");
             element.appendChild(mainField);
             element.mainField = mainField;
 
-            let kanban = document.createElement("div")
+            let kanban = document.createElement("div");
             kanban.classList.add("applications-kanban");
             mainField.appendChild(kanban);
             element.kanban = kanban;
@@ -123,6 +164,9 @@ function applicationsKanban() {
             element.acceptButton.innerHTML = options.nameHired.name;
             element.declineButton.innerHTML = options.nameRefused.name;
 
+            let statusDiv1 = createCompanyContainer('mhp', options);
+            let statusDiv2 = createCompanyContainer('sah', options);
+
             for (const status of options.statuses) {
                 let statusDiv = document.createElement("div")
                     statusDiv.classList.add("applications-kanban-status");
@@ -156,39 +200,22 @@ function applicationsKanban() {
                 let statusBody = document.createElement("div");
                 statusBody.classList.add("applications-kanban-status-body");
 
-                let mhpBody = document.createElement("div");
-                mhpBody.classList.add("companies");
-                element.mhpBody = mhpBody;
-                if (options.mhp.amount) createStatusStat(mhpBody, options.mhp.amount);
-
-                let sahBody = document.createElement("div");
-                sahBody.classList.add("companies");
-                element.sahBody = sahBody;
-                if (options.sah.amount) createStatusStat(sahBody, options.sah.amount);
-
-                if (status.nameStatus.trim() == "Нанят") {
-                    statusBody.appendChild(mhpBody);
-                    statusBody.appendChild(sahBody);
-                }
-
                 for (const applications of list)
                     if (applications.status === status.id.toString()) {
-                        if (status.nameStatus.trim() == "Нанят") {
-                            if (applications.companyEmployee !== undefined && applications.companyEmployee == 1) {
-                                let applicationsCard = createApplicationsCard(applications);
-                                mhpBody.appendChild(applicationsCard);
+                        if (applications.companyEmployee !== undefined && applications.companyEmployee == 1) {
+                            let applicationsCard = createApplicationsCard(applications);
+                            statusDiv1.statusBody.mhpBody.appendChild(applicationsCard);
 
-                                applicationsCard.addEventListener("click", function () {
-                                    controller.changeObject(applications, true, applicationsCard);
-                                });
-                            } else if (applications.companyEmployee !== undefined && applications.companyEmployee == 2) {
-                                let applicationsCard = createApplicationsCard(applications);
-                                sahBody.appendChild(applicationsCard);
+                            applicationsCard.addEventListener("click", function () {
+                                controller.changeObject(applications, true, applicationsCard);
+                            });
+                        } else if (applications.companyEmployee !== undefined && applications.companyEmployee == 2) {
+                            let applicationsCard = createApplicationsCard(applications);
+                            statusDiv2.statusBody.sahBody.appendChild(applicationsCard);
 
-                                applicationsCard.addEventListener("click", function () {
-                                    controller.changeObject(applications, true, applicationsCard);
-                                });
-                            }
+                            applicationsCard.addEventListener("click", function () {
+                                controller.changeObject(applications, true, applicationsCard);
+                            });
                         } else {
                             let applicationsCard = createApplicationsCard(applications);
                             statusBody.appendChild(applicationsCard);
@@ -201,10 +228,12 @@ function applicationsKanban() {
                 statusDiv.appendChild(statusBody);
                 statusBody.status = status;
                 element.statusBody = statusBody;
-                element.kanban.appendChild(statusDiv);
-
+                if (status.nameStatus.trim() !== "Нанят") element.kanban.appendChild(statusDiv);
                 element.drake.containers.push(statusBody);
             }
+
+            element.kanban.appendChild(statusDiv1);
+            element.kanban.appendChild(statusDiv2);
 
             element.drake.containers.push(element.acceptButton);
             element.drake.containers.push(element.declineButton);
@@ -223,15 +252,15 @@ function applicationsKanban() {
                     controller.changeProperty("hire", el.applications);
                     source.appendChild(el);
                 } else if (target === element.declineButton) {
-                        controller.changeProperty("refuse", el.applications);
-                        source.appendChild(el);
-                    } else if (target && target.querySelector('.companies')) {
-                        element.drake.cancel(true);
-                        return;
-                    } else if (el.applications.status !== target.status.id.toString()) {
-                            controller.changeProperty("status", el.applications, target.status.id);
-                            applicationsKanbanReorder(controller, target.children);
-                    }
+                    controller.changeProperty("refuse", el.applications);
+                    source.appendChild(el);
+                } else if (target && target.querySelector('.companies')) {
+                    element.drake.cancel(true);
+                    return;
+                } else if (el.applications.status !== target.status.id.toString()) {
+                    controller.changeProperty("status", el.applications, target.status.id);
+                    applicationsKanbanReorder(controller, target.children);
+                }
             });
         },
         clear: function (element) {

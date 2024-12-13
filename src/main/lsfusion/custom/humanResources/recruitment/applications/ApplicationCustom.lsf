@@ -148,7 +148,9 @@ applicationsStatuses () = JSON FROM id = ApplicationStatus s, nameStatus = name(
 
 dateTimeContacted 'Время контакта' = DATA DATETIME (Interview);
 nextContactDate 'Дата следующего контакта' (Application a) = DATE(dateTime(lastInterview(a))) IF NOT dateTimeContacted(lastInterview(a));
-captionContact (Application a) = STRING('Позвонить ' + toChar(nextContactDate(a), 'dd.MM.yy'));
+interviewTime 'Планируемое время' = DATA TIME (Interview) CHARWIDTH 15;
+
+captionContact (Application a) = CONCAT ' ', 'Позвонить', toChar(nextContactDate(a), 'dd.mm.yyyy'), toChar(interviewTime(lastInterview(a)), 'HH24:MI');
 
 EXTEND FORM dialogDate
     OBJECTS t = TIME PANEL
@@ -167,7 +169,6 @@ DESIGN dialogDate {
     }
 }
 
-interviewTime 'Планируемое время' = DATA TIME (Interview) CHARWIDTH 15;
 EXTEND FORM application PROPERTIES(i) interviewTime AFTER dateTime(i);
 
 setNextContactDate 'Назначить дату следующего контакта' (Application a){
@@ -256,8 +257,8 @@ order(ApplicationStatus s) += WHEN s = ApplicationStatus.hired THEN 7;
 countHiredMhp = GROUP SUM 1 IF status(Application aa) = ApplicationStatus.hired AND legalEntity(employee(aa)) = partner('mhp');
 countHiredSahaty = GROUP SUM 1 IF status(Application aa) = ApplicationStatus.hired AND legalEntity(employee(aa)) = partner('КН000016');
 
-captionStatusStatHiredMhp = JSON FROM amount = badged('MHP', OVERRIDE countHiredMhp(), 0) ;
-captionStatusStatHiredSahaty = JSON FROM amount = badged('Sahaty', OVERRIDE countHiredSahaty(), 0);
+captionStatusStatHiredMhp = JSON FROM amount = badged('Наняты (MHP)', OVERRIDE countHiredMhp(), 0) ;
+captionStatusStatHiredSahaty = JSON FROM amount = badged('Наняты (Sahaty)', OVERRIDE countHiredSahaty(), 0);
 
 applicationEmployee = DATA Employee (Application);
 
@@ -309,7 +310,7 @@ FORM applicationKanban 'Канбан анкет'
     FILTERS opened(tt) OR status(tt) = ApplicationStatus.hired
 
     OBJECTS c = Interview LAST
-    PROPERTIES 'Дата ' = DATE(dateTime(c)) READONLY ORDER DESC, 'Время контакта' = dateTimeContacted(c) READONLY
+    PROPERTIES 'Дата ' = DATE(dateTime(c)) READONLY ORDER DESC, 'Время контакта' = interviewTime(c) READONLY
     PROPERTIES csummary 'Отчет' = HTML(summary(c)) READONLY 
     FILTERS application(c) = tt
     
@@ -613,7 +614,6 @@ DESIGN application{
 fill(Employee e, Application a) +{
     mainSpeciality(e) <- mainSpeciality(a);
 }
-//
 
 onWebClientInit() + {
     onWebClientInit('applicationskanban.js') <- 1;
@@ -631,4 +631,13 @@ NAVIGATOR {
 DESIGN application {
     PROPERTY (dateTime(i)) { charWidth = 15; }
     PROPERTY (dateTimeContacted(i)) { charWidth = 15; }
+}
+
+EXTEND FORM interview PROPERTIES (i) interviewTime;
+DESIGN interview {
+    OBJECTS {
+        MOVE PROPERTY(dateTime(i)) { charWidth = 30; }
+        MOVE PROPERTY(interviewTime(i)) { charWidth = 30; }
+        MOVE PROPERTY(interviewers(i)) { charWidth = 30; }
+    }
 }
