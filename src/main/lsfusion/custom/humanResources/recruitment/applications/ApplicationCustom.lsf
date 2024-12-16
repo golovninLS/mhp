@@ -150,7 +150,7 @@ dateTimeContacted 'Время контакта' = DATA DATETIME (Interview);
 nextContactDate 'Дата следующего контакта' (Application a) = DATE(dateTime(lastInterview(a))) IF NOT dateTimeContacted(lastInterview(a));
 interviewTime 'Планируемое время' = DATA TIME (Interview) CHARWIDTH 15;
 
-captionContact (Application a) = CONCAT ' ', 'Позвонить', toChar(nextContactDate(a), 'dd.mm.yyyy'), toChar(interviewTime(lastInterview(a)), 'HH24:MI');
+captionContact (Application a) = 'Позвонить ' + CONCAT ' ', toChar(nextContactDate(a), 'dd.mm.yyyy'), toChar(interviewTime(lastInterview(a)), 'HH24:MI');
 
 EXTEND FORM dialogDate
     OBJECTS t = TIME PANEL
