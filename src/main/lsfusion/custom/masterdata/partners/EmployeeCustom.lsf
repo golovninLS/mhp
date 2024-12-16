@@ -32,11 +32,6 @@ EXTEND FORM employeesCustom
         FILTER '{Inactive}' archived(e)
 ;
 
-showAllCompaniesData 'Показывать все компании' = DATA BOOLEAN (CustomUser);
-
-EXTEND FORM customUsers
-    PROPERTIES showAllCompaniesData(u)
-;
 
 accessToCompany = DATA BOOLEAN (CustomUser, Company);
 in 'Incl.' (CustomUser u, Company c) = OVERRIDE accessToCompany(u, c), TRUE IF legalEntity(u) = c;
@@ -47,15 +42,6 @@ EXTEND FORM employee
     PROPERTIES(e, comp) in
 ;
 
-DESIGN employee {
-    details {
-        NEW companies LAST {
-            showIf = showAllCompaniesData(currentUser());
-            caption = 'Company';
-            MOVE BOX(comp) { caption = ''; };
-        }
-    }
-}
 
 showInfo 'Отображать вкладку инфо' = DATA BOOLEAN (UserRole);
 showRoles 'Отображать вкладку роли' = DATA BOOLEAN (UserRole);
@@ -84,11 +70,28 @@ DESIGN securityPolicy {
 
 canPayBills 'Оплата фактур' = DATA BOOLEAN (UserRole);
 
-EXTEND FORM securityPolicy PROPERTIES (ur) canPayBills PANEL;
+showAllProjects 'Отображать все проекты' = DATA BOOLEAN (UserRole);
+showAllCompaniesData 'Показывать все компании' = DATA BOOLEAN (UserRole);
+
+EXTEND FORM securityPolicy PROPERTIES (ur) PANEL canPayBills, showAllProjects, showAllCompaniesData;
 DESIGN securityPolicy {
     permissionsContainer {
+        NEW access FIRST {
+            MOVE PROPERTY(showAllProjects(ur));
+            MOVE PROPERTY(showAllCompaniesData(ur));
+        }
         NEW block2 {
             MOVE PROPERTY(canPayBills(ur));
+        }
+    }
+}
+
+DESIGN employee {
+    details {
+        NEW companies LAST {
+            showIf = GROUP SUM 1 IF has(currentUser(), UserRole urr) AND showAllCompaniesData(urr);
+            caption = 'Company';
+            MOVE BOX(comp) { caption = ''; };
         }
     }
 }

@@ -161,7 +161,7 @@ EXTEND FORM timesheetSupervisor
     FILTERS assigned(pa, ea, dates) OR hours(ea, pa, dates) OR (NOT countAssignments(pa) AND NOT countAssignments(currentUser()))
     FILTERS pa == timesheetProject() OR NOT timesheetProject()
     FILTERS in(pa, timesheetAccomodation()) OR NOT timesheetAccomodation()
-    FILTERS in(pa, currentUser()) OR showAllProjects(currentUser())
+    FILTERS in(pa, currentUser()) OR (GROUP SUM 1 IF has(currentUser(), UserRole ur) AND showAllProjects(ur))
 
     FILTERGROUP onlyFilledAccomodation
         FILTER 'Только заполненные' countSymbols(ea, pa, dates)

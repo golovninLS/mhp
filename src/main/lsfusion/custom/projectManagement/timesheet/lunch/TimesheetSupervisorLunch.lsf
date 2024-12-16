@@ -15,7 +15,7 @@ EXTEND FORM timesheetSupervisor
     OBJECTS pel = (pl = Project, el = Employee)
     PROPERTIES READONLY nameProjectLunch 'Project' = name(pl)
     PROPERTIES(el) READONLY firstName, lastName, namePosition, rolesTimesheet
-    FILTERS in(pl, currentUser()) OR showAllProjects(currentUser())
+    FILTERS in(pl, currentUser()) OR (GROUP SUM 1 IF has(currentUser(), UserRole ur) AND showAllProjects(ur))
 ;
 
 clearLunch 'Clear for date' (DATE d) {

@@ -1,6 +1,6 @@
 MODULE TimesheetSupervisorCustom;
 
-REQUIRE TimesheetSupervisor, TimeEntryTypeCustom, ProjectCustom;
+REQUIRE TimesheetSupervisor, TimeEntryTypeCustom, ProjectCustom, EmployeeCustom;
 
 PRIORITY MasterData;
 
@@ -251,42 +251,25 @@ DESIGN timesheetSupervisor {
         }
     }
 }
-showAllProjects 'Отображать все проекты' = DATA BOOLEAN (CustomUser);
 
-EXTEND FORM employee
-    PROPERTIES showAllProjects(e)
-;
-DESIGN employee{
-    info {
-        MOVE PROPERTY (showAllProjects(e));
-    }
-}
-skipCheckAssigned(CustomUser c, Project p) += WHEN showAllProjects(c) AND p IS Project THEN TRUE;
+projectByManager = GROUP MAX Project p BY manager(p);
+
+skipCheckAssigned(CustomUser c, Project p) += WHEN (GROUP SUM 1 IF has(c, UserRole ur) AND showAllProjects(ur)) AND p IS Project AND c IS CustomUser THEN TRUE;
 skipCheckAssigned(CustomUser c, Project p) += WHEN manager(p) = c THEN TRUE;
 
 CONSTRAINT SETCHANGED(TimeEntry t IS TimeEntry) AND NOT hours(t) MESSAGE 'В отметке времени обязательно указание часов';
 CONSTRAINT DROPPED(hours(TimeEntry t)) AND employee(t) MESSAGE 'В отметке времени обязательно указание часов';
 
-projectByManager = GROUP MAX Project p BY manager(p);
-
-DESIGN employee {
-    REMOVE PROPERTY(showAllProjects(e));
-}
-
-EXTEND FORM customUsers
-    PROPERTIES showAllProjects(u) 
-;
-
 EXTEND FORM timesheetSupervisor
-    FILTERS in(p, currentUser()) OR showAllProjects(currentUser())
+    FILTERS in(p, currentUser()) OR (GROUP SUM 1 IF has(currentUser(), UserRole ur) AND showAllProjects(ur))
 ;
 
 EXTEND FORM projects
-    FILTERS in(p, currentUser()) OR showAllProjects(currentUser())
+    FILTERS in(p, currentUser()) OR (GROUP SUM 1 IF has(currentUser(), UserRole ur) AND showAllProjects(ur))
 ;
 
 EXTEND FORM dialogProjects
-    FILTERS in(p, currentUser()) OR showAllProjects(currentUser())
+    FILTERS in(p, currentUser()) OR (GROUP SUM 1 IF has(currentUser(), UserRole ur) AND showAllProjects(ur))
     FILTERGROUP active
         FILTER 'Opened' NOT archived(p) AND NOT closed(p) DEFAULT
         FILTER 'Closed' archived(p) OR closed(p)

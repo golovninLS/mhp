@@ -72,7 +72,7 @@ EXTEND FORM project
     FILTERGROUP onlyFilledTimeEntry
         FILTER 'Только заполненные' ProjectManagement.countTimeEntryType(pm, ep, dates)
 
-    FILTERS ProjectManagement.in(pm, Authentication.currentUser()) OR ProjectManagement.showAllProjects(Authentication.currentUser())
+    FILTERS ProjectManagement.in(pm, Authentication.currentUser()) OR (GROUP SUM 1 IF has(currentUser(), UserRole ur) AND showAllProjects(ur))
 
     //обеды
     PROPERTIES datesLunch '' = VALUE(dates)
@@ -85,7 +85,7 @@ EXTEND FORM project
     OBJECTS pel = (pl = ProjectManagement.Project, el = MasterData.Employee)
     PROPERTIES READONLY nameProjectLunch 'Project' = ProjectManagement.name(pl)
     PROPERTIES(el) READONLY MasterData.firstName, MasterData.lastName, MasterData.namePosition, ProjectManagement.rolesTimesheet
-    FILTERS ProjectManagement.in(pl, Authentication.currentUser()) OR ProjectManagement.showAllProjects(Authentication.currentUser())
+    FILTERS ProjectManagement.in(pl, Authentication.currentUser()) OR (GROUP SUM 1 IF has(currentUser(), UserRole ur) AND showAllProjects(ur))
 
     PROPERTIES ProjectManagement.symbolProductOrder(d, el, pl) WAIT COLUMNS (d) HEADER Time.extractDay(d) BACKGROUND ProjectManagement.backgroundHoursTimesheet(d, el)
     ON CHANGE {
@@ -172,8 +172,7 @@ EXTEND FORM project
     FILTERS ProjectManagement.assigned(paa, ea, dates) OR ProjectManagement.hours(ea, paa, dates) OR (NOT ProjectManagement.countAssignments(paa) AND NOT ProjectManagement.countAssignments(Authentication.currentUser()))
     FILTERS paa == p
     FILTERS ProjectManagement.in(paa, ProjectManagement.timesheetAccomodation()) OR NOT ProjectManagement.timesheetAccomodation()
-    FILTERS ProjectManagement.in(paa, Authentication.currentUser()) OR ProjectManagement.showAllProjects(Authentication.currentUser())
-
+    FILTERS ProjectManagement.in(paa, Authentication.currentUser()) OR (GROUP SUM 1 IF has(currentUser(), UserRole ur) AND showAllProjects(ur))
     FILTERGROUP onlyFilledAccomodation
         FILTER 'Только заполненные' ProjectManagement.countSymbols(ea, paa, dates)
 
@@ -211,7 +210,7 @@ EXTEND FORM project
         FILTER 'Только заполненные'
         salary(et, tp, dates) OR lunches(et, tp, dates) OR accomodation(et, tp, dates) OR lunchCompensation(et, tp, dates)
             AND (hours(et, tp, dates) OR countLunches(et, tp, dates) OR countAccomodation(et, tp, dates))
-    FILTERS in(tp, currentUser()) OR showAllProjects(currentUser())
+    FILTERS in(tp, currentUser()) OR (GROUP SUM 1 IF has(currentUser(), UserRole ur) AND showAllProjects(ur))
 
     //payroll
     PROPERTIES datesPayroll '' = VALUE(dates)
@@ -226,12 +225,12 @@ EXTEND FORM project
 
     OBJECTS prr = Project
     FILTERS prr = p
-    FILTERS in(prr, Authentication.currentUser()) OR showAllProjects(currentUser())
+    FILTERS in(prr, Authentication.currentUser()) OR (GROUP SUM 1 IF has(currentUser(), UserRole ur) AND showAllProjects(ur))
 
     OBJECTS payslip = Payslip
     PROPERTIES(payslip) READONLY number, startDate, endDate, firstNameEmployee, lastNameEmployee, namePositionEmployee, nameCompany, netWage
     PROPERTIES(payslip) NEWSESSION EDIT
-    FILTERS in(prr, payslip) OR showAllProjects(currentUser())
+    FILTERS in(prr, payslip) OR (GROUP SUM 1 IF has(currentUser(), UserRole ur) AND showAllProjects(ur))
 
     PROPERTIES(payslip, pc) total COLUMNS 'total' (pc) HEADER name(pc) READONLYIF readonly(pc) ON CHANGE {
         NEWSESSION {
@@ -271,7 +270,7 @@ EXTEND FORM project
 DESIGN project {
     details {
         NEW timesheetProject LAST {
-            showIf = in(p, currentUser()) OR showAllProjects(currentUser());
+            showIf = in(p, currentUser()) OR (GROUP SUM 1 IF has(currentUser(), UserRole ur) AND showAllProjects(ur));
             caption = 'Timesheet';
             NEW tabbedPane {
                 tabbed = TRUE;

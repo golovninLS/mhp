@@ -286,9 +286,9 @@ NAVIGATOR {
     }
 }
 
-access = GROUP SUM 1 IF in(Project p, currentUser()) OR showAllProjects(currentUser()) BY type(p);
+access = GROUP SUM 1 IF in(Project p, currentUser()) OR (GROUP SUM 1 IF has(currentUser(), UserRole ur) AND showAllProjects(ur)) BY type(p);
 
 EXTEND FORM reportProjectsV2
-    FILTERS in(p, currentUser()) OR showAllProjects(currentUser())
+    FILTERS in(p, currentUser()) OR (GROUP SUM 1 IF has(currentUser(), UserRole ur) AND showAllProjects(ur))
     FILTERS access(t)
 ;

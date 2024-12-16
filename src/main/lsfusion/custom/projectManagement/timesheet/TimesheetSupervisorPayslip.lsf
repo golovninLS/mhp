@@ -54,13 +54,13 @@ EXTEND FORM timesheetSupervisor
     PROPERTIES nameTimesheetCompany(), generatePayslips(dates) SHOWIF timesheetCompany()
 
     OBJECTS pr = Project
-    FILTERS in(pr, currentUser()) OR showAllProjects(currentUser())
+    FILTERS in(pr, currentUser()) OR (GROUP SUM 1 IF has(currentUser(), UserRole ur) AND showAllProjects(ur))
 
     OBJECTS ps = Payslip
     PROPERTIES(ps) READONLY number, startDate, endDate, firstNameEmployee, lastNameEmployee, namePositionEmployee, nameCompany,
         netWage
     PROPERTIES(ps) NEWSESSION EDIT
-    FILTERS in(pr, ps) OR showAllProjects(currentUser())
+    FILTERS in(pr, ps) OR (GROUP SUM 1 IF has(currentUser(), UserRole ur) AND showAllProjects(ur))
 
     PROPERTIES(ps, pc) total COLUMNS 'total' (pc) HEADER name(pc) SHOWIF NOT timesheetProject() READONLYIF readonly(pc) ON CHANGE {
         NEWSESSION {

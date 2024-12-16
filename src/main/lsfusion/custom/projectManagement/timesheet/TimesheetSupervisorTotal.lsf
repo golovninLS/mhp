@@ -80,7 +80,7 @@ EXTEND FORM timesheetSupervisor
         FILTER 'Только заполненные'
             salary(et, tp, dates) OR lunches(et, tp, dates) OR accomodation(et, tp, dates) OR lunchCompensation(et, tp, dates) OR
             NOT timesheetProject() AND (hours(et, tp, dates) OR countLunches(et, tp, dates) OR countAccomodation(et, tp, dates))
-    FILTERS in(tp, currentUser()) OR showAllProjects(currentUser())
+    FILTERS in(tp, currentUser()) OR (GROUP SUM 1 IF has(currentUser(), UserRole ur) AND showAllProjects(ur))
 ;
 
 DESIGN timesheetSupervisor {

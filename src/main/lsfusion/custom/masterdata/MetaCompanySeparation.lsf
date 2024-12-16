@@ -10,7 +10,8 @@ REQUIRE EmployeeCustom, Company, Project, InvLedgerItem, ResLedgerItem, BillItem
 
 NAMESPACE MasterData;
 
-access (CustomUser u, Company c) = IF showAllCompaniesData(u) THEN TRUE ELSE in(u, c);
+access (CustomUser u, Company c) = IF ((GROUP SUM 1 IF has(currentUser(), UserRole urr) AND showAllCompaniesData(urr)) OR has(currentUser(), userRoleSID('admin'))) 
+    THEN TRUE ELSE in(u, c);
 
 //фильтрация форм
 META setCompanySeparation (form, obj, prop)
