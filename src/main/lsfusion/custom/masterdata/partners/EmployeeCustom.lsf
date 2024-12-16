@@ -69,12 +69,26 @@ DESIGN securityPolicy {
     rolePolicyContainer {
         NEW permissionsContainer {
             caption = 'Настройки приложения';
-            MOVE PROPERTY(showInfo(ur));
-            MOVE PROPERTY(showRoles(ur));
-            MOVE PROPERTY(showLocations(ur));
-            MOVE PROPERTY(showInventory(ur));
-            MOVE PROPERTY(showCompanies(ur));
-            MOVE PROPERTY(showNotifications(ur));
+            horizontal = TRUE;
+            NEW block1 {
+                MOVE PROPERTY(showInfo(ur));
+                MOVE PROPERTY(showRoles(ur));
+                MOVE PROPERTY(showLocations(ur));
+                MOVE PROPERTY(showInventory(ur));
+                MOVE PROPERTY(showCompanies(ur));
+                MOVE PROPERTY(showNotifications(ur));
+            }
+        }
+    }
+}
+
+canPayBills 'Оплата фактур' = DATA BOOLEAN (UserRole);
+
+EXTEND FORM securityPolicy PROPERTIES (ur) canPayBills PANEL;
+DESIGN securityPolicy {
+    permissionsContainer {
+        NEW block2 {
+            MOVE PROPERTY(canPayBills(ur));
         }
     }
 }

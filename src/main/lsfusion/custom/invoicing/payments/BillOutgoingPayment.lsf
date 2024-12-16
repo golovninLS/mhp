@@ -1,6 +1,6 @@
 MODULE BillOutgoingPayment;
 
-REQUIRE BillCustom, OutgoingPayment, PaymentCustom, BillPayment;
+REQUIRE BillCustom, OutgoingPayment, PaymentCustom, BillPayment, EmployeeCustom;
 
 NAMESPACE Invoicing;
 
@@ -161,3 +161,7 @@ CONSTRAINT SETCHANGED (paidVat(Bill b)) AND paidVat(b) > taxAmount(b) MESSAGE '�
 CONSTRAINT SETCHANGED (paid(Bill b)) AND paid(b) > amount(b) MESSAGE 'Превышена задолженность по brutto';
 
 WHEN SETCHANGED(brutto(OutgoingPayment op)) DO { amount(op) <- brutto(op); APPLY; }
+
+CONSTRAINT ((SETCHANGED(status(Bill b)) AND status(b) = BillStatus.done) OR SETCHANGED(paid(b)) OR SETCHANGED(paidNetto(b)) OR SETCHANGED(paidVat(b)))
+    AND has(currentUser(), UserRole role) AND NOT canPayBills(role)
+    MESSAGE 'Данному пользователю запрещено оплачивать фактуру';
