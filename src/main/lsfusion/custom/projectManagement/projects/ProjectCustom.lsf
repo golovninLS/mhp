@@ -147,7 +147,7 @@ FORM dialogEmployees 'Employees'
 
     OBJECTS e = Employee
     PROPERTIES in(p, e)
-    PROPERTIES(e) READONLY name[Partner] SELECTOR
+    PROPERTIES(e) READONLY name[Partner] SELECTOR, nameLegalEntity
 ;
 
 EXTEND FORM project

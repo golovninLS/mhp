@@ -297,3 +297,6 @@ END
 @checkExtraAccountObject(BillProject, , );
 
 @checkExtraAccountObject(ScrapProject, location, scrap);
+
+//счета
+@setCompanySeparation(Invoicing.accounts, a, holder);
