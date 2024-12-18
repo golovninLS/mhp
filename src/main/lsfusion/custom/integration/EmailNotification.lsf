@@ -1,11 +1,25 @@
 MODULE EmailNotification;
 
-REQUIRE Notification;
+REQUIRE Notification, EmployeeCustom;
 
 NAMESPACE Integration;
 
 in 'Уведомлять по email' = DATA BOOLEAN (Employee, NotificationType) CHARWIDTH 12;
 
 EXTEND FORM employee
-    PROPERTIES (e, nt) in FIRST READONLYIF nt = NotificationType.bill
+    PROPERTIES (e, nt) in FIRST
 ;
+
+sendEmail (Employee e, STRING message, STRING subject) {
+    timeoutHttp() <- 20000;
+    IF email[Partner](e) THEN TRY {
+        stringToFile(message);
+        EMAIL
+            SUBJECT (subject)
+            TO email[Partner](e)
+            BODY resultFile();
+    } CATCH {
+        MESSAGE 'Сообщение не было отправлено для ' + name(e);
+        MESSAGE System.messageCaughtException();
+    }
+}

@@ -1,6 +1,6 @@
 MODULE BillNotification;
 
-REQUIRE TelegramNotification, Debt, AccountBillProject;
+REQUIRE TelegramNotification, Debt, AccountBillProject, EmailNotification;
 
 NAMESPACE Integration;
 
@@ -36,8 +36,14 @@ WHEN SETCHANGED(status(Bill b)) AND notify(status(b)) DO {
         LOCAL message = STRING ();
         message() <- messageNotification(b);
         notifyUser(NotificationType.bill, message());
+    } CATCH {
+        logToFile('Telegram distribution failed:', messageCaughtException());
     }
-        CATCH {
-        logToFile('telegram', messageCaughtException());
+    TRY {
+        FOR in(Employee e, NotificationType.bill) DO {
+            sendEmail(e, messageNotification(b), 'Уведомление об изменении статуса фактуры');
+        }
+    } CATCH {
+        logToFile('E-mail distribution failed:', messageCaughtException());
     }
 }
