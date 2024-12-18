@@ -1,0 +1,205 @@
+MODULE PaymentsDashboardMobile;
+
+REQUIRE CashAccountPayment, OutgoingPaymentIncoming, BillOutgoingPayment;
+
+NAMESPACE Invoicing;
+
+FORM createOutgoingPayment 'Исходящий платёж'
+    OBJECTS a = Account PANEL
+
+    OBJECTS p = OutgoingPayment PANEL
+    PROPERTIES(p) nameType READONLY, dateTime, number, netto, vat, brutto READONLY, namePartner, namePartnerAccount, note, reference
+    PROPERTIES(p) READONLY imagedNameStatus BACKGROUND colorStatus(p)
+    PROPERTIES(p) markAsDoneDraft = markAsDone SHOWIF status(p) = OutgoingPaymentStatus.draft, done
+    PROPERTIES(p) createIncomingPayment SHOWIF ready(p) AND incomingPaymentType(type(p)) AND NOT countIncomingPayment(p)
+    PROPERTIES(p) cancel SHOWIF NOT (status(p) = OutgoingPaymentStatus.draft OR status(p) = OutgoingPaymentStatus.canceled), canceled
+
+    OBJECTS of = OutgoingPaymentFile
+    FILTERS outgoingPayment(of) = p
+    PROPERTIES(p) newFile TOOLBAR READONLYIF readonly(p)
+    PROPERTIES() READONLY previewPdfFile SHOWIF previewPdfFile(), previewImageFile SHOWIF NOT previewPdfFile()
+
+    EVENTS ON CHANGE of {
+        previewPdfFile() <- NULL;
+        previewImageFile() <- NULL;
+        IF lower(extension(of)) = 'jpg' OR lower(extension(of)) = 'jpeg' OR lower(extension(of)) = 'png' OR lower(extension(of)) = 'bmp' THEN {
+            previewImageFile() <- IMAGEFILE(file(of));
+        }
+        IF lower(extension(of)) = 'pdf' THEN {
+            previewPdfFile() <- PDFFILE(file(of));
+        }
+        IF lower(extension(of)) = 'doc' OR lower(extension(of)) = 'docx' THEN {
+            TRY {
+                wordToPdf(file(of));
+            } CATCH {}
+            previewPdfFile() <- exportPdfFile();
+        }
+    }
+
+    EVENTS ON INIT {
+        companyAccount(p) <- a;
+        company(p) <- holder(a);
+        type(p) <- defaultOutgoingPaymentTypeCashier();
+    }
+;
+
+DESIGN createOutgoingPayment {
+    caption = badged('Outgoing payment', number(p) + '(' + dateTime(p) + ')');
+    NEW statusPane FIRST {
+        horizontal = TRUE;
+        alignment = STRETCH;
+        NEW statusActions {
+            horizontal = TRUE;
+            flex = 1;
+            NEW primaryActions {
+                horizontal = TRUE;
+                MOVE PROPERTY(createIncomingPayment(p)) { valueClass = 'btn-primary'; }
+            }
+            NEW secondaryActions {
+                horizontal = TRUE;
+            }
+        }
+        NEW statusContainer {
+            fill = 1;
+            NEW status {
+                alignment = END;
+                horizontal = TRUE;
+                MOVE PROPERTY(imagedNameStatus(p));
+                NEW statusGroup {
+                    custom = '';
+                    class = 'btn-group';
+                    MOVE PROPERTY(done(p)) {
+                        valueClass = 'btn-check';
+                        captionClass = 'btn btn-outline-primary btn-arrow-right';
+                    }
+                    MOVE PROPERTY(canceled(p)) {
+                        valueClass = 'btn-check';
+                        captionClass = 'btn btn-outline-primary btn-arrow-right';
+                    }
+                }
+            }
+        }
+    }
+    OBJECTS {
+        NEW header {
+            NEW params {
+                caption = '';
+                horizontal = TRUE;
+                alignment = STRETCH;
+                MOVE PROPERTY(nameType(p)) { notNull = TRUE; }
+            }
+            NEW otherParms {
+                alignment = STRETCH;
+                MOVE PROPERTY(dateTime(p)) { alignment = STRETCH; }
+                MOVE PROPERTY(number(p));
+                MOVE PROPERTY(netto(p));
+                MOVE PROPERTY(vat(p));
+                MOVE PROPERTY(brutto(p));
+            }
+            NEW partner {
+                horizontal = TRUE;
+                alignment = STRETCH;
+                caption = 'Partner';
+                MOVE PROPERTY(namePartner(p));
+                MOVE PROPERTY(namePartnerAccount(p));
+            }
+            NEW otherInformation {
+                caption = 'Other information';
+                alignment = STRETCH;
+                MOVE PROPERTY(note(p));
+                MOVE PROPERTY(reference(p));
+            }
+            MOVE PROPERTY(newFile(p)) { alignment = STRETCH; height = 30; }
+            MOVE PROPERTY(markAsDoneDraft) { valueClass = 'btn-secondary'; alignment = STRETCH; height = 30; }
+            MOVE PROPERTY(cancel(p)) { valueClass = 'btn-danger'; alignment = STRETCH; height = 30; }
+            NEW preview {
+                MOVE PROPERTY(previewPdfFile()) { fill = 1; size = (370, 270); caption = ''; alignment = STRETCH; }
+                MOVE PROPERTY(previewImageFile()) { fill = 1; size = (370, 270); caption = ''; alignment = STRETCH; }
+            }
+        }
+    }
+
+    REMOVE TOOLBARBOX(p);
+    REMOVE TOOLBARSYSTEM(p);
+    REMOVE TOOLBARLEFT;
+}
+
+createOutgoingPayment 'Создать исходящий платёж' (Account a) {
+    NEWSESSION {
+        NEW p = OutgoingPayment {
+            SHOW createOutgoingPayment OBJECTS p = p, a = a DOCKED;
+        }
+    }
+}
+
+htmlPayment '' (Payment p) = HTML ('<div>' + (CONCAT '&nbsp;',
+    '<font size="-1">' + number(p) + '</font>',
+    '<i>' + nameType(p) + '</i>',
+    toChar(DATE(dateTime(p)), 'dd.mm.yyyy'),
+    toChar(TIME(dateTime(p)), 'hh24:mi'),
+    '<b>' + signedAmount(p) + '</b>',
+    '<i>' + namePartner(p) + '</i>',
+    '<u>' + namePartnerAccount(p) + '</u>') + '</div>');
+
+htmlName (Account a) = HTML ('<div>' + (CONCAT '&nbsp;',
+    'Касса: ',
+    '<b>' + name(a) + '</b>'
+) + '</div>');
+
+htmlBalance (Account a) = HTML ('<div>' + (CONCAT '&nbsp;',
+    'Баланс: ',
+    '<b>' + balance(a) + '</b>'
+    ) + '</div>');
+
+
+FORM mobilePayments 'Платежи (мобильные)'
+    OBJECTS a = Account
+    PROPERTIES (a) READONLY PANEL htmlName, htmlBalance
+    FILTERS responsible(a) = currentUser()
+
+    OBJECTS pa = Payment
+    PROPERTIES(pa) READONLY htmlPayment
+
+    FILTERS companyAccount(pa) = a AND pa IS OutgoingPayment
+
+    PROPERTIES(a) PANEL createOutgoingPayment
+;
+
+DESIGN mobilePayments {
+    OBJECTS {
+        fill = 1;
+        NEW info {
+            fill = 1;
+            horizontal = TRUE;
+            MOVE PROPERTY(htmlName(a)) {
+                caption = '';
+                alignment = STRETCH;
+                focusable = FALSE;
+            }
+            MOVE PROPERTY(htmlBalance(a)) {
+                caption = '';
+                alignment = STRETCH;
+                focusable = FALSE;
+            }
+        }
+        NEW payments {
+            fill = 100;
+            MOVE GRID(pa) {
+                PROPERTY(htmlPayment(pa)) { valueClass = 'myclass'; }
+            }
+        }
+        NEW actions {
+            fill = 1;
+            horizontal = TRUE;
+            MOVE PROPERTY(createOutgoingPayment(a)) { fill = 1; alignment = STRETCH; height = 30; }
+        }
+    }
+    REMOVE TOOLBARSYSTEM(pa);
+    REMOVE TOOLBARLEFT;
+}
+
+NAVIGATOR {
+    reporting {
+        NEW mobilePayments AFTER payments;
+    }
+}

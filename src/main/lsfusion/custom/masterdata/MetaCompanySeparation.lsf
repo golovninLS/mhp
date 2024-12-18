@@ -5,7 +5,7 @@ REQUIRE EmployeeCustom, Company, Project, InvLedgerItem, ResLedgerItem, BillItem
         OutgoingPayment, BillPaymentDashboard, PaymentProjectDashboard, PaymentListDashboard, BillReport, InvoiceReport, Payment, ProjectCustom,
         ProjectTimeEntry, ProjectTask, TimesheetSupervisorCustom, TimesheetSupervisorMobile, ProjectLedgerReport, TimesheetSupervisorLunch,
         TimesheetSupervisorAccomodation, TimesheetSupervisorTotal, TimesheetSupervisorPayslip, LunchOrder, PaymentsDashboardCustom, ProjectFilter,
-        ReceiptFilter, AccountBillProject
+        ReceiptFilter, AccountBillProject, CashAccountPayment
 ;
 
 NAMESPACE MasterData;
@@ -301,3 +301,6 @@ END
 
 //счета
 @setCompanySeparation(Invoicing.accounts, a, holder);
+
+CONSTRAINT responsible(Invoicing.Account a) AND NOT access(currentUser(), legalEntity(responsible(a)))
+        CHECKED BY responsible[Invoicing.Account] MESSAGE '';

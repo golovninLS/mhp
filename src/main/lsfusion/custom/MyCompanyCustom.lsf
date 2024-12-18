@@ -102,7 +102,7 @@ REQUIRE Eval, ProcessMonitor, Backup,
 
         MetaCompanySeparation, HumanResources, ApplicationInterview, PayslipBatchCustom, ApplicationCustom, PartnerCustom, BillOutgoingPayment, ProjectTaskCustom, TimesheetProject,
     
-        ApplicationReport, ApplicationTask
+        ApplicationReport, ApplicationTask, CashAccountPayment, PaymentsDashboardMobile
 ;
 
 onStarted()+{

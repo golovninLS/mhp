@@ -1,0 +1,123 @@
+MODULE CashAccountPayment;
+
+REQUIRE CashAccount, OutgoingPayment, IncomingPayment, FileUtils, OutgoingPaymentDone, IncomingPaymentDone, BillOutgoingPayment,
+        IncomingPaymentOutgoing, OutgoingPaymentIncoming;
+
+NAMESPACE Invoicing;
+
+
+responsible = DATA Employee (Account);
+nameResponisble 'Ответственный' (Account a) = name(responsible(a));
+
+EXTEND FORM account PROPERTIES (a) nameResponisble SHOWIF a IS CashAccount;
+
+DESIGN account {
+    extraParams {
+        MOVE PROPERTY (nameResponisble(a)) AFTER PROPERTY (nameAccountHolder(a));
+    }
+}
+
+CONSTRAINT (holder(Account a)) AND holder(a) IS Company AND legalEntity(responsible(a)) != holder(a)
+    CHECKED BY responsible[Account] MESSAGE 'Компания ответственного лица отлична от держателя счёта';
+
+defaultOutgoingPaymentTypeCashier = DATA OutgoingPaymentType ();
+nameDefaultOutgoingPaymentTypeCashier 'Тип исходящего платежа по умолчанию (касса)' = name(defaultOutgoingPaymentTypeCashier());
+
+EXTEND FORM options PROPERTIES () nameDefaultOutgoingPaymentTypeCashier;
+
+DESIGN options {
+    tabbedPane {
+        outgoing {
+            NEW options {
+                horizontal = TRUE;
+                MOVE PROPERTY (nameDefaultOutgoingPaymentType());
+                MOVE PROPERTY (nameDefaultOutgoingPaymentTypeCashier());
+            }
+            MOVE BOX(opt);
+        }
+    }
+}
+
+onStarted () + {
+    IF NOT GROUP MAX Numerator n IF series(n) = 'ПКИ' THEN {
+        NEW n = Numerator {
+            name(n) <- 'Пополнение кассы';
+            series(n) <- 'ПКИ';
+            minValue(n) <- 1;
+            maxValue(n) <- 999999;
+            stringLength(n) <- 6;
+        }
+        APPLY;
+    }
+
+    IF NOT GROUP MAX Numerator n IF series(n) = 'ПКВ' THEN {
+        NEW n = Numerator {
+            name(n) <- 'Пополнение кассы';
+            series(n) <- 'ПКВ';
+            minValue(n) <- 1;
+            maxValue(n) <- 999999;
+            stringLength(n) <- 6;
+        }
+        APPLY;
+    }
+
+    IF NOT GROUP MAX Numerator n IF series(n) = 'ОСК' THEN {
+        NEW n = Numerator {
+            name(n) <- 'Оплата с кассы';
+            series(n) <- 'ОСК';
+            minValue(n) <- 1;
+            maxValue(n) <- 999999;
+            stringLength(n) <- 6;
+        }
+        APPLY;
+    }
+    
+    IF NOT incomingPaymentType('cashRefill') THEN {
+        NEW ipt = IncomingPaymentType {
+            id(ipt) <- 'cashRefill';
+            name(ipt) <- 'Пополнение кассы';
+            cash(ipt) <- TRUE;
+            bank(ipt) <- TRUE;
+            interpay(ipt) <- TRUE;
+            numerator(ipt) <- GROUP MAX Numerator n IF series(n) = 'ПКВ';
+            outgoingPaymentType(ipt) <- outgoingPaymentType('cashRefill');
+        }
+        APPLY;
+    }
+
+    IF NOT outgoingPaymentType('cashRefill') THEN {
+        NEW opt = OutgoingPaymentType {
+            id(opt) <- 'cashRefill';
+            name(opt) <- 'Пополнение кассы';
+            cash(opt) <- TRUE;
+            bank(opt) <- TRUE;
+            interpay(opt) <- TRUE;
+            autoCreateIncomingPayment(opt) <- TRUE;
+            numerator(opt) <- GROUP MAX Numerator n IF series(n) = 'ПКИ';
+            incomingPaymentType(opt) <- incomingPaymentType('cashRefill');
+        }
+        APPLY;
+    }
+
+    IF NOT outgoingPaymentType('cashPay') THEN {
+        NEW opt = OutgoingPaymentType {
+            id(opt) <- 'cashPay';
+            name(opt) <- 'Оплата с кассы';
+            cash(opt) <- TRUE;
+            bank(opt) <- TRUE;
+            numerator(opt) <- GROUP MAX Numerator n IF series(n) = 'ОСК';
+            defaultOutgoingPaymentTypeCashier() <- opt;
+        }
+        APPLY;
+    }
+}
+
+@defineObjectFiles(outgoingPayment, p, 'Outgoing Payment file');
+
+DESIGN outgoingPayment {
+    files {
+        showIf = type(p) = outgoingPaymentType('cashRefill') OR type(p) = outgoingPaymentType('cashPay');
+    }
+}
+
+CONSTRAINT partner(Payment op) AND currency(partnerAccount(op)) != currency(companyAccount(op)) MESSAGE 'Валюта счёта контрагента не совпадает с валютой счёта компании';
