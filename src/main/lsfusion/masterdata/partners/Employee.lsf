@@ -141,3 +141,5 @@ EXTEND FORM employees
     FILTERGROUP filters
         FILTER '{Active}' NOT archived(e) DEFAULT
 ;
+
+defaultCompanyUser() += GROUP MAX Company c IF c = legalEntity(currentUser());
