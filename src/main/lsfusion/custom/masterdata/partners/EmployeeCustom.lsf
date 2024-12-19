@@ -1,6 +1,6 @@
 MODULE EmployeeCustom;
 
-REQUIRE Employee;
+REQUIRE Employee, CountryP;
 
 NAMESPACE MasterData;
 
@@ -93,5 +93,16 @@ DESIGN employee {
             caption = 'Company';
             MOVE BOX(comp) { caption = ''; };
         }
+    }
+}
+
+employeeCountry = DATA Country (Employee);
+nameEmployeeCountry 'Страна' (Employee e) = name(employeeCountry(e));
+
+EXTEND FORM employee PROPERTIES (e) nameEmployeeCountry;
+
+DESIGN employee { 
+    info {
+        MOVE PROPERTY (nameEmployeeCountry(e)) AFTER PROPERTY (state(e));
     }
 }
