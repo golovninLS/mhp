@@ -93,6 +93,8 @@ REQUIRE Eval, ProcessMonitor, Backup,
         AccountDistribution, AccountDistributionLineLedger, AccountDistributionCanceled,
 
         BillLunch, ProjectBillCustom, EmployeeTimesheet,
+        
+        ServiceAccountGoogle,
 
         ProjectFileFolder, TaskCustom, RabbitMQ,
 
