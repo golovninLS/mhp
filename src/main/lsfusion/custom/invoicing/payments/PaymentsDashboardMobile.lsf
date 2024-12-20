@@ -1,133 +1,167 @@
 MODULE PaymentsDashboardMobile;
 
-REQUIRE CashAccountPayment, OutgoingPaymentIncoming, BillOutgoingPayment;
+REQUIRE CashAccountPayment, OutgoingPaymentIncoming, BillOutgoingPayment, AccountBillProject;
 
 NAMESPACE Invoicing;
 
-FORM createOutgoingPayment 'Исходящий платёж'
-    OBJECTS a = Account PANEL
+vendor = DATA LOCAL NESTED Partner ();
+nameVendor 'Partner' = name(vendor());
 
-    OBJECTS p = OutgoingPayment PANEL
-    PROPERTIES(p) nameType READONLY, dateTime, number, netto, vat, brutto READONLY, namePartner, namePartnerAccount, note, reference
-    PROPERTIES(p) READONLY imagedNameStatus BACKGROUND colorStatus(p)
-    PROPERTIES(p) markAsDoneDraft = markAsDone SHOWIF status(p) = OutgoingPaymentStatus.draft, done
-    PROPERTIES(p) createIncomingPayment SHOWIF ready(p) AND incomingPaymentType(type(p)) AND NOT countIncomingPayment(p)
-    PROPERTIES(p) cancel SHOWIF NOT (status(p) = OutgoingPaymentStatus.draft OR status(p) = OutgoingPaymentStatus.canceled), canceled
+currency = DATA LOCAL NESTED Currency ();
+nameCurrency 'Currency' = name(currency());
 
-    OBJECTS of = OutgoingPaymentFile
-    FILTERS outgoingPayment(of) = p
-    PROPERTIES(p) newFile TOOLBAR READONLYIF readonly(p)
-    PROPERTIES() READONLY previewPdfFile SHOWIF previewPdfFile(), previewImageFile SHOWIF NOT previewPdfFile()
+dateTime 'Date' = DATA LOCAL NESTED DATETIME ();
 
-    EVENTS ON CHANGE of {
+netto 'Netto' = DATA LOCAL NESTED NUMERIC[14,2] ();
+vat 'Vat' = DATA LOCAL NESTED NUMERIC[14,2] ();
+brutto 'Brutto' = netto() (+) vat();
+
+accountObject = DATA LOCAL NESTED AccountObject () NONULL;
+nameAccountObject 'Объект затрат' = name(accountObject());
+salesAccount = DATA LOCAL NESTED CustomSalesAccount () NONULL;
+nameSalesAccount 'Статья затрат' = name(salesAccount());
+
+file 'Файл' = DATA LOCAL NESTED FILE ();
+
+responsibleUserAccount = GROUP MAX Account a IF responsible(a) = currentUser();
+
+attachFile 'Прикрепить файл' () {
+    INPUT f = FILE DO {
+        file() <- f;
+        
         previewPdfFile() <- NULL;
         previewImageFile() <- NULL;
-        IF lower(extension(of)) = 'jpg' OR lower(extension(of)) = 'jpeg' OR lower(extension(of)) = 'png' OR lower(extension(of)) = 'bmp' THEN {
-            previewImageFile() <- IMAGEFILE(file(of));
+
+        IF lower(extension(f)) = 'jpg' OR lower(extension(f)) = 'jpeg' OR lower(extension(f)) = 'png' OR lower(extension(f)) = 'bmp' THEN {
+            previewImageFile() <- IMAGEFILE(RAWFILE(f));
         }
-        IF lower(extension(of)) = 'pdf' THEN {
-            previewPdfFile() <- PDFFILE(file(of));
+        IF lower(extension(f)) = 'pdf' THEN {
+            previewPdfFile() <- PDFFILE(RAWFILE(f));
         }
-        IF lower(extension(of)) = 'doc' OR lower(extension(of)) = 'docx' THEN {
+        IF lower(extension(f)) = 'doc' OR lower(extension(f)) = 'docx' THEN {
             TRY {
-                wordToPdf(file(of));
+                wordToPdf(RAWFILE(f));
             } CATCH {}
             previewPdfFile() <- exportPdfFile();
         }
     }
+}
+
+createPayment 'Создать платёж' () {
+    NEWSESSION NESTED {
+        NEW b = Bill {
+            status(b) <- BillStatus.draft;
+            type(b) <- defaultBillTypeCashier();
+            company(b) <- holder(responsibleUserAccount());
+            vendor(b) <- vendor();
+            dateTime(b) <- dateTime();
+            NEW bf = BillFile {
+                bill(bf) <- b;
+                file(bf) <- RAWFILE(file());
+                extension(bf) <- extension(file());
+            }
+
+            NEW l = BillLine {
+                bill(l) <- b;
+                item(l) <- defaultBillItem();
+                taxAmount(defaultTax(), l) <- vat();
+                untaxedAmount(l) <- netto();
+            }
+
+            NEW bp = BillProject {
+                bill(bp) <- b;
+                accountObject(bp) <- accountObject();
+                salesAccount(bp) <- salesAccount();
+                taxAmount(defaultTax(), bp) <- vat();
+                untaxedAmount(bp) <- netto();
+                base(bp) <- 100;
+            }
+
+            NEW p = OutgoingPayment {
+                status(p) <- OutgoingPaymentStatus.draft;
+                companyAccount(p) <- responsibleUserAccount();
+                company(p) <- holder(responsibleUserAccount());
+                partner(p) <- vendor();
+                type(p) <- defaultOutgoingPaymentTypeCashier();
+                netto(p) <- netto();
+                vat(p) <- vat();
+                NEW uof = OutgoingPaymentFile {
+                    outgoingPayment(uof) <- p;
+                    file(uof) <- RAWFILE(file());
+                    extension(uof) <- extension(file());
+                }
+            }
+        }
+        APPLY;
+    }
+}
+
+FORM createOutgoingPayment 'Исходящий платёж'
+    OBJECTS a = Account PANEL
+    PROPERTIES () dateTime, nameVendor, netto, vat, brutto READONLY, nameAccountObject, nameSalesAccount
+    PROPERTIES () PANEL attachFile
+    PROPERTIES () TOOLBAR createPayment AFTER formCancel()
+
+    PROPERTIES() READONLY previewPdfFile SHOWIF previewPdfFile(), previewImageFile SHOWIF NOT previewPdfFile()
 
     EVENTS ON INIT {
-        companyAccount(p) <- a;
-        company(p) <- holder(a);
-        type(p) <- defaultOutgoingPaymentTypeCashier();
+        dateTime() <- currentDateTime();
+    }
+
+    EVENTS ON CANCEL {
+        dateTime() <- currentDateTime();
+        vendor() <- NULL;
+        netto() <- NULL;
+        vat() <- NULL;
+        accountObject() <- NULL;
+        salesAccount() <- NULL;
+        file() <- NULL;
+        previewPdfFile() <- NULL;
+        previewImageFile() <- NULL;
     }
 ;
 
 DESIGN createOutgoingPayment {
-    caption = badged('Outgoing payment', number(p) + '(' + dateTime(p) + ')');
-    NEW statusPane FIRST {
+    OBJECTS {
+        NEW info {
+            fill = 10;
+            MOVE PROPERTY (dateTime()) { charWidth = 20; fontSize = 18; font = '18'; captionFont = '18'; }
+            MOVE PROPERTY (nameVendor()) { charWidth = 20; fontSize = 18; captionFont = '18'; }
+            MOVE PROPERTY (netto()) { charWidth = 20; fontSize = 18; captionFont = '18'; }
+            MOVE PROPERTY (vat()) { charWidth = 20; fontSize = 18; captionFont = '18'; }
+            MOVE PROPERTY (brutto()) { charWidth = 20; fontSize = 18; captionFont = '18'; }
+            MOVE PROPERTY (nameAccountObject()) { charWidth = 20; fontSize = 18; captionFont = '18'; }
+            MOVE PROPERTY (nameSalesAccount()) { charWidth = 20; fontSize = 18; captionFont = '18'; }
+            NEW action {
+                alignment = STRETCH;
+                MOVE PROPERTY (attachFile()) { height = 25; fill = 1; alignment = STRETCH; fontSize = 18; captionFont = '18'; }
+            }
+        }
+        NEW files {
+            horizontal = TRUE;
+            fill = 5;
+            MOVE PROPERTY(previewPdfFile()) { fill = 1; size = (370, 270); caption = ''; alignment = STRETCH; }
+            MOVE PROPERTY(previewImageFile()) { fill = 1; size = (370, 270); caption = ''; alignment = STRETCH; }
+        }
+
+        REMOVE PROPERTY(formApply());
+        REMOVE PROPERTY(formRefresh());
+        REMOVE PROPERTY(formOk());
+    }
+    NEW actions {
         horizontal = TRUE;
         alignment = STRETCH;
-        NEW statusActions {
-            horizontal = TRUE;
-            flex = 1;
-            NEW primaryActions {
-                horizontal = TRUE;
-                MOVE PROPERTY(createIncomingPayment(p)) { valueClass = 'btn-primary'; }
-            }
-            NEW secondaryActions {
-                horizontal = TRUE;
-            }
-        }
-        NEW statusContainer {
-            fill = 1;
-            NEW status {
-                alignment = END;
-                horizontal = TRUE;
-                MOVE PROPERTY(imagedNameStatus(p));
-                NEW statusGroup {
-                    custom = '';
-                    class = 'btn-group';
-                    MOVE PROPERTY(done(p)) {
-                        valueClass = 'btn-check';
-                        captionClass = 'btn btn-outline-primary btn-arrow-right';
-                    }
-                    MOVE PROPERTY(canceled(p)) {
-                        valueClass = 'btn-check';
-                        captionClass = 'btn btn-outline-primary btn-arrow-right';
-                    }
-                }
-            }
-        }
+        MOVE PROPERTY (formClose()){ height = 25; alignment = STRETCH; fill = 1; fontSize = 18; }
+        MOVE PROPERTY (formCancel()){ height = 25; alignment = STRETCH; fill = 1; fontSize = 18; }
+        MOVE PROPERTY (createPayment()) { height = 25; alignment = STRETCH; fill = 1; fontSize = 18; }
     }
-    OBJECTS {
-        NEW header {
-            NEW params {
-                caption = '';
-                horizontal = TRUE;
-                alignment = STRETCH;
-                MOVE PROPERTY(nameType(p)) { notNull = TRUE; }
-            }
-            NEW otherParms {
-                alignment = STRETCH;
-                MOVE PROPERTY(dateTime(p)) { alignment = STRETCH; }
-                MOVE PROPERTY(number(p));
-                MOVE PROPERTY(netto(p));
-                MOVE PROPERTY(vat(p));
-                MOVE PROPERTY(brutto(p));
-            }
-            NEW partner {
-                horizontal = TRUE;
-                alignment = STRETCH;
-                caption = 'Partner';
-                MOVE PROPERTY(namePartner(p));
-                MOVE PROPERTY(namePartnerAccount(p));
-            }
-            NEW otherInformation {
-                caption = 'Other information';
-                alignment = STRETCH;
-                MOVE PROPERTY(note(p));
-                MOVE PROPERTY(reference(p));
-            }
-            MOVE PROPERTY(newFile(p)) { alignment = STRETCH; height = 30; }
-            MOVE PROPERTY(markAsDoneDraft) { valueClass = 'btn-secondary'; alignment = STRETCH; height = 30; }
-            MOVE PROPERTY(cancel(p)) { valueClass = 'btn-danger'; alignment = STRETCH; height = 30; }
-            NEW preview {
-                MOVE PROPERTY(previewPdfFile()) { fill = 1; size = (370, 270); caption = ''; alignment = STRETCH; }
-                MOVE PROPERTY(previewImageFile()) { fill = 1; size = (370, 270); caption = ''; alignment = STRETCH; }
-            }
-        }
-    }
-
-    REMOVE TOOLBARBOX(p);
-    REMOVE TOOLBARSYSTEM(p);
     REMOVE TOOLBARLEFT;
 }
 
 createOutgoingPayment 'Создать исходящий платёж' (Account a) {
     NEWSESSION {
         NEW p = OutgoingPayment {
-            SHOW createOutgoingPayment OBJECTS p = p, a = a DOCKED;
+            SHOW createOutgoingPayment DOCKED;
         }
     }
 }

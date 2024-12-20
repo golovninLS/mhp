@@ -5,7 +5,6 @@ REQUIRE CashAccount, OutgoingPayment, IncomingPayment, FileUtils, OutgoingPaymen
 
 NAMESPACE Invoicing;
 
-
 responsible = DATA Employee (Account);
 nameResponisble 'Ответственный' (Account a) = name(responsible(a));
 
@@ -23,7 +22,10 @@ CONSTRAINT (holder(Account a)) AND holder(a) IS Company AND legalEntity(responsi
 defaultOutgoingPaymentTypeCashier = DATA OutgoingPaymentType ();
 nameDefaultOutgoingPaymentTypeCashier 'Тип исходящего платежа по умолчанию (касса)' = name(defaultOutgoingPaymentTypeCashier());
 
-EXTEND FORM options PROPERTIES () nameDefaultOutgoingPaymentTypeCashier;
+defaultBillTypeCashier = DATA BillType ();
+nameDefaultBillTypeCashier 'Тип фактуры по умолчанию (касса)' = name(defaultBillTypeCashier());
+
+EXTEND FORM options PROPERTIES () nameDefaultOutgoingPaymentTypeCashier, nameDefaultBillTypeCashier;
 
 DESIGN options {
     tabbedPane {
@@ -34,6 +36,11 @@ DESIGN options {
                 MOVE PROPERTY (nameDefaultOutgoingPaymentTypeCashier());
             }
             MOVE BOX(opt);
+        }
+        NEW billType AFTER BOX(t) {
+            caption = 'Bill type';
+            MOVE PROPERTY (nameDefaultBillTypeCashier());
+            MOVE BOX(bt);
         }
     }
 }
