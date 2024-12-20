@@ -1,0 +1,166 @@
+MODULE BillProjectBigQuery;
+
+REQUIRE BigQuery, BillOutgoingPayment;
+
+NAMESPACE IntegrationGoogle;
+
+fillSchemaTable () + {
+    fillFieldTable(1, 'NULLABLE', 'nameAccountObject', 'STRING');  // nameAccountObject - Объект затрат
+    fillFieldTable(2, 'NULLABLE', 'nameAccount', 'STRING');        // nameSalesAccount - Статья затрат
+    fillFieldTable(3, 'NULLABLE', 'numberMonthAccount', 'INTEGER');// numberMonthAccount - Месяц
+    fillFieldTable(4, 'NULLABLE', 'yearAccount', 'INTEGER');       // Год
+    fillFieldTable(5, 'NULLABLE', 'base', 'NUMERIC');              // base - База распределения
+    fillFieldTable(6, 'NULLABLE', 'netto', 'NUMERIC');             // untaxedAmount - Netto
+    fillFieldTable(7, 'NULLABLE', 'vat', 'NUMERIC');               // taxAmount - Vat
+    fillFieldTable(8, 'NULLABLE', 'brutto', 'NUMERIC');            // amount - Brutto
+    fillFieldTable(9, 'NULLABLE', 'leftBrutto', 'NUMERIC');        // Осталось оплатить brutto
+    fillFieldTable(10, 'NULLABLE', 'leftNetto', 'NUMERIC');        // Осталось оплатить netto
+    fillFieldTable(11, 'NULLABLE', 'leftVat', 'NUMERIC');          // Осталось оплатить vat
+    fillFieldTable(12, 'NULLABLE', 'nameVendor', 'STRING');        // nameVendor - Поставщик(из фактуры) 
+    fillFieldTable(13, 'NULLABLE', 'nameCompany', 'STRING');       // nameCompany - Компания (из фактуры)
+    fillFieldTable(14, 'NULLABLE', 'date', 'DATE');                // date - Дата (из фактуры)
+    fillFieldTable(15, 'NULLABLE', 'number', 'STRING');            // number - Номер(из фактуры)
+    fillFieldTable(16, 'NULLABLE', 'billProjectId', 'STRING');     // id BillProject
+    fillFieldTable(17, 'NULLABLE', 'note', 'STRING');              // Примечание    
+}
+
+billProjectId(BillProject bp) = STRING(LONG(bp));
+note(BillProject bp) = note(bill(bp));
+
+updateDate = DATA DATETIME (BillProject);
+exportDate = DATA DATETIME (BillProject);
+
+WHEN
+    CHANGED(nameAccountObject(BillProject bp)) OR
+        CHANGED(nameSalesAccount(bp)) OR
+        CHANGED(numberMonthAccount(bp)) OR
+        CHANGED(yearAccount(bp)) OR
+        CHANGED(base(bp)) OR
+        CHANGED(untaxedAmount(bp)) OR
+        CHANGED(taxAmount(bp)) OR
+        CHANGED(amount(bp)) OR
+        CHANGED(leftBrutto(bp)) OR
+        CHANGED(leftNetto(bp)) OR
+        CHANGED(leftVat(bp)) OR
+        CHANGED(nameVendor(bp)) OR
+        CHANGED(nameCompany(bp)) OR
+        CHANGED(date(bp)) OR
+        CHANGED(number(bp)) OR
+        CHANGED(yearAccount(bp)) OR
+        CHANGED(note(bp))  DO {
+    updateDate(bp) <- currentDateTime();
+}
+
+deletedBillProjectId = DATA STRING (STRING);
+
+WHEN DROPPED(BillProject bp IS BillProject) DO {
+    deletedBillProjectId(billProjectId(bp)) <- billProjectId(bp);
+}
+
+GROUP json;
+needToExport = DATA LOCAL BOOLEAN (BillProject);
+needToUpdate = DATA LOCAL BOOLEAN (BillProject);
+
+deleteDataTable (ServiceGoogleAccount a, STRING projectId, STRING datasetId){
+    needToUpdate(BillProject bp) <- TRUE IF updateDate(bp) >= exportDate(bp) AND exportDate(bp);
+
+    LOCAL listDeleted = STRING ();
+    listDeleted() <- (CONCAT ', ',
+        (GROUP CONCAT '\'' + billProjectId(BillProject bp) + '\'' IF needToUpdate(bp), ', ' ORDER bp), // удаление обновляемых
+        (GROUP CONCAT '\'' + deletedBillProjectId(STRING s) + '\'' IF deletedBillProjectId(s), ', ' ORDER s));// удаление удаленных данных
+
+    IF NOT listDeleted() THEN RETURN;
+
+    query() <- 'DELETE FROM ' + datasetId + '.' + tableId() + ' WHERE billProjectId IN (' + listDeleted() + ');';
+
+    dataTableQuery(a, projectId, datasetId);
+    deletedBillProjectId(STRING s) <- NULL;
+    exportDate(BillProject bp) <- currentDateTime() WHERE needToUpdate(bp);    
+}
+
+formatDate(BillProject bp) = toChar(date(bp), 'YYYY-MM-DD');
+formatStingFieldValue(STRING s) = (OVERRIDE (CONCAT '', '\'', replace(replace(s, '\'', ''), '\\', '%\\\\%'), '\''), 'NULL');
+formatFieldValue(STRING s) = (OVERRIDE s, 'NULL');
+
+insertDataTable  (ServiceGoogleAccount a, STRING projectId, STRING datasetId){
+    authServiceAccount(a);
+
+    needToExport(BillProject bp) <- TRUE IF (needToUpdate(bp) OR NOT exportDate(bp)) AND bp IS BillProject;
+
+    IF NOT GROUP MIN needToExport(BillProject bp) THEN {
+        RETURN;
+    }
+
+    LOCAL response = FILE ();
+    LOCAL exportFieldList = STRING ();
+    LOCAL exportValueList = STRING ();
+
+    fillSchemaTable();
+    exportFieldList() <- GROUP CONCAT name(INTEGER i) IF name(i), ', ' ORDER i;
+
+    exportValueList () <- GROUP CONCAT
+    ('(' +
+        ( CONCAT ', ',
+            formatStingFieldValue(nameAccountObject(BillProject bp)),
+            formatStingFieldValue(nameSalesAccount(bp)),
+            formatFieldValue(STRING(numberMonthAccount(bp))),
+            formatFieldValue(STRING(yearAccount(bp))),
+            formatFieldValue(STRING(base(bp))),
+            formatFieldValue(STRING(untaxedAmount(bp))),
+            formatFieldValue(STRING(taxAmount(bp))),
+            formatFieldValue(STRING(amount(bp))),
+            formatFieldValue(STRING(leftBrutto(bp))),
+            formatFieldValue(STRING(leftNetto(bp))),
+            formatFieldValue(STRING(leftVat(bp))),
+            formatStingFieldValue(nameVendor(bp)),
+            formatStingFieldValue(nameCompany(bp)),
+            formatStingFieldValue(STRING(date(bp))),
+            formatStingFieldValue(number(bp)),
+            formatStingFieldValue(billProjectId(bp)),
+            formatStingFieldValue(note(bp))
+            ) + ')')
+        IF needToExport(bp), ', ' ORDER bp;
+
+    query() <- 'INSERT INTO ' + datasetId + '.BillProject (' + exportFieldList() + ') VALUES ' + exportValueList();
+    dataTableQuery(a, projectId, datasetId);
+    exportDate(BillProject bp) <- currentDateTime() WHERE needToExport(bp);
+    APPLY;
+}
+
+insertUpdateDataTable 'Экспорт таблицы BillProject (BigQuery)' (ServiceGoogleAccount a, STRING projectId, STRING datasetId) {
+    tableId() <- 'BillProject';
+    getTable(a, projectId, datasetId);
+    IF NOT existTable() THEN insertTable(a, projectId, datasetId);
+
+    deleteDataTable(a, projectId, datasetId); // удаление изменившихся записей
+    insertDataTable(a, projectId, datasetId); // экспорт изменившихся и новых записей
+
+    MESSAGE 'Экспорт завершен' NOWAIT;
+}
+
+serviceGoogleAccountBP 'Сервисный аккаунт для выгрузки BillProject' = DATA ServiceGoogleAccount();
+clientEmailServiceGoogleAccountBP 'Сервисный аккаунт для выгрузки BillProject'  = clientEmail(serviceGoogleAccountBP());
+bigQueryProgectId 'Проект BigQuery для выгрузки BillProject' = DATA STRING();
+bigqueryDatasetId 'Набор данных BigQuery для выгрузки BillProject' = DATA STRING();
+
+insertUpdateDataTable 'Экспорт таблицы BillProject (BigQuery)' () {
+    insertUpdateDataTable(serviceGoogleAccountBP(), bigQueryProgectId(), bigqueryDatasetId());
+}
+
+EXTEND FORM integrationData
+    PROPERTIES () PANEL clientEmailServiceGoogleAccountBP , bigQueryProgectId, bigqueryDatasetId, insertUpdateDataTable
+;
+
+DESIGN integrationData{
+    serviceAccountGoogle {
+        NEW bigqueryProject{
+            caption = 'BigQuery';
+            horizontal = FALSE;
+
+            MOVE PROPERTY (clientEmailServiceGoogleAccountBP());
+            MOVE PROPERTY (bigQueryProgectId());
+            MOVE PROPERTY (bigqueryDatasetId());
+            MOVE PROPERTY (insertUpdateDataTable());
+        }
+    }
+}

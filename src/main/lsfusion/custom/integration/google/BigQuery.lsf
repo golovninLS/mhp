@@ -1,0 +1,106 @@
+MODULE BigQuery;
+
+REQUIRE ServiceAccountGoogle;
+
+NAMESPACE IntegrationGoogle;
+
+// Таблицы Bigquery
+
+GROUP schema;
+GROUP tableReference;
+
+mode = DATA LOCAL STRING(INTEGER);
+name = DATA LOCAL STRING(INTEGER);
+type = DATA LOCAL STRING(INTEGER);
+
+datasetId = DATA LOCAL STRING();
+tableId = DATA LOCAL STRING();
+projectId = DATA LOCAL STRING();
+
+FORM table
+    OBJECTS fields = INTEGER IN schema
+    PROPERTIES(fields) mode, name, type
+    FILTERS name(fields)
+
+    PROPERTIES() IN tableReference datasetId, tableId, projectId
+;
+
+
+fillFieldTable (INTEGER i, STRING mode, name, type) {
+    mode(i) <- mode;
+    name(i) <- name;
+    type(i) <- type;
+}
+
+existTable = DATA LOCAL BOOLEAN ();
+
+getTable (ServiceGoogleAccount a, STRING projectId, STRING datasetId) {
+    authServiceAccount(a);    
+
+    LOCAL response = FILE ();
+    TRY {
+        EXTERNAL HTTP GET 'https://bigquery.googleapis.com/bigquery/v2/projects/' + projectId + '/datasets/' + datasetId + '/tables/' + tableId()
+            HEADERS headersServiceAccount PARAMS exportFile() TO response;
+
+        existTable() <- TRUE;
+    }
+}
+
+fillSchemaTable ABSTRACT ();
+
+insertTable (ServiceGoogleAccount a, STRING projectId, STRING datasetId) {
+    authServiceAccount(a);
+
+    fillSchemaTable();
+    projectId() <- projectId;
+    datasetId() <- datasetId;
+    
+    EXPORT table JSON;
+    fileToString(exportFile());
+
+    LOCAL response = FILE ();
+
+    TRY {
+        EXTERNAL HTTP POST 'https://bigquery.googleapis.com/bigquery/v2/projects/' + projectId + '/datasets/' + datasetId + '/tables'
+            HEADERS headersServiceAccount PARAMS exportFile() TO response;
+
+        fileToString(response());
+
+        MESSAGE 'Таблица создана' NOWAIT;
+    } CATCH {
+        fileToString(response());
+        throwException(CONCAT ' : ', 'insertTable', messageCaughtException(), resultString());
+    }
+}
+
+timeoutMs = DATA LOCAL NUMERIC();
+query = DATA LOCAL STRING();
+useLegacySql = DATA LOCAL STRING ();
+
+FORM queryDataTable
+    PROPERTIES() timeoutMs, query, useLegacySql;
+
+dataTableQuery (ServiceGoogleAccount a, STRING projectId, STRING datasetId){
+    timeoutMs() <- 10000;
+
+    IF NOT query() THEN {
+        MESSAGE 'Отсутствует тело запроса SQL' WAIT;
+        RETURN;
+    }
+
+    useLegacySql() <- 'false';
+    EXPORT queryDataTable JSON;
+    fileToString(exportFile());
+
+    LOCAL response = FILE ();
+
+    TRY {
+        EXTERNAL HTTP POST 'https://bigquery.googleapis.com/bigquery/v2/projects/' + projectId + '/queries'
+            HEADERS headersServiceAccount PARAMS exportFile() TO response;
+        
+        fileToString(response());
+    } CATCH {
+        fileToString(response());
+        throwException(CONCAT ' : ', 'dataTableQuery', messageCaughtException(), resultString());
+    }
+}
