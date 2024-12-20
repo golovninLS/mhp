@@ -121,6 +121,22 @@ payForBill 'Register Payment' (Bill b) {
     IF canceled() THEN RETURN;
 }
 
+leftNetto (BillProject p) =
+    PARTITION UNGROUP  leftNetto
+        PROPORTION STRICT ROUND(2) base(p)
+        ORDER p BY bill(p);
+
+
+leftVat (BillProject p) =
+    PARTITION UNGROUP leftVat
+        PROPORTION STRICT ROUND(2) base(p)
+        ORDER p BY bill(p);
+
+leftBrutto (BillProject p) =
+    PARTITION UNGROUP left
+        PROPORTION STRICT ROUND(2) base(p)
+        ORDER p BY bill(p);
+
 EXTEND FORM bill
     PROPERTIES(b) payForBill SHOWIF status(b) = BillStatus.ready
 

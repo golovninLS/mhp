@@ -94,7 +94,7 @@ REQUIRE Eval, ProcessMonitor, Backup,
 
         BillLunch, ProjectBillCustom, EmployeeTimesheet,
         
-        ServiceAccountGoogle,
+        ServiceAccountGoogle, BigQuery, BillProjectBigQuery,
 
         ProjectFileFolder, TaskCustom, RabbitMQ,
 
