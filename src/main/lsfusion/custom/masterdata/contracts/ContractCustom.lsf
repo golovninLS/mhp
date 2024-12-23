@@ -1,0 +1,26 @@
+MODULE ContractCustom;
+
+REQUIRE  Contract, ContractType, ContractStatus, Employee;
+
+NAMESPACE MasterData;
+
+createDate 'Дата создания' = DATA DATE (Contract) IN id;
+createDate(Contract c) <- currentDate() WHEN SET(c IS Contract);
+
+creator 'Автор' = DATA Employee (Contract) IN id;
+creator(Contract c) <- currentUser() WHEN SET(c IS Contract);
+idCreator 'АвторID' (Contract p) = id(creator(p));
+nameCreator 'Автор' (Contract p) = name(creator(p)) IN id;
+
+
+contractType 'Тип договора' = DATA ContractType (Contract) NONULL;
+idContractType 'Тип договораID' (Contract p) = id(contractType(p));
+nameContractType 'Тип договора' (Contract p) = name(contractType(p)) IN id;
+
+contractStatus 'Статус договора' = DATA ContractStatus (Contract) NONULL;
+idContractStatus 'Статус договора ID' (Contract p) = id(contractStatus(p));
+nameContractStatus'Статус договора' (Contract p) = name(contractStatus(p)) IN id;
+
+
+
+EXTEND FORM contract PROPERTIES (c) PANEL nameContractType, nameContractStatus, nameCreator, createDate;
