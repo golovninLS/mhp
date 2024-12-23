@@ -11,6 +11,7 @@ function createStatusStat(header, text) {
     statusStat.classList.add("project-kanban-status-budget");
     statusStat.innerHTML = text;
     header.appendChild(statusStat);
+    header.statusStat = statusStat;
 }
 
 function createApplicationsCard(applications) {
@@ -183,19 +184,9 @@ function applicationsKanban() {
                 statusName.innerHTML = status.name;
                 statusHeader.appendChild(statusName);
 
-                //                let statusNew = document.createElement("button");
-                //                statusNew.classList.add("applications-kanban-status-new");
-                //                statusNew.classList.add("btn");
-                //                statusNew.classList.add("btn-light");
-                //                statusNew.innerHTML = "<i class=\"bi bi-plus\"></i>";
-                //                statusHeader.appendChild(statusNew);
                 if (status.stat) {
                     createStatusStat(statusHeader, status.stat);
                 }
-
-                //                statusNew.addEventListener("click", function() {
-                //                    controller.changeProperty("createapplications", null, status.id);
-                //                });
 
                 let statusBody = document.createElement("div");
                 statusBody.classList.add("applications-kanban-status-body");
@@ -225,6 +216,47 @@ function applicationsKanban() {
                             });
                         }
                     }
+
+                let isFiltered = false;
+                statusHeader?.statusStat?.addEventListener("click", function () {
+                    if (status?.nameStatus) {
+                        let trimmedNameStatus = status?.nameStatus?.trim();
+
+                        let baseList = list.filter(application => application.status === status.id.toString());
+
+                        if (isFiltered) {
+                            filteredList = baseList;
+                            isFiltered = false;
+                        } else {
+                            if (trimmedNameStatus === "Сбор документов") {
+                                filteredList = baseList.filter(application => application.filterCollectDocuments === true);
+                            } else if (trimmedNameStatus === "Oświadczenie") {
+                                filteredList = baseList.filter(application => application.filterOswiadczenie === true);
+                            } else if (trimmedNameStatus === "Zezwolenie") {
+                                filteredList = baseList.filter(application => application.filterZezwolenie === true);
+                            } else if (trimmedNameStatus === "Виза") {
+                                filteredList = baseList.filter(application => application.filterViza === true);
+                            } else {
+                                filteredList = baseList;
+                            }
+                            isFiltered = true;
+                        }
+
+                        statusBody.innerHTML = "";
+
+                        for (const application of filteredList) {
+                            let applicationsCard = createApplicationsCard(application);
+                            if (isFiltered) applicationsCard.classList.add("bg-info");
+
+                            statusBody.appendChild(applicationsCard);
+
+                            applicationsCard.addEventListener("click", function () {
+                                controller.changeObject(application, true, applicationsCard);
+                            });
+                        }
+                    }
+                });
+
                 statusDiv.appendChild(statusBody);
                 statusBody.status = status;
                 element.statusBody = statusBody;
