@@ -11,12 +11,11 @@ EXTEND CLASS PartnerType {
 }
 
 dataDefaultCompany 'Company' = DATA Company ();
-defaultCompanyUser = ABSTRACT Company();
 
 countCompany 'Number of companies' () = GROUP SUM 1 IF c IS Company MATERIALIZED;
 firstCompany () = GROUP LAST Company c ORDER DESC c WHERE c IS Company; 
 
-defaultCompany = OVERRIDE dataDefaultCompany(), defaultCompanyUser(), (firstCompany() IF countCompany() = 1) MATERIALIZED;
+defaultCompany = OVERRIDE dataDefaultCompany(), (firstCompany() IF countCompany() = 1) MATERIALIZED;
 
 type (Partner p) += WHEN p IS Company THEN PartnerType.company;
 
