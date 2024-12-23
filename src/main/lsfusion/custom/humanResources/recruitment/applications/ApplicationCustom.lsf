@@ -651,3 +651,12 @@ dateTimeRefused 'Дата и время отказа' = DATA DATETIME (Applicati
 afterRefuse(Application a) +{
     dateTimeRefused(a) <- currentDateTime();
 }
+
+filterViza(Application a) = status(a) = ApplicationStatus.vizaCollect AND vizaCollect(a) AND expiredVizaCollect(a);
+filterZezwolenie (Application a) = status(a) = ApplicationStatus.zezwolenie AND zezwolenie(a) AND expiredZezwolenie(a);
+filterOswiadczenie (Application a) = status(a) = ApplicationStatus.oswiadczenie AND oswiadczenie(a) AND expiredOswiadczenie(a);
+filterCollectDocuments (Application a) = status(a) = ApplicationStatus.collectDocuments AND collectDocuments(a) AND expiredCollectDocuments(a);
+
+EXTEND FORM applicationKanban 
+    PROPERTIES (tt) filterViza, filterZezwolenie, filterOswiadczenie, filterCollectDocuments
+;
