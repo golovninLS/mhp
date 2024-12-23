@@ -12,7 +12,7 @@ CLASS Order 'Accomodation order';
 startDate 'Start date' = DATA DATE (Order) NONULL;
 endDate 'End date' = DATA DATE (Order);
 
-employee 'Employee' = DATA Employee (Order) NONULL;
+employee 'Employee' = DATA Employee (Order) NONULL INDEXED;
 nameEmployee 'Employee' (Order o) = name(employee(o));
 
 accomodation 'Accomodation' = DATA Accomodation (Order) NONULL;

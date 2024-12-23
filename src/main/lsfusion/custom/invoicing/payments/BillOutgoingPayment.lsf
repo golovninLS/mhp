@@ -113,6 +113,7 @@ payForBill 'Register Payment' (Bill b) {
         paidNetto(b, o) <- netto(o);
         paidVat(b, o) <- vat(o);
         amount(o) <- brutto(o);
+        done(o) <- TRUE;
 
         paid(b, o) <- left(b, o) (+) paid(b, o);
         paidNetto(b, o) <- leftNetto(b, o) (+) paidNetto(b, o);

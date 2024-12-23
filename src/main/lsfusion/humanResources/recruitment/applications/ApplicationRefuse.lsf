@@ -56,6 +56,9 @@ closed(ApplicationStatus a) += WHEN a = ApplicationStatus.refused THEN TRUE;
 refuseReason = DATA RefuseReason (Application);
 nameRefuseReason 'Refuse reason' (Application a) = name(refuseReason(a));
 
+
+afterRefuse ABSTRACT LIST (Application);
+
 refuse 'Refuse' (Application a) {
     APPLY;
     IF canceled() THEN RETURN;

@@ -9,7 +9,7 @@ NAMESPACE ProjectManagement;
 CONSTRAINT timesheetAccomodation() AND timesheetProject() AND NOT in(timesheetProject(), timesheetAccomodation())
     CHECKED BY timesheetAccomodation[] MESSAGE '';
 
-symbolAccomodation 'Symbol' (Order o) = symbol(accomodation(o));
+symbolAccomodation 'Symbol' (Order o) = symbol(accomodation(o)) MATERIALIZED;
 nameAccomodation '{master.data.name}' (Order o) = name(accomodation(o));
 
 FORM timesheetSupervisorDateEmployeeAccomodationOrders 'Accomodations'
@@ -35,14 +35,17 @@ maxTimeEntry (DATE d, Employee e) = GROUP LAST TimeEntry t ORDER hours(t) BY dat
 
 minProjectAccomodation (DATE d, Employee e) = OVERRIDE
     (GROUP MIN Project p IF in(p, accomodation(order(d, e)))
-        AND (assigned(p, e, interval(d, d)) OR (NOT countAssignments(p) AND NOT countAssignments(currentUser())))),
+        AND (assigned(p, e, interval(d, d)) OR 
+        (NOT countAssignments(p) AND NOT countAssignments(currentUser())))
+    ),
     (GROUP MIN Project p IF in(p, accomodation(order(d, e))));
 
-projectByTimeEntry (DATE d, Employee e) = IF in(project(maxTimeEntry(d, e)), accomodation(order(d, e))) THEN project(maxTimeEntry(d, e)) ELSE NULL;
+projectByTimeEntry (DATE d, Employee e) =  project(maxTimeEntry(d, e)) IF in(project(maxTimeEntry(d, e)), accomodation(order(d, e))) ;
 
-projectAccomodation (DATE d, Employee e, Project p) = p = OVERRIDE projectByTimeEntry(d, e), minProjectAccomodation(d, e);
+projectAccomodation (DATE d, Employee e, Project p) = p = IF  projectByTimeEntry(d, e) THEN projectByTimeEntry(d, e) ELSE minProjectAccomodation(d, e);
 
 accomodationOrder2 'Symbol' (DATE d, Employee e, Project p) = accomodation(order(d, e)) IF projectAccomodation(d, e, p);
+
 accomodationOrder 'Symbol' (DATE d, Employee e, Project p) = accomodation(order(d, e)) IF project(order(d, e)) = p;
 
 symbolAccomodationOrder 'Symbol' (DATE d, Employee e, Project p) = symbol(accomodationOrder(d, e, p));
@@ -156,7 +159,7 @@ EXTEND FORM timesheetSupervisor
         } ELSE
             SHOW timesheetSupervisorDateEmployeeAccomodationOrders OBJECTS i = interval(d, d), e = ea FLOAT;
     } ON CONTEXTMENU checkIn(d, ea) ON CONTEXTMENU checkOut(d, ea) ON CONTEXTMENU delete(d, ea)
-    FOOTER (IF timesheetProject() THEN accomodationsT(d, timesheetProject()) ELSE accomodationsT(d))
+//    FOOTER (IF timesheetProject() THEN accomodationsT(d, timesheetProject()) ELSE accomodationsT(d))
 
     FILTERS assigned(pa, ea, dates) OR hours(ea, pa, dates) OR (NOT countAssignments(pa) AND NOT countAssignments(currentUser()))
     FILTERS pa == timesheetProject() OR NOT timesheetProject()

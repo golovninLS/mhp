@@ -30,6 +30,9 @@ amountApplicationsBySource 'Общее количество анкет по ис
 amountApplicationsToday 'Новых анкет за сегодня' = GROUP SUM 1 IF DATE(dateTime(Application a)) = currentDate();
 amountContactsToday 'Контакты за сегодня' = GROUP SUM 1 IF DATE(dateTime(Interview i)) = currentDate();
 
+hired 'Нанято' (INTERVAL[DATE] d) = GROUP SUM 1 IF DATE(dateTimeHired(Application a)) >= from(d) AND DATE(dateTimeHired(a)) <= to(d);
+refused 'Отказано' (INTERVAL[DATE] d) = GROUP SUM 1 IF DATE(dateTimeRefused(Application a)) >= from(d) AND DATE(dateTimeRefused(a)) <= to(d);
+
 FORM applicationReportDashboard 'Отчёт по анкетам'
     OBJECTS dates = INTERVAL[DATE] PANEL NULL
     PROPERTIES dates '' = VALUE(dates)
@@ -41,7 +44,7 @@ FORM applicationReportDashboard 'Отчёт по анкетам'
     FILTERS iterate(d, from(dates), to(dates))
 
     //метрики
-    PROPERTIES (dates) READONLY amountApplicationsByPeriod, amountContactsByPeriod
+    PROPERTIES (dates) READONLY amountApplicationsByPeriod, amountContactsByPeriod, hired, refused
     PROPERTIES () amountApplicationsToday, amountContactsToday
 
     //круговая кол-во анкет по компаниям
@@ -106,6 +109,8 @@ DESIGN applicationReportDashboard {
                 MOVE PROPERTY (amountContactsToday()) { fontSize = 14; fontStyle = 'bold'; };
                 MOVE PROPERTY (amountApplicationsByPeriod(dates)) { fontSize = 14; fontStyle = 'bold'; };
                 MOVE PROPERTY (amountContactsByPeriod(dates)) { fontSize = 14; fontStyle = 'bold'; };
+                MOVE PROPERTY (hired(dates)) { fontSize = 14; fontStyle = 'bold'; };
+                MOVE PROPERTY (refused(dates)) { fontSize = 14; fontStyle = 'bold'; };
             }
             NEW box2 {
                 fill = 1;

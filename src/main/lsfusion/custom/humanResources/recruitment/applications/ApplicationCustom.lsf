@@ -641,3 +641,13 @@ DESIGN interview {
         MOVE PROPERTY(interviewers(i)) { charWidth = 30; }
     }
 }
+
+dateTimeHired 'Дата и время найма' = DATA DATETIME (Application);
+fill(Employee e, Application a) +{
+    dateTimeHired(a) <- currentDateTime();
+}
+
+dateTimeRefused 'Дата и время отказа' = DATA DATETIME (Application);
+afterRefuse(Application a) +{
+    dateTimeRefused(a) <- currentDateTime();
+}
