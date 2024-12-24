@@ -305,7 +305,7 @@ FORM applicationKanban 'Канбан анкет'
         SHOW application OBJECTS a = tt;
     },
     ptextPosition = textPosition, pnameMainSpeciality = nameMainSpeciality, pcompanyName = companyName,
-    edit = EDIT, hire SHOWIF showHire(tt), refuse SHOWIF showRefused(tt), openEmployee LAST
+    edit = EDIT, hire SHOWIF showHire(tt), refuse SHOWIF showRefused(tt), openEmployee LAST SHOWIF employee(tt)
 
     FILTERS opened(tt) OR status(tt) = ApplicationStatus.hired
 

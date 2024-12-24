@@ -23,9 +23,12 @@ DESIGN docTypes {
         NEW types {
             horizontal = FALSE;
             align = STRETCH;
+            fill = 1;
             NEW docs {
+                fill = 1;
                 align = STRETCH;
                 MOVE BOX(t);
+                PROPERTY(inactive(t)) { charWidth = 10; }
             }
             NEW options {
                 caption = 'Отображать на форме отображения сотрудников';
@@ -104,7 +107,7 @@ META docTypePropertyAddInt(prop, caption, type, int)
 END
 
 META docTypePropertyAdd(prop, caption, type)
-    use###prop caption = DATA BOOLEAN (DocType);
+    use###prop caption = DATA BOOLEAN (DocType) CHARWIDTH 7;
     prop caption = DATA type (DocType, Employee);
 
     EXTEND FORM docTypes
@@ -161,7 +164,7 @@ META docTypeSimplePropertyAddInt(prop, type, caption, int)
 END
 
 META docTypeSimplePropertyAdd(prop, caption, type)
-    use###prop caption = DATA BOOLEAN (DocType);
+    use###prop caption = DATA BOOLEAN (DocType) CHARWIDTH 7;
     prop caption = DATA type (DocType, Employee);
 
     EXTEND FORM docTypes
@@ -229,7 +232,7 @@ META docTypeFilePropertyAddInt(prop, caption, type, int)
 END
 
 META docTypeFilePropertyAdd(prop, caption);
-use###prop caption = DATA BOOLEAN (DocType);
+use###prop caption = DATA BOOLEAN (DocType) CHARWIDTH 7;
 prop caption = DATA FILE (DocType, Employee);
 open##prop (DocType t, Employee e){
     open(prop(t, e), CONCAT '_', name(e), name(t));

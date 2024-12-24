@@ -1,0 +1,267 @@
+MODULE ApplicationDocuments;
+
+REQUIRE ApplicationCustom, EmployeeDocs, ApplicationInterview, ApplicationEmail, ApplicationMessenger;
+
+NAMESPACE HumanResources;
+
+DESIGN application {
+    OBJECTS {
+        horizontal = TRUE;
+        NEW info {
+            fill = 3;
+            NEW main1 {
+                lines = 3;
+                MOVE PROPERTY(dateTime(a));
+                MOVE PROPERTY(subject(a));
+                MOVE PROPERTY(namePosition(a));
+                MOVE PROPERTY(nameDepartment(a));
+                MOVE PROPERTY(textPosition(a));
+                MOVE PROPERTY(currentViza(a));
+            }
+            NEW params1 {
+                caption = 'Parameters';
+                lines = 2;
+                MOVE PROPERTY(firstName(a));
+                MOVE PROPERTY(lastName(a));
+                MOVE PROPERTY(middleName(a));
+                MOVE PROPERTY(phone(a));
+                MOVE PROPERTY(email(a));
+                MOVE PROPERTY(availability(a));
+                MOVE PROPERTY(nameRecruiter(a));
+                MOVE PROPERTY(tags(a));
+                MOVE PROPERTY(expectedSalary(a));
+                MOVE PROPERTY(proposedSalary(a));
+                MOVE PROPERTY(channelComunication(a));
+            }
+            NEW details1 {
+                tabbed = TRUE;
+                fill = 1;
+                NEW description1 {
+                    caption = 'Description';
+                    height = 100;
+                    MOVE PROPERTY(description(a)) { caption = ''; fill = 1; valueHeight = -1; }
+                }
+                MOVE summary;
+                MOVE files;
+                MOVE interview;
+                MOVE email;
+                MOVE messenger;
+                MOVE history;
+            }
+        }
+
+        NEW documents {
+            fill = 1;
+        }
+    }
+}
+
+EXTEND FORM docTypes
+    OBJECTS tt = DocType
+    PROPERTIES (tt) index, name, inactive
+    PROPERTIES (tt) NEW, DELETE
+
+    LIST DocType OBJECT tt
+;
+
+DESIGN docTypes {
+    OBJECTS {
+        types {
+            horizontal = FALSE;
+            align = STRETCH;
+            NEW docsA {
+                fill = 1;
+                align = STRETCH;
+                MOVE BOX(tt) { caption = 'Типы документов для анкет'; };
+                PROPERTY(inactive(tt)) { charWidth = 10; }
+            }
+        }
+    }
+}
+
+background = ABSTRACT CASE COLOR (DocType, Application);
+
+META docTypeApplication(int)
+    EXTEND FORM application
+        OBJECTS t##int = DocType PANEL
+        FILTERS index(t##int) = int
+    ;
+
+    DESIGN application {
+        documents {
+            MOVE BOX (t##int) {
+                caption = name(t##int);
+                NEW infoFiles##int {
+                    horizontal = TRUE;
+                }
+            }
+        }
+    }
+    EXTEND FORM applications
+        OBJECTS t##int = DocType
+        FILTERS index(t##int) = int
+    ;
+END
+
+META docTypePanelApplication(caption)
+    @docTypeApplication(1);
+    @docTypeApplication(2);
+    @docTypeApplication(3);
+    @docTypeApplication(4);
+    @docTypeApplication(5);
+    @docTypeApplication(6);
+    @docTypeApplication(7);
+    @docTypeApplication(8);
+    @docTypeApplication(9);
+    @docTypeApplication(10);
+    @docTypeApplication(11);
+    @docTypeApplication(12);
+    @docTypeApplication(13);
+    @docTypeApplication(14);
+    @docTypeApplication(15);
+    @docTypeApplication(16);
+END
+
+@docTypePanelApplication();
+
+META docTypePropertyAddIntApplication(prop, caption, type, int)
+    EXTEND FORM application
+        PROPERTIES (t##int, a) prop SHOWIF use###prop(t##int) BACKGROUND background(t##int, a)
+    ;
+END
+
+META docTypePropertyAddApplication(prop, caption, type)
+    use###prop caption = DATA BOOLEAN (DocType) CHARWIDTH 7;
+    prop caption = DATA type (DocType, Application);
+
+    EXTEND FORM docTypes
+        PROPERTIES (tt) use###prop
+    ;
+    @docTypePropertyAddIntApplication(prop, caption, type, 1);
+    @docTypePropertyAddIntApplication(prop, caption, type, 2);
+    @docTypePropertyAddIntApplication(prop, caption, type, 3);
+    @docTypePropertyAddIntApplication(prop, caption, type, 4);
+    @docTypePropertyAddIntApplication(prop, caption, type, 5);
+    @docTypePropertyAddIntApplication(prop, caption, type, 6);
+    @docTypePropertyAddIntApplication(prop, caption, type, 7);
+    @docTypePropertyAddIntApplication(prop, caption, type, 8);
+    @docTypePropertyAddIntApplication(prop, caption, type, 9);
+    @docTypePropertyAddIntApplication(prop, caption, type, 10);
+    @docTypePropertyAddIntApplication(prop, caption, type, 11);
+    @docTypePropertyAddIntApplication(prop, caption, type, 12);
+    @docTypePropertyAddIntApplication(prop, caption, type, 13);
+    @docTypePropertyAddIntApplication(prop, caption, type, 14);
+    @docTypePropertyAddIntApplication(prop, caption, type, 15);
+    @docTypePropertyAddIntApplication(prop, caption, type, 16);
+END;
+
+META docTypeSimplePropertyAddIntApplication(prop, type, caption, int)
+    EXTEND FORM application
+        PROPERTIES (t##int, a) prop SHOWIF use###prop(t##int) HEADER name[DocType](t##int) FIRST BACKGROUND background(t##int, a)
+    ;
+END
+
+META docTypeSimplePropertyAddApplication(prop, caption, type)
+    use###prop caption = DATA BOOLEAN (DocType) CHARWIDTH 7;
+    prop caption = DATA type (DocType, Application);
+
+    EXTEND FORM docTypes
+        PROPERTIES (tt) use###prop
+    ;
+    @docTypeSimplePropertyAddIntApplication(prop, caption, type, 1);
+    @docTypeSimplePropertyAddIntApplication(prop, caption, type, 2);
+    @docTypeSimplePropertyAddIntApplication(prop, caption, type, 3);
+    @docTypeSimplePropertyAddIntApplication(prop, caption, type, 4);
+    @docTypeSimplePropertyAddIntApplication(prop, caption, type, 5);
+    @docTypeSimplePropertyAddIntApplication(prop, caption, type, 6);
+    @docTypeSimplePropertyAddIntApplication(prop, caption, type, 7);
+    @docTypeSimplePropertyAddIntApplication(prop, caption, type, 8);
+    @docTypeSimplePropertyAddIntApplication(prop, caption, type, 9);
+    @docTypeSimplePropertyAddIntApplication(prop, caption, type, 10);
+    @docTypeSimplePropertyAddIntApplication(prop, caption, type, 11);
+    @docTypeSimplePropertyAddIntApplication(prop, caption, type, 12);
+    @docTypeSimplePropertyAddIntApplication(prop, caption, type, 13);
+    @docTypeSimplePropertyAddIntApplication(prop, caption, type, 14);
+    @docTypeSimplePropertyAddIntApplication(prop, caption, type, 15);
+    @docTypeSimplePropertyAddIntApplication(prop, caption, type, 16);
+END;
+
+//files
+META docTypeFilePropertyAddIntApplication(prop, caption, type, int)
+    EXTEND FORM application
+        PROPERTIES (t##int, a) upload##prop SHOWIF use###prop(t##int) HEADER ('Upload ' + caption)
+        PROPERTIES (t##int, a) open##prop SHOWIF use###prop(t##int) AND prop(t##int, a) HEADER ('Open ' + caption)
+    ;
+    DESIGN application {
+        BOX (t##int) {
+            infoFiles##int {
+                NEW infoFile##prop##int {
+                    MOVE PROPERTY (upload##prop(t##int, a));
+                    MOVE PROPERTY (open##prop(t##int, a));
+                }
+            }
+        }
+    }
+END
+
+META docTypeFilePropertyAddApplication(prop, caption);
+use###prop caption = DATA BOOLEAN (DocType) CHARWIDTH 7;
+prop caption = DATA FILE (DocType, Application);
+open##prop (DocType t, Application a){
+    open(prop(t, a), CONCAT '_', phone(a), name(t));
+}
+upload##prop (DocType t, Application a){
+    INPUT = prop(t, a) CHANGE;
+}
+
+EXTEND FORM docTypes
+    PROPERTIES (tt) use###prop
+;
+@docTypeFilePropertyAddIntApplication(prop, caption, FILE, 1);
+@docTypeFilePropertyAddIntApplication(prop, caption, FILE, 2);
+@docTypeFilePropertyAddIntApplication(prop, caption, FILE, 3);
+@docTypeFilePropertyAddIntApplication(prop, caption, FILE, 4);
+@docTypeFilePropertyAddIntApplication(prop, caption, FILE, 5);
+@docTypeFilePropertyAddIntApplication(prop, caption, FILE, 6);
+@docTypeFilePropertyAddIntApplication(prop, caption, FILE, 7);
+@docTypeFilePropertyAddIntApplication(prop, caption, FILE, 8);
+@docTypeFilePropertyAddIntApplication(prop, caption, FILE, 9);
+@docTypeFilePropertyAddIntApplication(prop, caption, FILE, 10);
+@docTypeFilePropertyAddIntApplication(prop, caption, FILE, 11);
+@docTypeFilePropertyAddIntApplication(prop, caption, FILE, 12);
+@docTypeFilePropertyAddIntApplication(prop, caption, FILE, 13);
+@docTypeFilePropertyAddIntApplication(prop, caption, FILE, 14);
+@docTypeFilePropertyAddIntApplication(prop, caption, FILE, 15);
+@docTypeFilePropertyAddIntApplication(prop, caption, FILE, 16);
+END;
+
+@docTypePropertyAddApplication(dateFromProp, 'Дата от', DATE);
+@docTypePropertyAddApplication(dateToProp, 'Дата до', DATE);
+@docTypePropertyAddApplication(numberProp, 'Номер', STRING);
+@docTypePropertyAddApplication(noteProp, 'Примечание', STRING);
+@docTypeFilePropertyAddApplication(scanProp, 'Скан');
+@docTypeFilePropertyAddApplication(scan2Prop, 'Скан2');
+@docTypeFilePropertyAddApplication(scan3Prop, 'Скан3');
+
+@docTypeSimplePropertyAddApplication(name, 'Наименование', STRING);
+
+trackDaysA 'Отслеживать(дней)' = DATA INTEGER (DocType);
+
+EXTEND FORM docTypes
+    PROPERTIES (tt) trackDaysA
+;
+
+background(DocType dt, Application a) += WHEN dateToProp(dt, a) AND trackDays(dt) AND dateToProp(dt, a) < sum(currentDate(), trackDays(dt)) THEN RGB(250, 150, 157);
+
+fill(Employee e, Application a) + {
+    FOR DocType dt IS DocType AND INTEGER i > 0 AND i < 17 DO {
+        dateFrom(dt, e) <- dateFromProp(dt, a) WHERE index(dt) = i;
+        dateTo(dt, e) <- dateToProp(dt, a) WHERE index(dt) = i;
+        number(dt, e) <- numberProp(dt, a) WHERE index(dt) = i;
+        note(dt, e) <- noteProp(dt, a) WHERE index(dt) = i;
+        scan(dt, e) <- scanProp(dt, a) WHERE index(dt) = i ;
+        scan2(dt, e) <- scan2Prop(dt, a) WHERE index(dt) = i;
+        scan3(dt, e) <- scan3Prop(dt, a) WHERE index(dt) = i;
+        nameProp(dt, e) <- name(dt, a) WHERE index(dt) = i;
+    }
+}
