@@ -55,12 +55,15 @@ createPayment 'Создать платёж' () {
             company(b) <- holder(responsibleUserAccount());
             vendor(b) <- vendor();
             dateTime(b) <- dateTime();
-            NEW bf = BillFile {
-                bill(bf) <- b;
-                file(bf) <- RAWFILE(file());
-                extension(bf) <- extension(file());
+            
+            IF file() THEN {
+                NEW bf = BillFile {
+                    bill(bf) <- b;
+                    file(bf) <- RAWFILE(file());
+                    extension(bf) <- extension(file());
+                }
             }
-
+            
             NEW l = BillLine {
                 bill(l) <- b;
                 item(l) <- defaultBillItem();
@@ -85,10 +88,13 @@ createPayment 'Создать платёж' () {
                 type(p) <- defaultOutgoingPaymentTypeCashier();
                 netto(p) <- netto();
                 vat(p) <- vat();
-                NEW uof = OutgoingPaymentFile {
-                    outgoingPayment(uof) <- p;
-                    file(uof) <- RAWFILE(file());
-                    extension(uof) <- extension(file());
+
+                IF file() THEN {
+                    NEW uof = OutgoingPaymentFile {
+                        outgoingPayment(uof) <- p;
+                        file(uof) <- RAWFILE(file());
+                        extension(uof) <- extension(file());
+                    }
                 }
             }
         }
