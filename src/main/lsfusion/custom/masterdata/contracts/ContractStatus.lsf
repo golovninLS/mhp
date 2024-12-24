@@ -6,7 +6,7 @@ NAMESPACE MasterData;
 
 CLASS ContractStatus 'Статус договора';
 
-@defineID(contractStatus, 'Cтатус договора', 'CS', 5);
+@defineID(contractStatus, 'Cтатусы договоров', 'CS', 5);
 
 name '{Name}' = DATA STRING[50] (ContractStatus) CHARWIDTH 8 NONULL;
 contractStatusName (STRING[50] id) = GROUP AGGR ContractStatus o BY name(o);

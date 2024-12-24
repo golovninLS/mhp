@@ -6,7 +6,7 @@ NAMESPACE MasterData;
 
 CLASS ContractType 'Тип договора';
 
-@defineID(contractType, 'Тип договора', 'CT', 5);
+@defineID(contractType, 'Типы договоров', 'CT', 5);
 
 name '{Name}' = DATA STRING[50] (ContractType) CHARWIDTH 8 NONULL;
 contracTypeName (STRING[50] id) = GROUP AGGR ContractType o BY name(o);
